@@ -1,3 +1,4 @@
+/** @type {Array<[string,string,RegExp]>} */
 const rules=[
  ['investment','AI 투자 방향·효과는 어떻게 달라졌나?',/\b(capex|capital expenditures?|investments?|investing)\b/ig],
  ['release','제품·모델 출시 목표는 어떻게 달라졌나?',/\b(launch\w*|releas\w*|shipping|rollout|introduc\w*|available|availability)\b/ig],

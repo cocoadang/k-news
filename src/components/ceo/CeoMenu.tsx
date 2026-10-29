@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CeoApiResponse } from '../../ceo/types';
 import { fetchCeoDataset, requestCeoRefresh } from '../../ceo/dataSource';
 import { CeoStatementsView, CeoViewState } from './CeoStatementsView';
+import { CeoTimeline } from './timeline/CeoTimelineCandidate';
 import { CeoKoAdmin } from './CeoKoAdmin';
 
 /** CEO 메뉴 컨테이너: 읽기 전용 API 조회 → 화면 상태. 관리자에게만 원문 새로고침 버튼 */
@@ -64,7 +65,7 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
           )}
         </section>
       )}
-      <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />
+      {state.status === 'ready' ? <><p className="mb-3 text-sm text-slate-400">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><CeoTimeline dataset={state.dataset} /><details className="mt-6"><summary className="cursor-pointer text-slate-400">기존 목록과 수집 상태 보기</summary><CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} /></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
     </div>
   );
 }

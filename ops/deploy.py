@@ -2,8 +2,8 @@ import json,os,subprocess,time,urllib.request,urllib.error,re
 P='gen-lang-client-0064554427';R='asia-south1';S='spacex-intelligence-news-monitor'
 sha=os.environ['GITHUB_SHA'];revision=S+'-gh-'+sha[:12];image=R+'-docker.pkg.dev/'+P+'/knews-images/k-news:'+sha
 if os.environ.get('GITHUB_REPOSITORY')!='cocoadang/k-news' or os.environ.get('GITHUB_REF')!='refs/heads/main' or os.environ.get('GITHUB_EVENT_NAME')!='push':raise SystemExit('Unapproved execution context')
-def run(args):
- r=subprocess.run(['gcloud','--project='+P,'--quiet',*args],capture_output=True,text=True)
+def run(args,payload=None):
+ r=subprocess.run(['gcloud','--project='+P,'--quiet',*args],input=payload,capture_output=True,text=True)
  if r.returncode:
   # Only the CLI ERROR line; never response bodies or runtime environment values.
   line=next((x for x in r.stderr.splitlines() if x.startswith('ERROR:')),'CLI returned no error classification')
@@ -19,7 +19,20 @@ before=service();oldTraffic=[t for t in before['status']['traffic'] if t.get('pe
 if len(oldTraffic)!=1 or oldTraffic[0]['percent']!=100:raise SystemExit('Expected one stable traffic revision')
 old=oldTraffic[0]['revisionName'];oldspec=before['spec']['template']['spec'];promoted=False
 try:
- run(['run','deploy',S,'--region='+R,'--revision-suffix=gh-'+sha[:12],'--no-traffic','--tag=ci-preview','--container=app-container','--image='+image])
+ # Preserve the full runtime spec in memory. Stale source-overlay annotations
+ # cannot accompany a standalone image; never write environment values to disk.
+ candidateDoc={'apiVersion':'serving.knative.dev/v1','kind':'Service','metadata':{k:v for k,v in before.get('metadata',{}).items() if k in ['name','namespace','labels','annotations']},'spec':json.loads(json.dumps(before['spec']))}
+ candidateDoc['metadata'].setdefault('name',S)
+ template=candidateDoc['spec']['template'];template.setdefault('metadata',{})['name']=revision
+ for key in ['run.googleapis.com/sources','run.googleapis.com/base-images']:
+  template['metadata'].setdefault('annotations',{}).pop(key,None)
+ candidateDoc['metadata'].setdefault('annotations',{}).pop('run.googleapis.com/build-enable-automatic-updates',None)
+ assert len(template['spec']['containers'])==1 and template['spec']['containers'][0]['name']=='app-container'
+ template['spec']['containers'][0]['image']=image
+ candidateDoc['spec']['traffic']=[{'revisionName':old,'percent':100},{'revisionName':revision,'percent':0,'tag':'ci-preview'}]
+ payload=json.dumps(candidateDoc)
+ run(['run','services','replace','/dev/stdin','--region='+R,'--dry-run'],payload)
+ run(['run','services','replace','/dev/stdin','--region='+R],payload)
  after=service();new=after['spec']['template']['spec']
  # Only image and image-build annotations may differ; runtime configuration stays exact.
  a=json.loads(json.dumps(oldspec));b=json.loads(json.dumps(new))

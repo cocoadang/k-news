@@ -16,7 +16,12 @@ class DeploymentTests(unittest.TestCase):
     if deployed:s['containers'][0]['image']='new'
     if mode=='config' and deployed:s['serviceAccountName']='changed'
     d={'spec':{'template':{'spec':s}},'status':{'url':'https://live','traffic':[{'revisionName':new if promoted else old,'percent':100}]+([{'revisionName':new,'tag':'ci-preview','url':'https://candidate'}] if deployed else [])}}
-   elif a[1:3]==['run','deploy']:deployed=True;d={}
+   elif a[1:4]==['run','services','replace']:
+    payload=json.loads(kwargs['input'])
+    self.assertEqual(payload['spec']['template']['spec']['containers'][0]['env'],spec['containers'][0]['env'])
+    self.assertEqual(payload['spec']['traffic'][0],{'revisionName':old,'percent':100})
+    if '--dry-run' not in a:deployed=True
+    d={}
    elif a[1:4]==['run','revisions','describe']:d={'status':{'conditions':[{'type':'Ready','status':'False' if mode=='ready' else 'True'}]}}
    elif a[1:4]==['run','services','update-traffic']:promoted=any(x=='--to-revisions='+new+'=100' for x in a);d={}
    else:raise AssertionError(a)

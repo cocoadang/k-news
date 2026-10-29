@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+validation/
+transcript-review/
+*.log
+*ledger*.json
+*credentials*.json
+*service-account*.json
+candidates/**/evidence/
+candidates/**/preview-dist/

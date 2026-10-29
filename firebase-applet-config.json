@@ -1,0 +1,12 @@
+{
+  "projectId": "REPLACE_LOCALLY",
+  "appId": "REPLACE_LOCALLY",
+  "apiKey": "REPLACE_LOCALLY",
+  "authDomain": "REPLACE_LOCALLY",
+  "firestoreDatabaseId": "REPLACE_LOCALLY",
+  "storageBucket": "REPLACE_LOCALLY",
+  "messagingSenderId": "REPLACE_LOCALLY",
+  "measurementId": "REPLACE_LOCALLY",
+  "oAuthClientId": "REPLACE_LOCALLY",
+  "recaptchaSiteKey": "REPLACE_LOCALLY"
+}

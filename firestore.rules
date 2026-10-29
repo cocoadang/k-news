@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fail-Closed: All client-side direct access is denied.
+    // Server interacts with Firestore via Admin SDK / IAM credentials (ADC) only.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

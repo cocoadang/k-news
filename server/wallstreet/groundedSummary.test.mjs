@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {evidenceBlocks,evidenceContext,verificationPrompt,conservativeClassification,groundCandidate,acceptVerification,renderGroundedBrief,groundedSummarizer} from './groundedSummary.mjs';
+const segments=Array.from({length:9},(_,i)=>({start:i*3,text:`방송 구간 ${i}의 조건부 전망입니다.`}));
+const blocks=evidenceBlocks(segments);
+const candidate={items:blocks.map((b,i)=>({text:`출연자는 구간 ${i*3}에 관해 전망했습니다.`,kind:'outlook',evidenceIds:[b.id]}))};
+const audit={checks:blocks.map((_,index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',reason:'조건부 전망과 해당 근거 일치'}))};
+test('context is bounded and cannot bridge a caption gap or search distant names',()=>{
+ assert.deepEqual(evidenceContext([1],[{start:0},{start:100},{start:105},{start:110}]),[1,2]);
+ assert.throws(()=>evidenceContext([0],blocks,2),/context_radius/);
+});
+test('actual incomplete context-audit pattern cannot become an accepted result',()=>{
+ assert.match(verificationPrompt([]),/checks:\[\{index,supported,classificationCorrect,recommendedKind,reason\}\]/);
+ const items=groundCandidate(candidate,blocks,{contextRadius:1,topicContext:true});
+ const oldStyle={checks:items.map((_,index)=>({index,supported:true,classificationCorrect:true,reason:'선택 근거와 일치'}))};
+ assert.throws(()=>acceptVerification(items,oldStyle),/context_audit_incomplete/);
+ assert.throws(()=>acceptVerification(items,{checks:oldStyle.checks.slice(0,2)}),/semantic_verification_failed/);
+});
+test('audit can conservatively relabel a supported interpretation, never rescue unsupported text',()=>{
+ const items=[{text:'해석 문장',kind:'reported'},{text:'미확인 문장',kind:'reported'},{text:'전망',kind:'outlook'}];
+ const checks=items.map((_,index)=>({index,supported:index!==1,classificationCorrect:false,recommendedKind:index===2?'reported':'outlook',reason:'분류 검토'}));
+ const result=conservativeClassification(items,{checks});
+ assert.equal(result.items[0].kind,'outlook');assert.equal(result.items[0].text,items[0].text);
+ assert.equal(result.audit.checks[0].classificationCorrect,true);
+ assert.equal(result.audit.checks[1].supported,false);assert.equal(result.items[1].kind,'reported');
+ assert.equal(result.items[2].kind,'outlook');assert.equal(result.audit.checks[2].classificationCorrect,false);
+});
+test('server copies source and timestamps by stable IDs, rejects invented IDs/numbers',()=>{
+ const items=groundCandidate(candidate,blocks);assert.equal(items[1].quote,'[B0001] '+blocks[1].text);assert.equal(items[1].start,9);
+ assert.throws(()=>groundCandidate({items:candidate.items.map(x=>({...x,evidenceIds:['B9999']}))},blocks));
+ assert.throws(()=>groundCandidate({items:candidate.items.map(x=>({...x,text:'99퍼센트 상승'}))},blocks));
+ assert.throws(()=>groundCandidate({items:candidate.items.map(x=>({...x,text:'CTA 펀드의 숏 커버링이 가속화될 수 있습니다.'}))},blocks),/unsupported_source_term/);
+});
+test('negative semantic audit blocks unsupported conclusions and wrong classification',()=>{
+ const items=groundCandidate(candidate,blocks);
+ for(const field of ['supported','classificationCorrect'])assert.throws(()=>acceptVerification(items,{checks:audit.checks.map((x,i)=>i===0?{...x,[field]:false}:x)}));
+ assert.throws(()=>renderGroundedBrief({id:'test'},{protocol:'evidence_ids_v1',items,audit}));
+ const result=acceptVerification(items,audit);assert.match(renderGroundedBrief({id:'test',title:'방송'},result),/출연자의 해석·전망/);
+});
+test('separate evidence blocks retain individual source links and conservative outlook attribution',()=>{
+ const input={items:candidate.items.map((x,i)=>i===0?{...x,text:'출연자는 하락 가능성을 분석했습니다.',kind:'reported',evidenceIds:['B0000','B0002']}:x)};
+ const items=groundCandidate(input,blocks);assert.equal(items[0].kind,'outlook');assert.deepEqual(items[0].starts,[0,18]);
+ assert.ok(items[0].quote.includes('[B0000]'));assert.ok(items[0].quote.includes('[B0002]'));
+ const output=renderGroundedBrief({id:'test',title:'방송'},acceptVerification(items,audit));assert.ok(output.includes('&t=18s'));
+ assert.throws(()=>groundCandidate({items:input.items.map(x=>({...x,evidenceIds:['B0002','B0000']}))},blocks),/grounded_ids/);
+});
+test('two calls share one ceiling; failed generation is not retried and preserves draft',async()=>{
+ let calls=0;const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(++calls===1?candidate:audit)})};
+ const factory=()=>groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:0.3,outputMicrosPerToken:2.5,approved:true});
+ await assert.rejects(factory().summarize({segments,maxCostMicros:5000}),/budget/);assert.equal(calls,0);
+ const result=await factory().summarize({segments,maxCostMicros:12000});assert.equal(calls,2);assert.equal(result.items.length,3);
+ calls=0;client.generate=async()=>{calls++;throw Error('timeout')};
+ await assert.rejects(factory().summarize({segments,maxCostMicros:12000}),e=>e.candidate.calls[0].status==='inflight');assert.equal(calls,1);
+});
+test('one bounded repair followed by fresh audit, no unbounded regeneration',async()=>{
+ let calls=0;const failed={checks:audit.checks.map((x,i)=>i===1?{...x,supported:false,reason:'unsupported purpose'}:x)};
+ const repaired={items:candidate.items.map((x,i)=>i===1?{...x,text:'조건부 전망을 설명했습니다.'}:x)};
+ const answers=[candidate,failed,repaired,audit];
+ const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(answers[calls++])})};
+ const result=await groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:0.3,outputMicrosPerToken:2.5,approved:true}).summarize({segments,maxCostMicros:20000});
+ assert.equal(calls,4);assert.equal(result.items[0].text,candidate.items[0].text);assert.equal(result.items[1].text,repaired.items[1].text);
+});
+test('omit rejected candidates only when at least three detailed points pass',async()=>{
+ const five={items:[...candidate.items,{...candidate.items[0],text:'추가 해석을 소개했습니다.'},{...candidate.items[1],text:'또 다른 전망을 소개했습니다.'}]};
+ const checks={checks:five.items.map((_,index)=>({index,supported:index<3,classificationCorrect:true,recommendedKind:'outlook',reason:index<3?'근거 일치':'추가 해석'}))};
+ let calls=0;const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(++calls===1?five:checks)})};
+ const result=await groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:0.3,outputMicrosPerToken:2.5,approved:true}).summarize({segments,maxCostMicros:20000});
+ assert.equal(result.items.length,3);assert.deepEqual(result.omittedIndices,[3,4]);assert.equal(calls,2);
+});
+test('optional one source repair preserves accepted claims and still needs a fresh audit',async()=>{
+ const bad={items:candidate.items.map((x,i)=>i===1?{...x,text:'CTA 펀드의 전망입니다.'}:x)};
+ let calls=0;const responses=[bad,candidate,audit];
+ const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(responses[calls++])})};
+ const result=await groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,approved:true,allowSourceRepair:true}).summarize({segments,maxCostMicros:20000});
+ assert.equal(calls,3);assert.equal(result.items.length,3);assert.ok(result.validationJournal.sourceRepair);
+ assert.equal(result.items[0].text,candidate.items[0].text);
+});

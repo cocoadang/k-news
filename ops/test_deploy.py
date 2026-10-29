@@ -7,6 +7,9 @@ class DeploymentTests(unittest.TestCase):
   spec={'serviceAccountName':'runtime','containers':[{'name':'app-container','image':'old','env':[{'name':'SECRET','valueFrom':{'secretKeyRef':{'name':'existing','key':'1'}}}]}]}
   def command(a,**kwargs):
    nonlocal deployed,promoted
+   a=[x for x in a if not x.startswith('--project=') and x!='--quiet']
+   if '--container=app-container' in a:
+    self.assertTrue(all(x.startswith('--image=') for x in a[a.index('--container=app-container')+1:]))
    calls.append(a)
    if a[1:4]==['run','services','describe']:
     s=copy.deepcopy(spec)

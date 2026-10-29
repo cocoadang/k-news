@@ -3,7 +3,7 @@ P='gen-lang-client-0064554427';R='asia-south1';S='spacex-intelligence-news-monit
 sha=os.environ['GITHUB_SHA'];revision=S+'-gh-'+sha[:12];image=R+'-docker.pkg.dev/'+P+'/knews-images/k-news:'+sha
 if os.environ.get('GITHUB_REPOSITORY')!='cocoadang/k-news' or os.environ.get('GITHUB_REF')!='refs/heads/main' or os.environ.get('GITHUB_EVENT_NAME')!='push':raise SystemExit('Unapproved execution context')
 def run(args):
- r=subprocess.run(['gcloud',*args,'--project='+P,'--quiet'],capture_output=True,text=True)
+ r=subprocess.run(['gcloud','--project='+P,'--quiet',*args],capture_output=True,text=True)
  if r.returncode:
   # Only the CLI ERROR line; never response bodies or runtime environment values.
   line=next((x for x in r.stderr.splitlines() if x.startswith('ERROR:')),'CLI returned no error classification')
@@ -19,7 +19,7 @@ before=service();oldTraffic=[t for t in before['status']['traffic'] if t.get('pe
 if len(oldTraffic)!=1 or oldTraffic[0]['percent']!=100:raise SystemExit('Expected one stable traffic revision')
 old=oldTraffic[0]['revisionName'];oldspec=before['spec']['template']['spec'];promoted=False
 try:
- run(['run','deploy',S,'--region='+R,'--container=app-container','--image='+image,'--revision-suffix=gh-'+sha[:12],'--no-traffic','--tag=ci-preview'])
+ run(['run','deploy',S,'--region='+R,'--revision-suffix=gh-'+sha[:12],'--no-traffic','--tag=ci-preview','--container=app-container','--image='+image])
  after=service();new=after['spec']['template']['spec']
  # Only image and image-build annotations may differ; runtime configuration stays exact.
  a=json.loads(json.dumps(oldspec));b=json.loads(json.dumps(new))

@@ -1,0 +1,43 @@
+name: Validate and deploy K-news main
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: knews-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'cocoadang/k-news' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run lint
+      - run: node --test candidates/ceo-timeline/*.test.mjs server/wallstreet/*.test.mjs
+      - run: python3 -m unittest discover -s ops -p "test_*.py"
+      - run: npm run build
+      - name: Build credential-free image
+        run: docker build -t "asia-south1-docker.pkg.dev/gen-lang-client-0064554427/knews-images/k-news:${GITHUB_SHA}" .
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: projects/9298525505/locations/global/workloadIdentityPools/knews-github/providers/github-main
+          service_account: knews-github-deploy@gen-lang-client-0064554427.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Push commit image
+        run: |
+          gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+          docker push "asia-south1-docker.pkg.dev/gen-lang-client-0064554427/knews-images/k-news:${GITHUB_SHA}"
+      - name: Verify candidate then promote
+        run: python3 ops/deploy.py

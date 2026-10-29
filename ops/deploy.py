@@ -1,10 +1,14 @@
-import json,os,subprocess,time,urllib.request,urllib.error
+import json,os,subprocess,time,urllib.request,urllib.error,re
 P='gen-lang-client-0064554427';R='asia-south1';S='spacex-intelligence-news-monitor'
 sha=os.environ['GITHUB_SHA'];revision=S+'-gh-'+sha[:12];image=R+'-docker.pkg.dev/'+P+'/knews-images/k-news:'+sha
 if os.environ.get('GITHUB_REPOSITORY')!='cocoadang/k-news' or os.environ.get('GITHUB_REF')!='refs/heads/main' or os.environ.get('GITHUB_EVENT_NAME')!='push':raise SystemExit('Unapproved execution context')
 def run(args):
  r=subprocess.run(['gcloud',*args,'--project='+P,'--quiet'],capture_output=True,text=True)
- if r.returncode:raise RuntimeError('gcloud command failed: '+args[0]+' '+args[1])
+ if r.returncode:
+  # Only the CLI ERROR line; never response bodies or runtime environment values.
+  line=next((x for x in r.stderr.splitlines() if x.startswith('ERROR:')),'CLI returned no error classification')
+  line=re.sub(r'(AIza[\w-]+|ya29\.[\w.-]+|Bearer\s+\S+)', '[REDACTED]',line)[:800]
+  raise RuntimeError('gcloud '+args[0]+' '+args[1]+': '+line)
  return r.stdout
 def service():return json.loads(run(['run','services','describe',S,'--region='+R,'--format=json']))
 def request(url):
@@ -38,5 +42,5 @@ try:
  print(json.dumps({'status':'verified','commit':sha,'revision':revision,'previousRevision':old,'trafficPercent':100,'runtimeConfigUnchanged':True}))
 except Exception as e:
  if promoted:run(['run','services','update-traffic',S,'--region='+R,'--to-revisions='+old+'=100'])
- print(json.dumps({'status':'failed_old_revision_retained','errorType':type(e).__name__,'previousRevision':old}))
+ print(json.dumps({'status':'failed_old_revision_retained','errorType':type(e).__name__,'reason':str(e),'previousRevision':old}))
  raise SystemExit(1)

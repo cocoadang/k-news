@@ -18,6 +18,7 @@ import { SystemStatus, NewsEvent, ArticleSource, RawArticle } from './server/typ
 import { getIsFirestoreAvailable, initFirestore, sanitizeForFirestore } from './server/firestore';
 import {
   SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_MS,
   generateSessionToken,
   verifySessionToken,
@@ -240,6 +241,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     const cookieOpts = getCookieOptions(req);
 
     res.cookie(SESSION_COOKIE_NAME, token, cookieOpts);
+    res.clearCookie(LEGACY_SESSION_COOKIE_NAME, { ...cookieOpts, maxAge: undefined });
 
     db.addLog('System', 'info', `Admin session established successfully from ${clientIp}`);
     res.json({ success: true, message: 'Authenticated successfully' });
@@ -248,7 +250,8 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   // Admin logout (applies CSRF Origin check, clears HttpOnly session cookie)
   app.post('/api/auth/logout', verifyCsrfForAuth, (req, res) => {
     const cookieOpts = getCookieOptions(req);
-    res.clearCookie(SESSION_COOKIE_NAME, cookieOpts);
+    res.clearCookie(SESSION_COOKIE_NAME, { ...cookieOpts, maxAge: undefined });
+    res.clearCookie(LEGACY_SESSION_COOKIE_NAME, { ...cookieOpts, maxAge: undefined });
     res.json({ success: true, message: 'Logged out successfully' });
   });
 

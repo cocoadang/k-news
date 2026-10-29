@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import express from 'express';
 
-export const SESSION_COOKIE_NAME = 'admin_session';
+export const SESSION_COOKIE_NAME = '__session';
+export const LEGACY_SESSION_COOKIE_NAME = 'admin_session';
 export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ==========================================

@@ -29,6 +29,8 @@ try:
  candidateDoc['metadata'].setdefault('annotations',{}).pop('run.googleapis.com/build-enable-automatic-updates',None)
  assert len(template['spec']['containers'])==1 and template['spec']['containers'][0]['name']=='app-container'
  template['spec']['containers'][0]['image']=image
+ if template['spec'].get('runtimeClassName')=='run.googleapis.com/linux-base-image-update':
+  template['spec'].pop('runtimeClassName') # Source base-image update mode cannot apply to a standalone image.
  candidateDoc['spec']['traffic']=[{'revisionName':old,'percent':100},{'revisionName':revision,'percent':0,'tag':'ci-preview'}]
  payload=json.dumps(candidateDoc)
  run(['run','services','replace','/dev/stdin','--region='+R,'--dry-run'],payload)
@@ -36,6 +38,7 @@ try:
  after=service();new=after['spec']['template']['spec']
  # Only image and image-build annotations may differ; runtime configuration stays exact.
  a=json.loads(json.dumps(oldspec));b=json.loads(json.dumps(new))
+ if a.get('runtimeClassName')=='run.googleapis.com/linux-base-image-update' and 'runtimeClassName' not in b:a.pop('runtimeClassName')
  for spec in [a,b]:
   for c in spec['containers']:c.pop('image',None)
  if a!=b:raise RuntimeError('Runtime configuration changed; old traffic retained')

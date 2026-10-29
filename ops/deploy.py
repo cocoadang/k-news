@@ -31,7 +31,8 @@ try:
   c,d=request(base+'/api/events');assert c==200 and isinstance(d,list) and len(d)>0
   assert request(base+'/api/admin/wallstreet/status')[0]==401
  smoke(candidate)
- run(['run','services','update-traffic',S,'--region='+R,'--to-revisions='+revision+'=100']);promoted=True
+ promoted=True # Restore stable traffic even when the promotion response is uncertain.
+ run(['run','services','update-traffic',S,'--region='+R,'--to-revisions='+revision+'=100'])
  final=service();smoke(final['status']['url'])
  assert any(t.get('revisionName')==revision and t.get('percent')==100 for t in final['status']['traffic'])
  print(json.dumps({'status':'verified','commit':sha,'revision':revision,'previousRevision':old,'trafficPercent':100,'runtimeConfigUnchanged':True}))

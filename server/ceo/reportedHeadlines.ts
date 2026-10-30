@@ -112,8 +112,12 @@ export function reportedCeoStatements(events: HeadlineEvent[], { limitPerScope =
 const STOP = new Set(['the','and','for','with','that','this','from','says','said','will','its','his','has','have','are','was','but','not','into','over','after','as','of','to','in','on','at','by','a','an','is','it','be','ceo','elon','musk','jensen','huang','nvidia','nvidia\'s','satya','nadella','sundar','pichai','google','alphabet','microsoft','tesla','spacex','reveals','admits','confirms','hints','warns','claims','calls','tells','told','new','could','would','about','more','than','what','why','how','he','she','they','we','our','their','us','report','reports']);
 /** 비교용 핵심 단어: 소문자, 3글자 이상, 흔한 단어·인명·회사명 제외, 영어는 앞 6글자로 어형 차이 흡수 */
 export function storyTokens(text: string): Set<string> {
-  return new Set(String(text).toLowerCase().replace(/[’']s\b/g, '').split(/[^a-z0-9가-힣]+/)
-    .filter(w => w.length >= 3 && !STOP.has(w)).map(w => (/^[a-z]+$/.test(w) ? w.slice(0, 6) : w)));
+  // 숫자 표기 통일: $40B · 40 billion · $40 bn → n40b, 25% · 25 percent → n25p
+  const normalized = String(text).toLowerCase()
+    .replace(/\$?\s?(\d+(?:\.\d+)?)\s*(trillion|tn|t|billion|bn|b|million|mn|m)\b/g, (_m, n, u) => ` n${n}${u[0]} `)
+    .replace(/(\d+(?:\.\d+)?)\s*(?:%|percent\b)/g, (_m, n) => ` n${n}p `);
+  return new Set(normalized.replace(/[’']s\b/g, '').split(/[^a-z0-9가-힣]+/)
+    .filter(w => w.length >= 3 && !STOP.has(w)).map(w => (/^[a-z]+$/.test(w) ? w.slice(0, 6) : w)).filter(w => w.length >= 3 || /^n\d/.test(w)));
 }
 function similar(a: Set<string>, b: Set<string>): boolean {
   let n = 0; for (const w of b) if (a.has(w)) n++;

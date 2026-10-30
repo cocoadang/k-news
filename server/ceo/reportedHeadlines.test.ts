@@ -48,3 +48,12 @@ test('differently worded headlines about the same story become one item', () => 
   assert.equal(cloud.reportedSourceCount, 3);
   assert.equal((cloud as any).relatedHeadlines.length, 2);
 });
+
+test('number formats are unified before grouping', () => {
+  const out = reportedCeoStatements([
+    ev('SpaceX secures $40B in financing for GPUs as Elon Musk warns of AI cloud industry consolidation', '2026-10-26T01:00:00Z', 'https://n.example/1'),
+    ev('Musk says SpaceX raised $40 billion in debt for GPUs', '2026-10-26T03:00:00Z', 'https://n.example/2'),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].reportedSourceCount, 2);
+});

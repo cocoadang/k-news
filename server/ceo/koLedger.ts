@@ -68,6 +68,8 @@ export function decideReserve(s: KoLedgerState, o: { jobKey: string; statementId
 export interface SettleInput {
   jobKey: string; attemptId: string; costNano: number; now: number;
   usage: KoJob['usage']; result: KoResult | null; note?: string; halt?: string | null;
+  /** 묶음 작업(헤드라인 번역)의 항목별 결과: 항목 키 → 결과 */
+  extraResults?: Record<string, KoResult>;
 }
 /** 정산: 같은 시도(attemptId)의 'reserved'/'uncertain' 작업만, 정확히 1회. 비용은 원래 예약 월에 기록. 예약 초과도 그대로 기록하고 중지 */
 export function decideSettle(s: KoLedgerState, o: SettleInput): { next: KoLedgerState; ok: boolean } {
@@ -79,6 +81,7 @@ export function decideSettle(s: KoLedgerState, o: SettleInput): { next: KoLedger
   nj.status = 'settled'; nj.costNano = o.costNano; nj.usage = o.usage; nj.endedAt = new Date(o.now).toISOString(); if (o.note) nj.note = o.note;
   next.months[j.month] = { spentNano: (next.months[j.month]?.spentNano ?? 0) + o.costNano };
   if (o.result) next.results[o.jobKey] = o.result;
+  for (const [k, v] of Object.entries(o.extraResults || {})) if (!next.results[k]) next.results[k] = v;
   const over = o.costNano > j.reservedNano ? `실제 비용(${o.costNano})이 예약(${j.reservedNano})을 넘음` : null;
   const halt = o.halt || over;
   if (halt && !next.halted) next.halted = halt;

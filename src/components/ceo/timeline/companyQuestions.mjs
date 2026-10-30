@@ -93,7 +93,7 @@ export function literalMetrics(text) {
 /** Korean display text: reviewed translation > ready AI summary title > original quote. */
 export function displayText(s) {
   if (s?.translationKo?.status === 'reviewed' && s.translationKo.text) return { text: s.translationKo.text, kind: 'translation' };
-  if (s?.kind === 'video_quote' && s.aiTranslationKo) return { text: s.aiTranslationKo, kind: 'ai_translation' };
+  if (['video_quote', 'reported_headline', 'reported_excerpt'].includes(s?.kind) && s.aiTranslationKo) return { text: s.aiTranslationKo, kind: 'ai_translation' };
   if (s?.koSummary?.status === 'ready' && s.koSummary.title) return { text: s.koSummary.title, kind: 'ai_title' };
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }

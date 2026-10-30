@@ -129,3 +129,12 @@ test('after a validator fix, a recently failed summary (old version, already ret
  await x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='evidence_topic_span';v.summaryFailedAt=now-3*3600000;v.summaryRetried=true;await save();});
  await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');
 });
+
+test('web-only re-summary replaces published text once and never sends Telegram',async()=>{
+ const x=setup({summaryProtocol:'evidence_ids_v1',resummarize:{version:1,ids:['Idn_d5ArZvA']}});let calls=0;
+ x.deps.summarizer.summarize=async()=>{calls++;throw Error('insufficient_context_reviewed_items');};
+ await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA={video:video(),programmes:['wallstreet'],recipient:'123',stage:'sent',transcript:[{start:0,text:'a'}],parts:[{text:'old',status:'sent'}],firstSeen:now};await save();});
+ await x.run().run();await x.run().run();
+ const r=x.store.state.videos.Idn_d5ArZvA;
+ assert.equal(calls,1);assert.equal(x.sent.length,0);assert.equal(r.parts[0].text,'old');assert.equal(r.resummaryFailure,'insufficient_context_reviewed_items');assert.equal(r.stage,'sent');
+});

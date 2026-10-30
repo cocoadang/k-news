@@ -61,17 +61,13 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyId) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
-  const [pair, setPair] = useState<string[]>([]);
 
   const items: Item[] = q?.items || [];
   // 목록은 최신순(날짜 미확인은 맨 아래). 분류·비교 로직은 그대로 오래된 순 데이터를 씁니다.
   const newestFirst = [...items].sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''));
-  const selected = pair.map(id => items.find(x => x.statement.statementId === id)).filter(Boolean)
-    .sort((a: any, b: any) => (a.date.value || '').localeCompare(b.date.value || '')) as Item[];
 
-  const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); setPair([]); };
-  const pickQuestion = (id: string) => { setQuestionId(id); setPair([]); };
-  const toggle = (id: string) => setPair(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 2 ? [...p, id] : [p[1], id]);
+  const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
+  const pickQuestion = (id: string) => setQuestionId(id);
 
   return <section className="ceo-tl">
     <header className="tl-head">
@@ -100,33 +96,20 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
         <ol className="tl-list">
           {newestFirst.map(x => {
-            const s = x.statement, on = pair.includes(s.statementId);
-            return <li key={s.statementId} className={on ? 'on' : ''}>
+            const s = x.statement;
+            return <li key={s.statementId}>
               <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{x.date.label}</small></div>
               <div className="tl-card">
                 <Body s={s} />
                 <Metrics values={x.metrics} />
                 <div className="tl-foot">
                   <Source s={s} />
-                  <button className={'tl-pick' + (on ? ' on' : '')} onClick={() => toggle(s.statementId)} aria-pressed={on}>{on ? '비교 해제' : '비교에 추가'}</button>
                 </div>
               </div>
             </li>;
           })}
         </ol>
 
-        <section className="tl-compare" aria-live="polite">
-          <h3>두 발언 나란히 보기 <span className="tl-muted">{selected.length}/2</span></h3>
-          {selected.length < 2 ? <p className="tl-muted">위 목록에서 ‘비교에 추가’를 두 번 누르세요.</p> :
-          <div className="tl-cols">{selected.map(x => <article key={x.statement.statementId}>
-            <span className="tl-span-label">{fmt(x.date.value)} · {x.date.label}</span>
-            <Body s={x.statement} open />
-            <Metrics values={x.metrics} />
-            <p className="tl-muted">분류 단어: {x.matchedTerms.join(', ')}</p>
-            <Source s={x.statement} />
-          </article>)}</div>}
-          {selected.length === 2 && <p className="tl-muted">조건·수치·기간이 같은지 원문에서 함께 확인하세요. 표현이 달라졌다고 입장이 바뀐 것은 아닙니다.</p>}
-        </section>
 
         {(result.other.length > 0 || result.excludedCount > 0) && <details className="tl-other">
           <summary>질문에 분류되지 않은 발언 {result.other.length}건{result.excludedCount ? ` · 인사말·편집자 주 ${result.excludedCount}건 제외` : ''}</summary>

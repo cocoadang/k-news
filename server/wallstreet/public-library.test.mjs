@@ -16,3 +16,10 @@ test('supervised trial remains labelled separately from automatic summaries',()=
 test('unrecognized publication provenance cannot bypass held state',()=>{
  assert.equal(publicSummaryLibrary({videos:{x:{video:{id:'abcdefghijk'},publication:{source:'user_authored',reviewStatus:'approved',summary:'x'}}}}).videos.length,0);
 });
+
+test('hidden programmes (crypto) never appear in the public library',()=>{
+  const v=(id,programmes)=>({video:{id,title:'t',publishedAt:1},programmes,stage:'sent',parts:[{text:'요약'}]});
+  const r=publicSummaryLibrary({videos:{a:v('aaaaaaaaaaa',['crypto']),b:v('bbbbbbbbbbb',['bullbear']),c:v('ccccccccccc',['crypto','bullbear'])}});
+  assert.deepEqual(r.videos.map(x=>x.id).sort(),['bbbbbbbbbbb','ccccccccccc']);
+  assert.deepEqual(r.videos.find(x=>x.id==='ccccccccccc').programmes,['bullbear']);
+});

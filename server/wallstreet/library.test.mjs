@@ -34,4 +34,5 @@ test('menu retains both existing views, hides manual collection in new view, and
  const ui=readFileSync(new URL('../../src/components/YoutubeMenu.tsx',import.meta.url),'utf8');
  assert.equal((ui.match(/fetch\(/g)||[]).length,1);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);
  assert.ok(!/dangerouslySetInnerHTML|line-clamp|truncate|\/run|\/poll/.test(ui));
+ assert.match(ui,/isAdmin&&<WallstreetRunButton/);assert.ok(!/crypto/.test(ui));
 });

@@ -15,14 +15,15 @@ export function createSupadataProvider({apiKey,organizationId,approved=false,fet
          b.maxCredits!==100||!Number.isSafeInteger(b.usedCredits)||b.usedCredits<0||b.usedCredits>100)throw Error('supadata_free_balance_unverified');
       return {organizationId,maximum:100,remaining:100-b.usedCredits,used:b.usedCredits};
     },
-    async get(videoId){
+    async get(videoId,{lang='ko'}={}){
       if(!/^[A-Za-z0-9_-]{11}$/.test(videoId))throw Error('supadata_video_id');
-      const r=await get('transcript',{url:`https://www.youtube.com/watch?v=${videoId}`,mode:'native',lang:'ko',text:'false'});
+      if(!['ko','en'].includes(lang))throw Error('supadata_lang');
+      const r=await get('transcript',{url:`https://www.youtube.com/watch?v=${videoId}`,mode:'native',lang,text:'false'});
       if(r.status!==200)return {status:r.status===202?'pending':'unavailable',httpStatus:r.status};
-      const b=r.data;if(b?.lang!=='ko'||!Array.isArray(b.content)||!b.content.length||b.content.length>20000)throw Error('supadata_korean_required');
+      const b=r.data;if(!String(b?.lang||'').toLowerCase().startsWith(lang)||!Array.isArray(b.content)||!b.content.length||b.content.length>20000)throw Error('supadata_korean_required');
       let last=-1;const segments=b.content.map(s=>{
         if(!Number.isFinite(s.offset)||s.offset<last||s.offset<0||!Number.isFinite(s.duration)||s.duration<0||
-          (s.lang!==undefined&&s.lang!=='ko')||typeof s.text!=='string'||!s.text.trim())throw Error('supadata_segment_invalid');
+          (s.lang!==undefined&&!String(s.lang).toLowerCase().startsWith(lang))||typeof s.text!=='string'||!s.text.trim())throw Error('supadata_segment_invalid');
         last=s.offset;return {start:s.offset/1000,text:s.text};
       });return {status:'ok',segments};
     }

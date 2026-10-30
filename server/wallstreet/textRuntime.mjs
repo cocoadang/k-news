@@ -3,6 +3,7 @@ import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
 import {reserveVidiq} from './vidiqBudget.mjs';
 import {reserveSupadata,refundSupadata} from './supadata.mjs';
+import {runCeoVideoStep} from './ceoVideo.mjs';
 import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
@@ -65,7 +66,7 @@ export function acceptNativeCaption(segments,video){
  }else validateTranscript(segments,video);
 }
 // Explicit provider routing only; no scraping or fallback to paid/video providers.
-export function createTextRuntime({store,discovery,summarizer,telegram,captions,supadata,config:c,clock=Date.now}){
+export function createTextRuntime({store,discovery,summarizer,telegram,captions,supadata,ceoDiscovery,ceoExtractor,config:c,clock=Date.now}){
   function check(){if(c.projectId!==TEXT_PROJECT||c.paidFallback!==false||!Number.isFinite(c.activatedAt))throw Error('text_configuration');}
   return {status:()=>({status:c.enabled?'configured':'disabled',acquisition:'routed_native_captions_and_ui_import',intervalMs:c.dailyCheckTimes?null:600000,dailyCheckTimes:c.dailyCheckTimes||null,deliveryTime:c.deliveryTime||null}),
     async importTranscript({video,text,provenance}){check();const now=clock(),programmes=matchProgrammes(video,{activatedAt:c.activatedAt,now,maxAgeMs:c.maxAgeMs});
@@ -88,7 +89,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         for(const r of Object.values(s.videos))if(['vidiq_inflight','supadata_inflight'].includes(r.stage)){r.stage='text_review_required';r.hold='caption_outcome_unknown_no_retry';}
         if(discovery&&(!s.text.lastCollectionAt||now-s.text.lastCollectionAt>=600000)){
           for(const channel of [...new Set(PROGRAMMES.map(p=>p.channelId))])try{const batch=await discovery.list(channel);
-            for(const video of batch){if(c.excludedVideoIds?.includes(video.id))continue;const programmes=matchProgrammes(video,{activatedAt:c.activatedAt,now,maxAgeMs:c.maxAgeMs,allowProviderVerification:true});if(programmes.length&&!s.videos[video.id])s.videos[video.id]={video,programmes,stage:'text_waiting',recipient:c.recipient,firstSeen:now,hold:'authorized_automatic_caption_source_unavailable'};}
+            for(const video of batch){if(c.excludedVideoIds?.includes(video.id))continue;const programmes=matchProgrammes(video,{activatedAt:c.activatedAt,now,maxAgeMs:c.maxAgeMs,allowProviderVerification:true});if(programmes.length&&!programmes.some(p=>c.disabledProgrammes?.includes(p))&&!s.videos[video.id])s.videos[video.id]={video,programmes,stage:'text_waiting',recipient:c.recipient,firstSeen:now,hold:'authorized_automatic_caption_source_unavailable'};}
             s.text.coverage[channel]={at:now,complete:batch.coverageComplete===true,...(batch.coverage?{details:batch.coverage}:{})};
           }catch(error){s.text.coverage[channel]={at:now,complete:false,failure:safeDiscoveryFailure(error)};}
           s.text.lastCollectionAt=now;
@@ -96,6 +97,8 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         for(const r of Object.values(s.videos)){
           if(c.excludedVideoIds?.includes(r.video.id))continue;
           if(r.recipient!==c.recipient)continue;
+          // 사용자가 끈 프로그램(예: 크립토 PLUS)은 대기 중인 기록도 더 처리하지 않음. 이미 보낸 기록은 그대로.
+          if(r.programmes?.some(p=>c.disabledProgrammes?.includes(p))&&!['sent','historical_complete'].includes(r.stage)){if(r.hold!=='programme_disabled_by_user'){r.stage='text_review_required';r.hold='programme_disabled_by_user';}continue;}
           if(r.stage==='text_waiting'&&now-r.firstSeen>=172800000){r.stage='text_caption_expired';r.hold='caption_not_obtained_within_48h';continue;}
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&['bullbear','crypto'].includes(r.programmes[0])&&c.supadataApproved===true&&supadata){
             let before;
@@ -159,7 +162,11 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;
           }if(r.parts.every(p=>p.status==='sent')){r.stage='sent';await save();}
-        }if(manualRunId)s.text.manualRuns[manualRunId]={status:'completed',startedAt:now,completedAt:clock()};await save();return {status:'processed',acquisition:'routed_native_captions_and_ui_import',stages:Object.fromEntries(Object.entries(s.videos).map(([id,r])=>[id,r.stage]))};
+        }
+        // CEO 발언 영상: 프로그램 처리 뒤 남는 Supadata 여유로 최대 1편. 실패해도 유튜브 요약 결과에 영향 없음.
+        let ceoVideo={status:'ceo_video_disabled'};
+        try{ceoVideo=await runCeoVideoStep({s,save,now,c,discovery:ceoDiscovery,supadata,extractor:ceoExtractor});}catch{ceoVideo={status:'ceo_video_error'};}
+        if(manualRunId)s.text.manualRuns[manualRunId]={status:'completed',startedAt:now,completedAt:clock()};await save();return {status:'processed',acquisition:'routed_native_captions_and_ui_import',ceoVideo,stages:Object.fromEntries(Object.entries(s.videos).map(([id,r])=>[id,r.stage]))};
       });}
   };
 }

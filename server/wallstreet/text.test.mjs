@@ -113,3 +113,12 @@ test('Supadata definite no-caption answer with no charge is refunded and retried
  await x.run().run();assert.equal(x.store.state.supadata.used,0);assert.equal(x.store.state.videos['annR-E8m5WQ'].stage,'text_waiting');
  await x.run().run();await x.run().run();await x.run().run();assert.equal(calls,3);assert.equal(x.store.state.videos['annR-E8m5WQ'].stage,'text_review_required');
 });
+
+test('user-disabled programme is not collected and pending records stop',async()=>{
+ const x=setup({disabledProgrammes:['crypto']});
+ const crypto={id:'cryptoVid01',title:'코인 전망 [크립토 PLUS]',description:'크립토 PLUS',channelId:PROGRAMMES[2].channelId,publishedAt:now-1000,durationSeconds:600,visibility:'public',status:'completed',isShort:false,isRebroadcast:false};
+ x.deps.discovery={list:async c=>c===crypto.channelId?[crypto]:[]};
+ await x.run().run();assert.equal(x.store.state.videos.cryptoVid01,undefined);
+ await x.store.exclusive(async(s,save)=>{s.videos.old00000001={video:{...crypto,id:'old00000001'},programmes:['crypto'],recipient:'123',stage:'text_summary',transcript:[{start:0,text:'x'}],firstSeen:now};await save();});
+ await x.run().run();assert.equal(x.store.state.videos.old00000001.hold,'programme_disabled_by_user');assert.equal(x.sent.length,0);
+});

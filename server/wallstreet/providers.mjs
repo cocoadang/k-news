@@ -13,6 +13,7 @@ import {FirestoreWallstreetStore} from './firestoreStore.mjs';
 import {PROGRAMMES} from './programmes.mjs';
 import {createTextRuntime,TEXT_PROJECT} from './textRuntime.mjs';
 import {createSupadataProvider} from './supadata.mjs';
+import {ceoVideoDiscovery,createCeoQuoteExtractor} from './ceoVideo.mjs';
 
 // Same stateless Interactions contract used in the completed supervised text trial.
 export function createGeminiTextSdkClient({GoogleGenAI,apiKey}){
@@ -102,6 +103,13 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
       if(!env.TELEGRAM_BOT_TOKEN||! /^[1-9]\d*$/.test(config.recipient||''))throw Error('private_delivery_configuration_required');
       const transport=telegramTransport({token:env.TELEGRAM_BOT_TOKEN,approved:true,fetcher});
       dependencies.telegram={send(id,text){if(id!==config.recipient)throw Error('recipient_mismatch');return transport.send(id,text);}};
+    }
+    if(config.ceoVideo?.enabled===true&&dependencies.supadata&&!dependencies.ceoDiscovery){
+      try{
+        dependencies.ceoDiscovery=ceoVideoDiscovery({apiKey:env.YOUTUBE_API_KEY,fetcher});
+        const {GoogleGenAI}=await (loadGemini||(()=>import('@google/genai')))();
+        dependencies.ceoExtractor=createCeoQuoteExtractor({client:createGeminiTextSdkClient({GoogleGenAI,apiKey:env.GEMINI_API_KEY})});
+      }catch{delete dependencies.ceoDiscovery;delete dependencies.ceoExtractor;}
     }
     return createTextRuntime({...dependencies,store:new FirestoreWallstreetStore(db),config});
   }

@@ -547,11 +547,25 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     return db.getEventsForRead();
   };
 
+  // CEO 발언 영상 인용: 유튜브 요약 상태 문서에서 읽기 (10분 캐시)
+  let videoCache: { at: number; items: any[] } | null = null;
+  const cachedCeoVideoStatements = async () => {
+    if (videoCache && Date.now() - videoCache.at < 10 * 60_000) return videoCache.items;
+    const fs = getIsFirestoreAvailable() ? initFirestore() : null;
+    if (!fs) return [];
+    const { FirestoreWallstreetStore } = await import('./server/wallstreet/firestoreStore.mjs');
+    const { ceoVideoStatements } = await import('./server/wallstreet/ceoVideo.mjs');
+    const items = ceoVideoStatements(await new FirestoreWallstreetStore(fs as any).read());
+    videoCache = { at: Date.now(), items };
+    return items;
+  };
+
   app.use(createCeoRouter({
     runtime: ceoRuntime,
     getRuntime: () => getSchedulerCeoRuntime() || ceoRuntime,
     verifyAdmin: verifyAdminAuth,
     getReportedEvents: cachedEventHeadlines,
+    getVideoStatements: cachedCeoVideoStatements,
   }));
 
   // 5. Single Event Detail (Public read)

@@ -1466,6 +1466,13 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
     if (options.deadlineAt && Date.now() >= options.deadlineAt) { summary.timeBudgetExceeded = true; return true; }
     return false;
   };
+  // Screening must not consume the whole cycle: keep the last 60s for detailed analysis of already-screened
+  // important items, otherwise the growing backlog starves detailed analysis (and Telegram alerts) entirely.
+  const DETAIL_RESERVE_MS = 60 * 1000;
+  const pastScreeningDeadline = () => {
+    if (options.deadlineAt && Date.now() >= options.deadlineAt - DETAIL_RESERVE_MS) { summary.timeBudgetExceeded = true; return true; }
+    return false;
+  };
   // Byte-count reservation is conservative. Provider usage replaces it after each response.
   // A provider may exceed estimates (e.g. thinking tokens); stop further calls on overrun.
   const budget = Math.max(0, Math.min(options.estimatedTokenBudget ?? 60000, 200000));
@@ -1532,7 +1539,7 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
       corroboration: (e.relatedSources || []).slice(0,2).map(s => ({ title:s.title?.slice(0,180), snippet:s.snippet?.slice(0,220) })),
     })));
     const reservation = Buffer.byteLength(prompt, 'utf8') + 4096;
-    if (!generate || summary.isRateLimited || summary.screeningCalls >= maxScreenCalls || !reserve(reservation) || pastDeadline()) break;
+    if (!generate || summary.isRateLimited || summary.screeningCalls >= maxScreenCalls || !reserve(reservation) || pastScreeningDeadline()) break;
     summary.screeningCalls++;
     let settled = false;
     try {

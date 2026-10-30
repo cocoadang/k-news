@@ -69,6 +69,7 @@ export function createCeoRuntime(getEvents: () => EventLike[], getFirestore: () 
 export function createCeoRouter(deps: {
   runtime?: CeoRuntime;
   getReportedEvents?: () => HeadlineEvent[] | Promise<HeadlineEvent[]>;
+  getVideoStatements?: () => any[] | Promise<any[]>;
   getRuntime?: () => CeoRuntime | null;
   verifyAdmin: Middleware;
 }) {
@@ -90,6 +91,14 @@ export function createCeoRouter(deps: {
           const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
           snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...extra.filter(x => !ids.has(x.statementId))] };
         } catch { /* 보조 자료 실패는 공식 자료 응답에 영향 없음 */ }
+      }
+      // CEO 발언 영상 자막에서 확인한 인용 (유튜브 요약 런타임이 저장)
+      if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getVideoStatements) {
+        try {
+          const vids = await deps.getVideoStatements();
+          const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
+          snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...vids.filter((x: any) => !ids.has(x.statementId))] };
+        } catch { /* 영상 자료 실패는 공식 자료 응답에 영향 없음 */ }
       }
       res.json(snap);
     } catch (e: any) {

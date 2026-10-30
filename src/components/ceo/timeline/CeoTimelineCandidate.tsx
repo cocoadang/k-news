@@ -19,6 +19,13 @@ function Source({ s }: { s: any }) {
 
 function Body({ s, open = false }: { s: any; open?: boolean }) {
   const t = displayText(s);
+  if (s.kind === 'video_quote') {
+    return <>
+      <p className="tl-text">{t.kind === 'ai_translation' ? t.text : <span lang="en">{t.text}</span>}</p>
+      <span className="tl-tag">영상 자막에서 확인한 발언{t.kind === 'ai_translation' ? ' · AI 번역' : ''}{s.videoTitle ? ` · ${s.videoTitle}` : ''}</span>
+      <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+    </>;
+  }
   if (s.kind === 'reported_excerpt') {
     return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">기사 요약 속 인용 · 공식 원문 아님{s.context ? ` · 기사: ${s.context}` : ''}</span></>;
   }

@@ -7,6 +7,10 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   allowSourceRepair:true,
   counterEvidenceRequired:true,
   dailyCheckTimes:Object.freeze(['09:00','15:00']),scheduleTimeZone:'Asia/Seoul',
+  // 사용자 요청(2026-10-30): 크립토 PLUS 수집 제외
+  disabledProgrammes:Object.freeze(['crypto']),
+  // CEO 발언 영상(Supadata 무료 한도 공유): 하루 1편·월 15편, Gemini 영상당 2센트·하루 4센트·월 40센트 상한
+  ceoVideo:Object.freeze({enabled,dailyVideos:1,monthlyVideos:15,reservationMicros:20000,dailyMicros:40000,monthlyMicros:400000}),
   excludedVideoIds:Object.freeze(['Idn_d5ArZvA','annR-E8m5WQ','IggP39LRnT8','LtT_k6wCOek']),
   mode:'caption_text',vidiqApproved:enabled,paidFallback:false,freeEvidence:null,projectId:'gen-lang-client-0064554427',
   supadataApproved:enabled,supadataOrganizationId:'febfd73e-8c82-4621-8c32-fbae9b021859',supadataCycleStart:process.env.KNEWS_SUPADATA_WINDOW_START?Date.parse(process.env.KNEWS_SUPADATA_WINDOW_START):null,supadataCycleEnd:process.env.KNEWS_SUPADATA_WINDOW_END?Date.parse(process.env.KNEWS_SUPADATA_WINDOW_END):null,supadataCycleLimit:90,supadataDailyLimit:4,

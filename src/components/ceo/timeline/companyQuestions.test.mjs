@@ -65,3 +65,10 @@ test('reported headlines are comparable but labelled by report date', () => {
   assert.ok(r.questions.find(q => q.id === 'energy'));
   assert.equal(r.questions[0].items[0].date.label, '기사 보도일');
 });
+
+test('video quotes use AI translation and video date', () => {
+  const q = { statementId: 'v', personId: 'p', companyId: 'nvda', kind: 'video_quote', quoteText: 'Demand for Blackwell is incredible right now and supply is tight', aiTranslationKo: '번역', referenceDate: { value: '2026-10-29', basis: 'video', precision: 'day' } };
+  const r = companyQuestions([q], 'p', 'nvda');
+  assert.equal(r.questions[0].items[0].date.label, '영상 게시일');
+  assert.equal(displayText(q).kind, 'ai_translation');
+});

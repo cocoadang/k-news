@@ -59,7 +59,7 @@ const NOT_A_CLAIM = [
 ];
 
 export function isComparableClaim(statement) {
-  const q = ['direct_quote', 'reported_headline', 'reported_excerpt'].includes(statement?.kind) ? String(statement.quoteText || '').trim() : '';
+  const q = ['direct_quote', 'reported_headline', 'reported_excerpt', 'video_quote'].includes(statement?.kind) ? String(statement.quoteText || '').trim() : '';
   return !!q && !NOT_A_CLAIM.some(re => re.test(q));
 }
 
@@ -79,6 +79,7 @@ export function effectiveDate(statement) {
     if (rd.basis === 'released') return { value: rd.value, basis: 'released', label: '보도자료 발표일' };
     if (rd.basis === 'written') return { value: rd.value, basis: 'written', label: '게시일' };
     if (rd.basis === 'reported') return { value: rd.value, basis: 'reported', label: '기사 보도일' };
+    if (rd.basis === 'video') return { value: rd.value, basis: 'video', label: '영상 게시일' };
   }
   return { value: null, basis: 'unknown', label: '날짜 미확인' };
 }
@@ -92,6 +93,7 @@ export function literalMetrics(text) {
 /** Korean display text: reviewed translation > ready AI summary title > original quote. */
 export function displayText(s) {
   if (s?.translationKo?.status === 'reviewed' && s.translationKo.text) return { text: s.translationKo.text, kind: 'translation' };
+  if (s?.kind === 'video_quote' && s.aiTranslationKo) return { text: s.aiTranslationKo, kind: 'ai_translation' };
   if (s?.koSummary?.status === 'ready' && s.koSummary.title) return { text: s.koSummary.title, kind: 'ai_title' };
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }

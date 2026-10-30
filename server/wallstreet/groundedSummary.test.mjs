@@ -104,3 +104,18 @@ test('long single-topic evidence (up to 16 blocks, ~10 min) is accepted; wider s
  const prompt=sourceRepairPrompt({items:[{text:'x',kind:'reported',evidenceIds:[blocks[0].id,blocks[190].id]}]},{items:[],rejected:[]},blocks);
  assert.match(prompt,/B0190/);
 });
+
+test('held "qualifies" claims get one grounded rewrite that can restore the floor; the audit still decides',async()=>{
+ const seg=Array.from({length:18},(_,i)=>({start:i*3,text:`방송 구간 ${i}의 조건부 전망입니다.`}));
+ const bl=evidenceBlocks(seg);
+ const item=(b,i)=>({text:`출연자는 구간 ${i*3}에 관해 전망했습니다.`,kind:'outlook',evidenceIds:[b.id]});
+ const four={items:bl.slice(0,4).map(item)};
+ const findings={findings:[0,1,2,3].map(index=>index<2?{index,status:'clear',sourceIds:[],reason:'추가 단서 없음'}:{index,status:'qualifies',sourceIds:[bl[index].id],reason:'조건이 빠짐'})};
+ const fixed={items:[{index:2,text:'출연자는 구간 6에 관해 조건부로 전망했습니다.',kind:'outlook',evidenceIds:[bl[2].id]}]};
+ const checks=n=>({checks:Array.from({length:n},(_,index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',reason:'근거 일치'}))});
+ let calls=0;const responses=[four,findings,fixed,checks(3)];
+ const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(responses[calls++])})};
+ const s=groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,approved:true,minimumSummaryItems:5,acceptMinimumItems:3,counterEvidenceRequired:true});
+ const result=await s.summarize({segments:seg,maxCostMicros:20000});
+ assert.equal(calls,4);assert.equal(result.items.length,3);assert.match(result.items[2].text,/조건부로/);
+});

@@ -40,7 +40,7 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
        <h2 className="mt-3 break-words text-xl font-bold leading-relaxed text-white">{video.title}</h2>
        <p className="mt-2 text-sm text-slate-400">{date(video.publishedAt)} · {statuses[video.status]||'상태 확인 필요'}</p>
        <a className="mt-3 inline-block break-all text-cyan-300 underline" href={video.url} target="_blank" rel="noopener noreferrer">YouTube 원문 보기 ↗</a>
-       </div>{video.status==='ready'&&video.summary?<><p className="mx-auto mt-5 max-w-[760px] border-l-2 border-slate-600 pl-3 text-xs leading-6 text-slate-400">{video.source==='transcript_review'?'자막 직접 검토 요약 · 외부 공식 자료 대조 미실시':video.source==='supervised_trial'?'기존 시험의 자막 검토·교정본 · 무인 자동 검증 결과가 아닙니다. 외부 공식 자료 대조 미실시':'자동 생성 후 프로그램 검사를 통과한 결과입니다. 외부 공식 자료 대조를 의미하지 않습니다.'}</p>
+       </div>{video.status==='ready'&&video.summary?<><p className="mx-auto mt-5 max-w-[760px] border-l-2 border-slate-600 pl-3 text-xs leading-6 text-slate-400">{video.source==='transcript_review'?'자막 직접 검토 요약 · 외부 공식 자료 대조 미실시':video.source==='supervised_trial'?'기존 시험의 자막 검토·교정본 · 무인 자동 검증 결과가 아닙니다. 외부 공식 자료 대조 미실시':'자동 자막 기반 요약 · 근거 대조·점검을 통과한 항목만 표시 · 외부 공식 자료 대조 미실시'}</p>
        <YoutubeSummaryBody text={video.summary} videoId={video.id}/></>:<div className="mt-5 rounded-lg bg-amber-950/30 p-4 leading-7 text-amber-200">아직 표시할 완료 요약이 없습니다. 검증 보류·미생성·처리 실패 결과를 완료 요약으로 표시하지 않습니다. 채팅에서 직접 검토해 전달한 요약은 이 저장소에 자동으로 등록되지 않습니다.</div>}
      </article>:<>
        <div className="flex flex-wrap gap-2" aria-label="프로그램 필터">{Object.entries({all:'전체',...programmes}).map(([key,label])=><button key={key} className={chipClass(filter===key)} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>

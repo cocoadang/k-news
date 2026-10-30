@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
 import {reserveVidiq} from './vidiqBudget.mjs';
-import {reserveSupadata} from './supadata.mjs';
+import {reserveSupadata,refundSupadata} from './supadata.mjs';
 import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
@@ -98,12 +98,22 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(r.recipient!==c.recipient)continue;
           if(r.stage==='text_waiting'&&now-r.firstSeen>=172800000){r.stage='text_caption_expired';r.hold='caption_not_obtained_within_48h';continue;}
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&['bullbear','crypto'].includes(r.programmes[0])&&c.supadataApproved===true&&supadata){
-            try{if(!reserveSupadata(s,await supadata.balance(),now,c)){r.hold='supadata_free_cycle_or_day_limit';continue;}}
+            let before;
+            try{before=await supadata.balance();if(!reserveSupadata(s,before,now,c)){r.hold='supadata_free_cycle_or_day_limit';continue;}}
             catch{r.hold='supadata_free_account_or_cycle_unverified';continue;}
             r.stage='supadata_inflight';await save();
-            try{const result=await supadata.get(r.video.id);if(result.status!=='ok')throw Error('caption_unavailable');acceptNativeCaption(result.segments,r.video);
+            let definiteNoCaption=false;
+            try{const result=await supadata.get(r.video.id);if(result.status!=='ok'){definiteNoCaption=['pending','unavailable'].includes(result.status);throw Error('caption_unavailable');}acceptNativeCaption(result.segments,r.video);
               r.transcript=result.segments;r.source={method:'supadata_native',videoId:r.video.id,sha256:hash(JSON.stringify(result.segments))};r.stage='text_summary';delete r.hold;
-            }catch{r.stage='text_review_required';r.hold='supadata_failed_pending_or_uncertain_no_retry';}await save();
+            }catch{
+              // Only a definite 'no captions yet' answer (not a timeout) whose balance shows no charge is refunded and retried next run (max 3 tries).
+              let after=null;if(definiteNoCaption){try{after=await supadata.balance();}catch{}}
+              const notCharged=after&&Number.isSafeInteger(after.remaining)&&after.remaining>=before.remaining;
+              r.supadataAttempts=(r.supadataAttempts||0)+1;
+              if(notCharged){refundSupadata(s,now);}
+              if(notCharged&&r.supadataAttempts<3){r.stage='text_waiting';r.hold='supadata_not_charged_retry_next_run';}
+              else{r.stage='text_review_required';r.hold='supadata_failed_pending_or_uncertain_no_retry';}
+            }await save();
           }
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&r.programmes[0]==='wallstreet'&&c.vidiqApproved===true&&captions){
             try{if(!reserveVidiq(s,await captions.balance(),now)){r.hold='vidiq_free_cycle_or_day_limit';continue;}}
@@ -113,11 +123,11 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
               r.transcript=result.segments;r.source={method:'vidiq',videoId:r.video.id,sha256:hash(JSON.stringify(result.segments))};r.stage='text_summary';delete r.hold;
             }catch{r.stage='text_review_required';r.hold='caption_failed_or_uncertain_no_retry';}await save();
           }
-          // A validation rejection (every model call completed; never a timeout/unknown outcome) is retried once
+          // A failed summary (validation rejection or timeout) is retried once
           // right away in the same run. Records held before this change (no summaryFailedAt) get their one retry at the next run.
           // Captions are already stored, so no caption credits are spent; budget caps and grounding checks still apply.
-          const validationRejected=x=>x.hold==='summary_failed_or_uncertain'&&Array.isArray(x.transcript)&&x.transcript.length
-            &&Array.isArray(x.summaryCandidate?.calls)&&x.summaryCandidate.calls.length>0&&x.summaryCandidate.calls.every(k=>k?.status==='completed');
+          // Summary happens before any Telegram send, so retrying cannot duplicate a message; cost stays inside the budget caps.
+          const validationRejected=x=>['summary_failed_or_uncertain','summary_outcome_unknown'].includes(x.hold)&&Array.isArray(x.transcript)&&x.transcript.length;
           if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
             r.summaryRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }

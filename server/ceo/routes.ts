@@ -16,7 +16,7 @@ import { CURATED_SEC_EXHIBITS, SEC_HOST, SEC_USER_AGENT } from './secExhibits';
 import { CURATED_PAGES } from './officialPages';
 import { FirestoreKoLedger } from './koLedger';
 import { createKoGeminiClient } from './koGeminiClient';
-import { HeadlineEvent, reportedMuskTeslaStatements } from './reportedHeadlines';
+import { HeadlineEvent, reportedCeoStatements } from './reportedHeadlines';
 
 type FirestoreLike = ConstructorParameters<typeof FirestoreCeoStateStore>[0];
 type Middleware = (req: any, res: any, next: any) => any;
@@ -86,7 +86,7 @@ export function createCeoRouter(deps: {
       // Tesla 공식 출처가 403으로 막혀 있어, 이미 수집한 기사 헤드라인의 '머스크 발언 보도'를 따로 표시합니다(직접 인용 아님).
       if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getReportedEvents) {
         try {
-          const extra = reportedMuskTeslaStatements(await deps.getReportedEvents());
+          const extra = reportedCeoStatements(await deps.getReportedEvents());
           const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
           snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...extra.filter(x => !ids.has(x.statementId))] };
         } catch { /* 보조 자료 실패는 공식 자료 응답에 영향 없음 */ }

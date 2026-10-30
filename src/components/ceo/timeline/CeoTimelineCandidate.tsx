@@ -19,6 +19,9 @@ function Source({ s }: { s: any }) {
 
 function Body({ s, open = false }: { s: any; open?: boolean }) {
   const t = displayText(s);
+  if (s.kind === 'reported_excerpt') {
+    return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">기사 요약 속 인용 · 공식 원문 아님{s.context ? ` · 기사: ${s.context}` : ''}</span></>;
+  }
   if (s.kind === 'reported_headline') {
     return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag tl-warn">언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span></>;
   }

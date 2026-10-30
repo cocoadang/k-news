@@ -12,6 +12,7 @@
 import crypto from 'node:crypto';
 import { CeoStatement, StatementTranslation } from '../../src/ceo/types';
 import { normalizeForMatch } from '../../src/ceo/text';
+import { HASHED_TRANSLATIONS, HASHED_REVIEWER, HASHED_ON } from './translationsHashed';
 
 export interface TranslationEntry {
   id: string;
@@ -110,6 +111,7 @@ for (const t of TRANSLATIONS) {
 }
 
 const byHash = new Map(TRANSLATIONS.map(t => [translationSourceHash(t.quote, t.excerpt), t] as const));
+const byStoredHash = new Map(HASHED_TRANSLATIONS.map(t => [t.sourceHash, t] as const));
 const quoteKey = (q: string) => normalizeForMatch(q).replace(/[.,]\s*$/, '');
 const byQuote = new Map(TRANSLATIONS.map(t => [quoteKey(t.quote), t] as const));
 
@@ -127,6 +129,8 @@ export function translationFor(s: CeoStatement): StatementTranslation | undefine
   const sourceHash = translationSourceHash(s.quoteText, ex);
   const hit = byHash.get(sourceHash);
   if (hit) return { status: 'reviewed', text: hit.ko, ...(hit.noteKo ? { noteKo: hit.noteKo } : {}), sourceHash, method: 'curated_review', reviewedBy: hit.reviewedBy, reviewedOn: hit.reviewedOn, userConfirmed: hit.userConfirmed };
+  const hashed = byStoredHash.get(sourceHash);
+  if (hashed) return { status: 'reviewed', text: hashed.ko, sourceHash, method: 'curated_review', reviewedBy: HASHED_REVIEWER, reviewedOn: HASHED_ON, userConfirmed: false };
   if (byQuote.has(quoteKey(s.quoteText))) return { status: 'stale', sourceHash };
   return { status: 'missing', sourceHash };
 }

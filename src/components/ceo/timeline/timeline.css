@@ -69,7 +69,7 @@
 .tl-empty{color:var(--tl-muted);padding:24px 0}
 
 @media (max-width:760px){
- .ceo-tl{padding:20px 14px 40px}
+ .ceo-tl{padding:0 0 32px}
  .ceo-tl h1{font-size:24px}
  .tl-layout{grid-template-columns:1fr;gap:16px}
  .tl-questions{position:static;flex-direction:row;flex-wrap:wrap}

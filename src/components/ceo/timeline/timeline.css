@@ -82,3 +82,5 @@
  .tl-date{text-align:left;display:flex;gap:8px;align-items:baseline}
  .tl-date small{margin:0}
 }
+
+.tl-related{margin:8px 0 0;padding-left:18px;color:#cfd8e6;font-size:13px;line-height:1.6}

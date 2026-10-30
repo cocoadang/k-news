@@ -23,7 +23,8 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
     return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">기사 요약 속 인용 · 공식 원문 아님{s.context ? ` · 기사: ${s.context}` : ''}</span></>;
   }
   if (s.kind === 'reported_headline') {
-    return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag tl-warn">언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span></>;
+    return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag tl-warn">언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span>
+      {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
   if (t.kind === 'original') {
     return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag">원문 · 한국어 번역 없음</span></>;

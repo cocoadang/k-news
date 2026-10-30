@@ -75,8 +75,20 @@ export function reportedCeoStatements(events: HeadlineEvent[], { limitPerScope =
       groups.set(k, g);
     }
   }
+  // 같은 사건을 매체마다 다르게 쓴 헤드라인 묶기: 같은 CEO·회사, 보도일 2일 이내, 핵심 단어가 충분히 겹치면 한 건.
+  type Story = G & { headlines: string[] };
+  const stories: Story[] = [];
+  for (const g of [...groups.values()].sort((a, b) => a.date.localeCompare(b.date))) {
+    const toks = storyTokens(g.text);
+    const hit = stories.find(st => st.personId === g.personId && st.companyId === g.companyId &&
+      Math.abs(Date.parse(st.date) - Date.parse(g.date)) <= 2 * 86400_000 && similar(storyTokens(st.headlines.join(' ')), toks));
+    if (hit) {
+      hit.headlines.push(g.text);
+      for (const src of g.sources) if (!hit.sources.some(x => x.url === src.url)) hit.sources.push(src);
+    } else stories.push({ ...g, sources: [...g.sources], headlines: [g.text] });
+  }
   const perScope = new Map<string, number>();
-  return [...groups.values()]
+  return stories
     .sort((a, b) => b.date.localeCompare(a.date))
     .filter(g => { const s = g.personId + '|' + g.companyId, n = perScope.get(s) || 0; perScope.set(s, n + 1); return n < limitPerScope; })
     .map(g => {
@@ -90,10 +102,22 @@ export function reportedCeoStatements(events: HeadlineEvent[], { limitPerScope =
         referenceDate: { value: day, basis: 'reported', precision: 'day' },
         evidence: g.sources.slice(0, 5).map(s => ({ url: s.url, sourceName: s.name, articlePublishedAt: s.publishedAt, excerpt: g.text })),
         reportedSourceCount: g.sources.length,
+        ...(g.headlines.length > 1 ? { relatedHeadlines: g.headlines.filter(h => h !== g.text).slice(0, 10) } : {}),
         verification: { status: 'not_rechecked' },
         isExample: false,
       };
     });
+}
+
+const STOP = new Set(['the','and','for','with','that','this','from','says','said','will','its','his','has','have','are','was','but','not','into','over','after','as','of','to','in','on','at','by','a','an','is','it','be','ceo','elon','musk','jensen','huang','nvidia','nvidia\'s','satya','nadella','sundar','pichai','google','alphabet','microsoft','tesla','spacex','reveals','admits','confirms','hints','warns','claims','calls','tells','told','new','could','would','about','more','than','what','why','how','he','she','they','we','our','their','us','report','reports']);
+/** 비교용 핵심 단어: 소문자, 3글자 이상, 흔한 단어·인명·회사명 제외, 영어는 앞 6글자로 어형 차이 흡수 */
+export function storyTokens(text: string): Set<string> {
+  return new Set(String(text).toLowerCase().replace(/[’']s\b/g, '').split(/[^a-z0-9가-힣]+/)
+    .filter(w => w.length >= 3 && !STOP.has(w)).map(w => (/^[a-z]+$/.test(w) ? w.slice(0, 6) : w)));
+}
+function similar(a: Set<string>, b: Set<string>): boolean {
+  let n = 0; for (const w of b) if (a.has(w)) n++;
+  return n >= 3 || (n >= 2 && n / Math.min(a.size || 1, b.size || 1) >= 0.5);
 }
 
 /** 이전 이름 호환 */

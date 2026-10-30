@@ -35,3 +35,16 @@ test('other CEOs and quotes inside article snippets', () => {
 test('outlet suffix is stripped', () => {
   assert.equal(cleanHeadline('Musk says Tesla X - WHEC.com'), 'Musk says Tesla X');
 });
+
+test('differently worded headlines about the same story become one item', () => {
+  const out = reportedCeoStatements([
+    ev('Google CEO Sundar Pichai says company is giving up short-term cloud revenue to prioritise advanced AI', '2026-10-26T01:00:00Z', 'https://s.example/1'),
+    ev('Google prioritizing AI research over cloud customers, Sundar Pichai reveals', '2026-10-26T05:00:00Z', 'https://s.example/2'),
+    ev("Sundar Pichai: 'Google Cloud Is Forgoing Short-Term Revenue To Support Frontier AI Development'", '2026-10-26T07:00:00Z', 'https://s.example/3'),
+    ev('Pichai says Gemini app passes 900 million users', '2026-10-26T08:00:00Z', 'https://s.example/4'),
+  ]);
+  assert.equal(out.length, 2);
+  const cloud = out.find(s => /cloud/i.test(s.quoteText))!;
+  assert.equal(cloud.reportedSourceCount, 3);
+  assert.equal((cloud as any).relatedHeadlines.length, 2);
+});

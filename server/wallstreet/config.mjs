@@ -3,6 +3,7 @@ const enabled=process.env.KNEWS_YOUTUBE_ENABLED==='true';
 export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt:process.env.KNEWS_YOUTUBE_ACTIVATED_AT?Date.parse(process.env.KNEWS_YOUTUBE_ACTIVATED_AT):null,
   summaryProtocol:'evidence_ids_v1',
   minimumSummaryItems:5,
+  acceptMinimumItems:3,
   allowSourceRepair:true,
   counterEvidenceRequired:true,
   dailyCheckTimes:Object.freeze(['09:00','15:00']),scheduleTimeZone:'Asia/Seoul',

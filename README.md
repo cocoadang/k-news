@@ -10,4 +10,4 @@ Checks: `npm run lint`, `npm run build`, `npm run test:wallstreet`. Some source-
 ## Undeployed candidate
 `candidates/ceo-timeline/` is separate from the app entry point. It adds question-based chronology and two-record comparison. The candidate is preserved for reference. Its integrated version is in src/components/ceo/timeline and is type-checked and built; production integration deployed as revision 00035-jbl; see HANDOFF.md. No production data snapshot or local preview bundle is included.
 
-No GitHub Actions, deployment hooks/configuration, credentials, operational ledgers, transcripts, actual summary datasets or generated build output are included. Pushing this snapshot is not a deployment request.
+No credentials, operational ledgers, transcripts, actual summary datasets or generated build output are included. `.github/workflows/deploy.yml` validates every push and PR; production deployment runs only when the owner manually runs the workflow on main (see HANDOFF.md).

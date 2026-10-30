@@ -1,20 +1,21 @@
-name: Validate and deploy K-news main
+name: Validate and deploy K-news
+# Validation runs on every push to main and every pull request.
+# Production deployment runs ONLY when the owner presses "Run workflow"
+# (workflow_dispatch) on main in the GitHub Actions tab.
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: knews-production
-  cancel-in-progress: false
 jobs:
-  deploy:
-    if: github.repository == 'cocoadang/k-news' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     permissions:
       contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -28,6 +29,28 @@ jobs:
       - run: node --test candidates/ceo-timeline/*.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts
       - run: python3 -m unittest discover -s ops -p "test_*.py"
+      - run: npm run build
+
+  deploy:
+    needs: validate
+    if: github.repository == 'cocoadang/k-news' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: knews-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
       - name: Build credential-free image
         run: docker build -t "asia-south1-docker.pkg.dev/gen-lang-client-0064554427/knews-images/k-news:${GITHUB_SHA}" .

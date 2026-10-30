@@ -37,8 +37,9 @@ class DeploymentTests(unittest.TestCase):
    if mode=='rollback' and url.startswith('https://live'):raise HTTPError(url,500,'',{},None)
    d={'dataset':{'statements':[]}} if url.endswith('/dataset') else {'videos':[{}, {}, {}, {}]} if url.endswith('/summaries') else [{}]
    return Response(json.dumps(d).encode())
-  env={'GITHUB_SHA':sha,'GITHUB_REPOSITORY':'cocoadang/k-news','GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'push'}
+  env={'GITHUB_SHA':sha,'GITHUB_REPOSITORY':'cocoadang/k-news','GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'workflow_dispatch'}
   if mode=='fork':env['GITHUB_REPOSITORY']='other/fork'
+  if mode=='push':env['GITHUB_EVENT_NAME']='push'
   with patch.dict(os.environ,env),patch('subprocess.run',command),patch('urllib.request.urlopen',request),contextlib.redirect_stdout(io.StringIO()):
    try:runpy.run_path('ops/deploy.py',run_name='__main__')
    except SystemExit:pass
@@ -49,4 +50,5 @@ class DeploymentTests(unittest.TestCase):
  def test_failed_smoke_never_promotes(self):self.assertFalse(self.simulate('smoke')[1])
  def test_live_failure_rolls_back(self):self.assertFalse(self.simulate('rollback')[1])
  def test_fork_has_no_cloud_calls(self):self.assertEqual(self.simulate('fork')[0],[])
+ def test_push_event_has_no_cloud_calls(self):self.assertEqual(self.simulate('push')[0],[])
 if __name__=='__main__':unittest.main()

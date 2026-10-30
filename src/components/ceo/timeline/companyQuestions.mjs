@@ -59,7 +59,7 @@ const NOT_A_CLAIM = [
 ];
 
 export function isComparableClaim(statement) {
-  const q = statement?.kind === 'direct_quote' || statement?.kind === 'reported_headline' ? String(statement.quoteText || '').trim() : '';
+  const q = ['direct_quote', 'reported_headline', 'reported_excerpt'].includes(statement?.kind) ? String(statement.quoteText || '').trim() : '';
   return !!q && !NOT_A_CLAIM.some(re => re.test(q));
 }
 

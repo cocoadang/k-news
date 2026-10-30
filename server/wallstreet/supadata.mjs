@@ -43,3 +43,9 @@ export function reserveSupadata(state,balance,now,c){
   if(budget.used+1>c.supadataCycleLimit||(budget.days[day]||0)+1>c.supadataDailyLimit||budget.shadowRemaining<1)return false;
   budget.used++;budget.days[day]=(budget.days[day]||0)+1;budget.shadowRemaining--;return true;
 }
+
+// Undo one reservation when the provider balance proves the failed request was not charged.
+export function refundSupadata(state,now){
+  const b=state.supadata;if(!b)return;const day=new Date(now+9*3600000).toISOString().slice(0,10);
+  if(b.used>0)b.used--;if((b.days?.[day]||0)>0)b.days[day]--;b.shadowRemaining++;
+}

@@ -47,7 +47,7 @@ try:
  candidate=next(t['url'] for t in after['status']['traffic'] if t.get('tag')=='ci-preview' and t.get('revisionName')==revision)
  def smoke(base):
   c,d=request(base+'/api/ceo/dataset');assert c==200 and isinstance(d.get('dataset',{}).get('statements'),list)
-  c,d=request(base+'/api/youtube/summaries');assert c==200 and isinstance(d.get('videos'),list) and len(d['videos'])>=4
+  c,d=request(base+'/api/youtube/summaries');assert c==200 and isinstance(d.get('videos'),list) and len(d['videos'])>=3 and not any('crypto' in v.get('programmes',[]) for v in d['videos'])
   c,d=request(base+'/api/events');assert c==200 and isinstance(d,list) and len(d)>0
   assert request(base+'/api/admin/wallstreet/status')[0]==401
  smoke(candidate)

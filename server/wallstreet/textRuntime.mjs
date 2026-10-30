@@ -163,7 +163,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(!/^[1-9]\d*$/.test(c.recipient)||(c.deliveryMode!=='immediate'&&!due(now,c.deliveryTime)))continue;
           delete r.hold;
           for(const p of r.parts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
-            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text);}catch{result={status:'unknown'};}
+            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt});}catch{result={status:'unknown'};}
             if(result.status==='sent'&&result.messageId){p.status='sent';p.messageId=String(result.messageId);}
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;

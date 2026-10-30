@@ -61,14 +61,14 @@ export function youtubeDiscovery({ apiKey, approved=false, fetcher=fetch,allowed
   }};
 }
 export function telegramTransport({token,approved=false,fetcher=fetch}) {
-  return {async send(chatId,text) {
+  return {async send(chatId,text,meta={}) {
     required(approved);
     if(!token || !chatId || text.length>3500) throw Error('invalid_telegram_request');
     try {
       const post=body=>fetcher(`https://api.telegram.org/bot${token}/sendMessage`,{
         method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
         body:JSON.stringify({chat_id:chatId,link_preview_options:{is_disabled:true},...body})});
-      let r=await post({text:telegramHtml(text),parse_mode:'HTML'});
+      let r=await post({text:telegramHtml(text,meta),parse_mode:'HTML'});
       let data=await r.json();
       // A 400 means Telegram rejected the formatted message (nothing was sent); retry once as plain text.
       if(r.status===400&&data.ok===false){r=await post({text});data=await r.json();}

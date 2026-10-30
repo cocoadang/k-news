@@ -4,7 +4,8 @@ import {splitMessage} from './core.mjs';
 const id='4eaJ4HserCg',u=t=>`https://www.youtube.com/watch?v=${id}${t===undefined?'':`&t=${t}s`}`;
 test('summary becomes readable Telegram HTML: bold title, numbered labelled points, short timestamp links',()=>{
  const text=['[1/1]','[홍장원의 불앤베어] 구글 <실적> & 반도체',u(),'자동 자막 기반 · 방송의 주장과 해석이며 독립적으로 확인된 사실이 아닙니다.','• [방송에서 소개한 내용] 구글 클라우드는 103% 성장했습니다.',u(129),u(3724),'• [출연자의 해석·전망] 반도체 투심이 흔들릴 수 있습니다.',u(310)].join('\n');
- const h=telegramHtml(text);
+ const h=telegramHtml(text,{publishedAt:Date.parse('2026-10-28T22:38:09Z')});
+ assert.match(h,/\n🗓 2026\.10\.29 \(목\) 오전 7:38 방송\n/);assert.ok(!h.includes('자동 자막 기반'));
  assert.match(h,/^📺 <b>\[홍장원의 불앤베어\] 구글 &lt;실적&gt; &amp; 반도체<\/b>/);
  assert.match(h,/<b>1\.<\/b> 📰 구글 클라우드는 103%/);assert.match(h,/<b>2\.<\/b> 💬 반도체/);
  assert.match(h,/⏱ <a href="https:\/\/www\.youtube\.com\/watch\?v=4eaJ4HserCg&amp;t=129s">2:09<\/a>  ·  <a[^>]+>1:02:04<\/a>/);

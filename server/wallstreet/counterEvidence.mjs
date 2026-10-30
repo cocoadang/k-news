@@ -10,8 +10,10 @@ export function applyCounterEvidence(items,response){
  const eligible=[],held=[];
  response.findings.forEach((finding,index)=>{
   const item=items[index],allowed=new Map((item.relatedBlocks||[]).map(b=>[b.id,b]));
-  if(finding.index!==index||!['clear','qualifies','uncertain'].includes(finding.status)||typeof finding.reason!=='string'||!finding.reason.trim()||finding.reason.length>200||!Array.isArray(finding.sourceIds)||finding.sourceIds.length>12||new Set(finding.sourceIds).size!==finding.sourceIds.length||finding.sourceIds.some(id=>!allowed.has(id)))throw Error('counter_evidence_shape');
-  if(finding.status==='qualifies'&&!finding.sourceIds.length)throw Error('counter_evidence_missing_source');
+  if(!finding||typeof finding!=='object')throw Error('counter_evidence_shape');
+  // A single malformed finding (bad index/ID/reason) holds only that claim as 'uncertain' instead of failing the whole summary.
+  const malformed=finding.index!==index||!['clear','qualifies','uncertain'].includes(finding.status)||typeof finding.reason!=='string'||!finding.reason.trim()||finding.reason.length>200||!Array.isArray(finding.sourceIds)||finding.sourceIds.length>12||new Set(finding.sourceIds).size!==finding.sourceIds.length||finding.sourceIds.some(id=>!allowed.has(id))||(finding.status==='qualifies'&&!finding.sourceIds.length);
+  if(malformed){held.push({index,originalIndex:item.originalIndex,review:{index,status:'uncertain',sourceIds:[],reason:'counter_evidence_malformed',sources:[]}});return;}
   const review={...finding,sources:finding.sourceIds.map(id=>allowed.get(id))};
   if(finding.status==='clear')eligible.push({...item,counterEvidenceReview:review});
   else held.push({index,originalIndex:item.originalIndex,review});

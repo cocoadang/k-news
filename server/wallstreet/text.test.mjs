@@ -130,11 +130,12 @@ test('after a validator fix, a recently failed summary (old version, already ret
  await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');
 });
 
-test('web-only re-summary replaces published text once and never sends Telegram',async()=>{
- const x=setup({summaryProtocol:'evidence_ids_v1',resummarize:{version:1,ids:['Idn_d5ArZvA']}});let calls=0;
- x.deps.summarizer.summarize=async()=>{calls++;throw Error('insufficient_context_reviewed_items');};
- await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA={video:video(),programmes:['wallstreet'],recipient:'123',stage:'sent',transcript:[{start:0,text:'a'}],parts:[{text:'old',status:'sent'}],firstSeen:now};await save();});
+test('web-only supplement reuses the stored result, never re-summarizes or sends Telegram, and waits for new videos',async()=>{
+ const x=setup({summaryProtocol:'evidence_ids_v1',resummarize:{version:2,ids:['Idn_d5ArZvA']}});let full=0,sup=0;
+ x.deps.summarizer.summarize=async()=>{full++;throw Error('x');};
+ x.deps.summarizer.supplement=async()=>{sup++;throw Error('nothing_to_supplement');};
+ await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA={video:video(),programmes:['wallstreet'],recipient:'123',stage:'sent',transcript:[{start:0,text:'a'}],parts:[{text:'old',status:'sent'}],summaryCandidate:{validationJournal:{}},firstSeen:now};await save();});
  await x.run().run();await x.run().run();
  const r=x.store.state.videos.Idn_d5ArZvA;
- assert.equal(calls,1);assert.equal(x.sent.length,0);assert.equal(r.parts[0].text,'old');assert.equal(r.resummaryFailure,'insufficient_context_reviewed_items');assert.equal(r.stage,'sent');
+ assert.equal(full,0);assert.equal(sup,1);assert.equal(x.sent.length,0);assert.equal(r.parts[0].text,'old');assert.equal(r.supplementFailure,'nothing_to_supplement');
 });

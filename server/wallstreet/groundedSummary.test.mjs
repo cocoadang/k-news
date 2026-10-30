@@ -134,3 +134,21 @@ test('a caveat-held claim is rewritten even when enough other points remain (kep
  const result=await s.summarize({segments:seg,maxCostMicros:20000});
  assert.equal(calls,4);assert.equal(result.items.length,5);assert.match(result.items[1].text,/조건부로/);
 });
+
+test('supplement reuses a stored result: only the caveat-held claim is rewritten and audited, existing points unchanged',async()=>{
+ const seg=Array.from({length:18},(_,i)=>({start:i*3,text:`방송 구간 ${i}의 조건부 전망입니다.`}));
+ const bl=evidenceBlocks(seg);
+ const item=(b,i)=>({text:`출연자는 구간 ${i*3}에 관해 전망했습니다.`,kind:'outlook',evidenceIds:[b.id]});
+ const four={items:bl.slice(0,4).map(item)};
+ const findings={findings:[0,1,2,3].map(index=>index===1?{index,status:'qualifies',sourceIds:[bl[1].id],reason:'피해 미확인'}:{index,status:'clear',sourceIds:[],reason:'추가 단서 없음'})};
+ const checks=n=>({checks:Array.from({length:n},(_,index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',reason:'근거 일치'}))});
+ // Original run where the rewrite was not available (rewrite returns nothing).
+ let calls=0;let responses=[four,findings,{items:[]},checks(3)];
+ const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(responses[calls++])})};
+ const s=groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,approved:true,minimumSummaryItems:5,acceptMinimumItems:3,counterEvidenceRequired:true});
+ const first=await s.summarize({segments:seg,maxCostMicros:20000});assert.equal(first.items.length,3);
+ calls=0;responses=[{items:[{index:1,text:'출연자는 구간 3에 관해 조건부로 전망했습니다.',kind:'outlook',evidenceIds:[bl[1].id]}]},checks(1)];
+ const next=await s.supplement({result:first,segments:seg,maxCostMicros:20000});
+ assert.equal(calls,2);assert.equal(next.items.length,4);assert.match(next.items[1].text,/조건부로/);assert.equal(next.items[0].text,first.items[0].text);
+ assert.ok(renderGroundedBrief({id:'Idn_d5ArZvA',title:'t'},next).includes('조건부로'));
+});

@@ -86,7 +86,44 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
  // minimumSummaryItems sizes the request (5-8 detailed points); acceptMinimumItems is the delivery floor.
  // Every delivered point is still individually grounded, counter-checked and audited.
  const floor=Math.max(3,Math.min(acceptMinimumItems,minimumSummaryItems));
- return {async summarize({segments,maxCostMicros,video}){
+ return {
+ // Reuse a finished result: only claims that were held for a missing caveat are rewritten and audited
+ // (two small calls). Already-verified points are kept as they are, no full re-summary.
+ async supplement({result,segments,maxCostMicros}){
+  if(!approved||model!=='gemini-3.5-flash-lite'||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>20000)throw Error('grounded_budget_config');
+  const j=result?.validationJournal,screen=j?.repairedSourceScreen||j?.sourceScreen;
+  if(!Array.isArray(result?.items)||!Array.isArray(result?.audit?.checks)||result.audit.checks.length!==result.items.length||!Array.isArray(j?.counterEvidenceHeld)||!Array.isArray(screen?.items))throw Error('supplement_source_missing');
+  const entries=j.counterEvidenceHeld.filter(h=>h.review?.status==='qualifies').map(h=>({index:h.index,item:screen.items[h.index],review:h.review})).filter(e=>e.item);
+  if(!entries.length)throw Error('nothing_to_supplement');
+  const blocks=evidenceBlocks(segments),journal={protocol:'evidence_ids_v1',calls:[]};let reserved=0;
+  async function call(contents,cap,leave){
+   const count=await client.countTokens({model,contents});if(!Number.isSafeInteger(count.totalTokens)||count.totalTokens<=0)throw Error('grounded_count');
+   const ceiling=Math.ceil((count.totalTokens+1024)*0.3+cap*2.5);
+   if(reserved+ceiling+leave>maxCostMicros)throw Error('grounded_budget_exceeded');
+   reserved+=ceiling;journal.calls.push({ceiling,status:'inflight'});
+   const output=await client.generate({model,contents,maxOutputTokens:cap,timeoutMs:60000});
+   journal.calls.at(-1).status='completed';journal.calls.at(-1).raw=output.text;
+   return parseSummaryJson(output.text);
+  }
+  try{
+   const fixed=await call(qualifyPrompt(entries),900,4000);journal.qualifyRepair=fixed;
+   const added=[];
+   for(const x of Array.isArray(fixed?.items)?fixed.items:[]){
+    if(!entries.some(e=>e.index===x?.index))continue;
+    try{const [g]=groundCandidate({items:[{text:x.text,kind:x.kind,evidenceIds:x.evidenceIds}]},blocks,{minimum:1,contextRadius:1,topicContext:true});
+     if(!result.items.some(i=>i.text===g.text)&&!added.some(i=>i.text===g.text))added.push({...g,qualified:true});}catch{}
+   }
+   if(!added.length)throw Error('supplement_nothing_grounded');
+   let audit=await call(verificationPrompt(added),700,0);journal.audit=audit;let items=added;({items,audit}=conservativeClassification(items,audit));
+   if(!Array.isArray(audit?.checks)||audit.checks.length!==items.length)throw Error('semantic_verification_failed');
+   const kept=items.map((item,i)=>({item,check:audit.checks[i]})).filter(({check})=>check.index!==undefined&&check.supported===true&&check.classificationCorrect===true&&typeof check.reason==='string'&&check.reason.trim()&&['reported','outlook'].includes(check.recommendedKind));
+   if(!kept.length)throw Error('supplement_rejected_by_audit');
+   const merged=[...result.items.map((item,i)=>({item,check:result.audit.checks[i]})),...kept].sort((a,b)=>a.item.start-b.item.start);
+   const next=acceptVerification(merged.map(x=>x.item),{checks:merged.map((x,i)=>({...x.check,index:i}))});
+   next.validationJournal={...j,supplement:journal};return next;
+  }catch(error){error.candidate=journal;throw error;}
+ },
+ async summarize({segments,maxCostMicros,video}){
   if(!approved||model!=='gemini-3.5-flash-lite'||inputMicrosPerToken!==0.3||outputMicrosPerToken!==2.5||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>20000)throw Error('grounded_budget_config');
   // Detailed generation (2500), counter review (700), audit (700), excluding all input tokens.
   if(minimumSummaryItems>=5&&counterEvidenceRequired&&maxCostMicros<9750)throw Error('detailed_budget_below_output_ceiling');
@@ -120,7 +157,9 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
      const entries=screenedContext.held.filter(h=>h.review?.status==='qualifies').map(h=>({index:h.index,item:screened.items[h.index],review:h.review})).filter(e=>e.item);
      if(entries.length){
       try{
-       const fixed=await call(qualifyPrompt(entries),900,3500);journal.qualifyRepair=fixed;
+       const auditTokens=(await client.countTokens({model,contents:verificationPrompt([...items,...entries.map(e=>e.item)])})).totalTokens;
+       const auditLeave=Math.ceil((auditTokens+1024)*0.3+700*2.5)+500;
+       const fixed=await call(qualifyPrompt(entries),900,auditLeave);journal.qualifyRepair=fixed;
        const added=[];
        for(const x of Array.isArray(fixed?.items)?fixed.items:[]){
         if(!entries.some(e=>e.index===x?.index))continue;

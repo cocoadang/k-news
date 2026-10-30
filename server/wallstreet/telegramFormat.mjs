@@ -15,7 +15,7 @@ export function telegramHtml(text,{publishedAt}={}){
   const lines=String(text).split(/\r?\n/);
   let part='';const m=lines[0]?.match(/^\[(\d+)\/(\d+)\]$/);
   if(m){lines.shift();if(m[2]!=='1')part=`(${m[1]}/${m[2]})`;}
-  const out=[];let n=0,titleDone=false,stamps=[];
+  const out=[];let n=0,titleDone=false,stamps=[],pendingTitle='';
   const flush=()=>{if(stamps.length){out.push('   ⏱ '+stamps.join('  ·  '));stamps=[];}};
   for(const raw of lines){
     const line=raw.trim();if(!line)continue;
@@ -27,9 +27,12 @@ export function telegramHtml(text,{publishedAt}={}){
     }
     flush();
     if(/^자동 자막 기반/.test(line)){if(out.length)out.push('');continue;} // disclaimer omitted in Telegram (web keeps it)
-    if(!titleDone&&!/^•/.test(line)){out.push(`📺 <b>${esc(line)}</b>`);const day=kstDate(publishedAt);if(day)out.push(`🗓 ${day} 방송`);titleDone=true;continue;}
+    if(!titleDone&&!/^•/.test(line)&&!line.startsWith('▌')){out.push(`📺 <b>${esc(line)}</b>`);const day=kstDate(publishedAt);if(day)out.push(`🗓 ${day} 방송`);titleDone=true;continue;}
+    if(line.startsWith('▌')){pendingTitle=line.slice(1).trim();continue;}
     const label=LABELS.find(([re])=>re.test(line));
-    if(label){n++;if(n>1)out.push('');out.push(`<b>${n}.</b> ${label[1]} ${esc(line.replace(label[0],''))}`);continue;}
+    if(label){n++;if(n>1)out.push('');
+      if(pendingTitle){out.push(`<b>${n}. ${esc(pendingTitle)}</b>`,`${label[1]} ${esc(line.replace(label[0],''))}`);pendingTitle='';}
+      else out.push(`<b>${n}.</b> ${label[1]} ${esc(line.replace(label[0],''))}`);continue;}
     out.push(esc(line));
   }
   flush();

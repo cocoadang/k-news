@@ -17,3 +17,8 @@ test('multi-part marker kept; split never cuts a link line',()=>{
  for(const p of parts)for(const line of p.split('\n').slice(1))assert.ok(!/^https/.test(line)||/^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}&t=\d+s$/.test(line));
  assert.match(telegramHtml(parts[1]),/\(2\/\d\)$/);
 });
+
+test('topic title line becomes the bold numbered heading in Telegram',()=>{
+ const h=telegramHtml(['[1/1]','제목',u(),'▌구글 현금흐름 우려','• [방송에서 소개한 내용] 구글은 마이너스 FCF를 기록했습니다.',u(129)].join('\n'));
+ assert.match(h,/<b>1\. 구글 현금흐름 우려<\/b>\n📰 구글은/);assert.match(h,/^📺 <b>제목<\/b>/);
+});

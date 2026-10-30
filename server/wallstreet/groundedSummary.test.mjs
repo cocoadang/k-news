@@ -152,3 +152,11 @@ test('supplement reuses a stored result: only the caveat-held claim is rewritten
  assert.equal(calls,2);assert.equal(next.items.length,4);assert.match(next.items[1].text,/조건부로/);assert.equal(next.items[0].text,first.items[0].text);
  assert.ok(renderGroundedBrief({id:'Idn_d5ArZvA',title:'t'},next).includes('조건부로'));
 });
+
+test('optional topic title is kept only when grounded; a bad title is dropped without losing the point',()=>{
+ const seg=Array.from({length:6},(_,i)=>({start:i*3,text:`구글 클라우드 매출이 늘었습니다 ${i}`}));const bl=evidenceBlocks(seg);
+ const [ok]=groundCandidate({items:[{title:'구글 클라우드 성장',text:'구글 클라우드 매출이 늘었습니다.',kind:'reported',evidenceIds:[bl[0].id]}]},bl,{minimum:1});
+ assert.equal(ok.title,'구글 클라우드 성장');
+ const [bad]=groundCandidate({items:[{title:'매출 99% 급증',text:'구글 클라우드 매출이 늘었습니다.',kind:'reported',evidenceIds:[bl[0].id]}]},bl,{minimum:1});
+ assert.equal(bad.title,undefined);assert.equal(bad.text,'구글 클라우드 매출이 늘었습니다.');
+});

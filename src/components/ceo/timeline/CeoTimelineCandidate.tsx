@@ -75,8 +75,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
   return <section className="ceo-tl">
     <header className="tl-head">
-      <h1>CEO 발언의 변화</h1>
-      <p className="tl-muted">같은 질문에 대한 CEO의 발언을 날짜순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않고, 원문과 수치를 나란히 비교할 수 있게 합니다.</p>
       <div className="tl-scopes" role="tablist" aria-label="인물 · 회사">
         {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count}>
           {s.name} · {s.company}<span>{s.count ? s.count + '건' : '자료 없음'}</span>

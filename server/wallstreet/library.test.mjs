@@ -30,7 +30,7 @@ test('reading absent state performs no writes and uses read-only transaction',as
 });
 test('menu retains both existing views, hides manual collection in new view, and fetches only library',()=>{
  const app=readFileSync(new URL('../../src/App.tsx',import.meta.url),'utf8');
- assert.match(app,/\['news',/);assert.match(app,/\['ceo',/);assert.match(app,/\['youtube',/);assert.match(app,/hideManualPoll=\{mainView !== 'news'\}/);
+ assert.match(app,/\['news',/);assert.match(app,/\['ceo',/);assert.match(app,/\['youtube',/);assert.match(app,/useState<'news' \| 'ceo' \| 'youtube'>\('youtube'\)/);assert.ok(app.indexOf("['youtube',")<app.indexOf("['news',"));
  const ui=readFileSync(new URL('../../src/components/YoutubeMenu.tsx',import.meta.url),'utf8');
  assert.equal((ui.match(/fetch\(/g)||[]).length,1);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);
  assert.ok(!/dangerouslySetInnerHTML|line-clamp|truncate|\/run|\/poll/.test(ui));

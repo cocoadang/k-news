@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+/* 전체 메뉴 공통 글자체: Pretendard(없으면 OS 한글 기본체) */
+:root{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;}
+body,button,input,select,textarea{font-family:inherit;}

@@ -4,6 +4,7 @@ import { fetchCeoDataset, requestCeoRefresh } from '../../ceo/dataSource';
 import { CeoStatementsView, CeoViewState } from './CeoStatementsView';
 import { CeoTimeline } from './timeline/CeoTimelineCandidate';
 import { CeoKoAdmin } from './CeoKoAdmin';
+import { PageHeader, RefreshButton, CollectButton } from '../ui';
 
 /** CEO 메뉴 컨테이너: 읽기 전용 API 조회 → 화면 상태. 관리자에게만 원문 새로고침 버튼 */
 export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
@@ -52,25 +53,19 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div>
+      <PageHeader title="CEO 발언" description="같은 질문에 대한 CEO의 발언을 날짜순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않고, 원문과 수치를 나란히 비교할 수 있게 합니다."
+        status={notice || undefined}
+        actions={<>{isAdmin && <CollectButton onClick={onRefresh} busy={refreshing} label="공식 원문 수집 (관리자)" />}<RefreshButton onClick={load} /></>} />
       {/* 관리자 전용 제어 영역: 조건부 렌더링 (비관리자 방문자에게는 렌더링하지 않음) */}
       {isAdmin && (
         <section aria-label="CEO 발언 관리자 영역" className="mb-5 rounded-2xl border border-cyan-800/60 bg-cyan-950/20 p-4" data-testid="ceo-admin-panel">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-bold text-cyan-200 flex items-center gap-1.5">
-              <span aria-hidden="true">🔒</span> CEO 발언 관리자 영역
-            </h3>
-            <button type="button" onClick={onRefresh} disabled={refreshing}
-              className="min-h-[40px] rounded-lg border border-cyan-700 bg-cyan-950 px-3 text-sm font-semibold text-cyan-100 hover:border-cyan-500 hover:bg-cyan-900 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
-              {refreshing ? '공식 원문 불러오는 중…' : '공식 원문 새로고침 (관리자)'}
-            </button>
-          </div>
-          {notice && <p role="status" className="mb-3 text-sm font-medium text-amber-200">{notice}</p>}
+          <h3 className="mb-3 text-sm font-semibold text-cyan-200">CEO 발언 관리자 영역 · 한국어 번역 관리</h3>
           {api?.dataset && api.koSummary && (
             <CeoKoAdmin info={api.koSummary} statements={legacyStatements} onChanged={load} />
           )}
         </section>
       )}
-      {state.status === 'ready' ? <><p className="mb-3 text-sm text-slate-400">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><SectionBoundary label="CEO 발언 타임라인"><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-slate-400">기존 목록과 수집 상태 보기</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
+      {state.status === 'ready' ? <><p className="mb-3 text-xs text-slate-500">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><SectionBoundary label="CEO 발언 타임라인"><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-sm text-slate-400">기존 목록과 수집 상태 보기</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import json,os,subprocess,time,urllib.request,urllib.error,re
 P='gen-lang-client-0064554427';R='asia-south1';S='spacex-intelligence-news-monitor'
 sha=os.environ['GITHUB_SHA'];revision=S+'-gh-'+sha[:12];image=R+'-docker.pkg.dev/'+P+'/knews-images/k-news:'+sha
-if os.environ.get('GITHUB_REPOSITORY')!='cocoadang/k-news' or os.environ.get('GITHUB_REF')!='refs/heads/main' or os.environ.get('GITHUB_EVENT_NAME')!='push':raise SystemExit('Unapproved execution context')
+if os.environ.get('GITHUB_REPOSITORY')!='cocoadang/k-news' or os.environ.get('GITHUB_REF')!='refs/heads/main' or os.environ.get('GITHUB_EVENT_NAME')!='workflow_dispatch':raise SystemExit('Unapproved execution context')
 def run(args,payload=None):
  r=subprocess.run(['gcloud','--project='+P,'--quiet',*args],input=payload,capture_output=True,text=True)
  if r.returncode:

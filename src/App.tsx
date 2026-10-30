@@ -184,7 +184,7 @@ export default function App() {
       const contentType = res.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await res.json();
-        if (res.status === 401 || handlePotentialAuthError(res, data)) {
+        if (handlePotentialAuthError(res, data)) {
           return;
         }
         if (data.success) {

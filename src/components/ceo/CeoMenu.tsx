@@ -45,6 +45,11 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
     : !api.dataset ? { status: 'error', message: api.message || '공식 출처를 읽지 못했습니다.', sources: api.sources }
     : { status: 'ready', dataset: api.dataset, source: { status: api.status, refreshedAt: api.refreshedAt, sources: api.sources, message: api.message, historyDurable: api.historyDurable, withdrawnCount: api.withdrawnCount, koSummary: api.koSummary } };
 
+  // 기존 목록·번역 관리 화면은 공식 수집 자료(spokenAt·evidence 보유)만 다룹니다.
+  // 보도 헤드라인·영상 발언은 타임라인 전용이라 여기로 넘기면 화면 전체가 멈춥니다.
+  const legacyStatements = (api?.dataset?.statements || []).filter(isLegacyStatement);
+  const legacyState: CeoViewState = state.status === 'ready' ? { ...state, dataset: { ...state.dataset, statements: legacyStatements } } : state;
+
   return (
     <div>
       {/* 관리자 전용 제어 영역: 조건부 렌더링 (비관리자 방문자에게는 렌더링하지 않음) */}
@@ -61,11 +66,27 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
           </div>
           {notice && <p role="status" className="mb-3 text-sm font-medium text-amber-200">{notice}</p>}
           {api?.dataset && api.koSummary && (
-            <CeoKoAdmin info={api.koSummary} statements={api.dataset.statements} onChanged={load} />
+            <CeoKoAdmin info={api.koSummary} statements={legacyStatements} onChanged={load} />
           )}
         </section>
       )}
-      {state.status === 'ready' ? <><p className="mb-3 text-sm text-slate-400">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><CeoTimeline dataset={state.dataset} /><details className="mt-6"><summary className="cursor-pointer text-slate-400">기존 목록과 수집 상태 보기</summary><CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} /></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
+      {state.status === 'ready' ? <><p className="mb-3 text-sm text-slate-400">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><SectionBoundary label="CEO 발언 타임라인"><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-slate-400">기존 목록과 수집 상태 보기</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
     </div>
   );
+}
+
+export function isLegacyStatement(s: any): boolean {
+  return !!s && typeof s.spokenAt === 'object' && s.spokenAt !== null && Array.isArray(s.evidence) && !['reported_headline', 'reported_excerpt', 'video_quote'].includes(s.kind);
+}
+
+/** 한 영역에서 오류가 나도 페이지 전체가 하얗게 멈추지 않도록 그 영역만 안내문으로 바꿉니다. */
+class SectionBoundary extends React.Component<{ label: string; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e: unknown) { console.error('[CeoMenu]', this.props.label, e); }
+  render() {
+    return this.state.failed
+      ? <p role="alert" className="rounded-lg border border-amber-700 bg-amber-950/30 p-4 text-amber-200">{this.props.label}을(를) 표시하지 못했습니다. 다른 영역은 계속 이용할 수 있습니다.</p>
+      : this.props.children;
+  }
 }

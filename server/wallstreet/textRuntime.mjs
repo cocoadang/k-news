@@ -113,23 +113,31 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
               r.transcript=result.segments;r.source={method:'vidiq',videoId:r.video.id,sha256:hash(JSON.stringify(result.segments))};r.stage='text_summary';delete r.hold;
             }catch{r.stage='text_review_required';r.hold='caption_failed_or_uncertain_no_retry';}await save();
           }
-          // One automatic summary retry within 48h, only when every model call completed (a validation rejection,
-          // never an unknown/timeout outcome). Captions are already stored, so no caption credits are spent;
-          // the retry still goes through the same Gemini budget caps and grounding checks.
-          if(r.stage==='text_review_required'&&r.hold==='summary_failed_or_uncertain'&&!r.summaryRetried&&Array.isArray(r.transcript)&&r.transcript.length&&now-r.firstSeen<172800000
-            &&Array.isArray(r.summaryCandidate?.calls)&&r.summaryCandidate.calls.length>0&&r.summaryCandidate.calls.every(x=>x?.status==='completed')){
+          // A validation rejection (every model call completed; never a timeout/unknown outcome) is retried once
+          // right away in the same run. Records held before this change (no summaryFailedAt) get their one retry at the next run.
+          // Captions are already stored, so no caption credits are spent; budget caps and grounding checks still apply.
+          const validationRejected=x=>x.hold==='summary_failed_or_uncertain'&&Array.isArray(x.transcript)&&x.transcript.length
+            &&Array.isArray(x.summaryCandidate?.calls)&&x.summaryCandidate.calls.length>0&&x.summaryCandidate.calls.every(k=>k?.status==='completed');
+          if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
             r.summaryRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }
           if(r.stage==='text_summary'){
             if(c.summaryApproved!==true||!summarizer||c.combinedTokenCapVerified!==true){r.hold='text_summary_approval_or_verified_cap_required';continue;}
             for(const k of ['summaryReservationMicros','dailySummaryMicros','monthlySummaryMicros'])if(!Number.isSafeInteger(c[k])||c[k]<=0)throw Error('text_budget_required');
+            const attempt=async()=>{
+              r.stage='text_summary_inflight';delete r.hold;await save();
+              try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:c.summaryReservationMicros});
+                r.summaryCandidate=result;await save();
+                const message=c.summaryProtocol==='evidence_ids_v1'?renderGroundedBrief(r.video,result):renderBrief(r.video,r.transcript,result);
+                r.parts=splitMessage(message).map(text=>({text,hash:hash(text),status:'pending'}));r.stage='text_delivery';
+              }catch(error){if(error?.candidate)r.summaryCandidate=error.candidate;else delete r.summaryCandidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.summaryFailedAt=now;r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}await save();
+            };
             if(!reserve(s,now,c)){r.hold='text_budget';continue;}
-            r.stage='text_summary_inflight';delete r.hold;await save();
-            try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:c.summaryReservationMicros});
-              r.summaryCandidate=result;await save();
-              const message=c.summaryProtocol==='evidence_ids_v1'?renderGroundedBrief(r.video,result):renderBrief(r.video,r.transcript,result);
-              r.parts=splitMessage(message).map(text=>({text,hash:hash(text),status:'pending'}));r.stage='text_delivery';
-            }catch(error){if(error?.candidate)r.summaryCandidate=error.candidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}await save();
+            await attempt();
+            if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)){
+              r.summaryRetried=true;
+              if(reserve(s,now,c))await attempt();else{r.hold='text_budget';await save();}
+            }
           }
           if(r.stage!=='text_delivery')continue;
           if(c.deliveryApproved!==true||!telegram||(c.deliveryMode!=='immediate'&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(c.deliveryTime||''))){r.hold='delivery_approval_time_required';continue;}

@@ -48,6 +48,7 @@
 .tl-text{font-size:16px;line-height:1.7}
 .tl-en{color:#cfd8e6;font-size:15px}
 .tl-tag{display:inline-block;margin-top:6px;color:var(--tl-muted);font-size:11px}
+.tl-warn{color:#d8c39b}
 .tl-original{margin-top:6px}
 .tl-original summary{cursor:pointer;color:var(--tl-muted);font-size:12px}
 .tl-original blockquote,.tl-cols blockquote{margin:8px 0 0;padding-left:12px;border-left:2px solid var(--tl-accent);color:#cfd8e6;font-size:14px;line-height:1.7;overflow-wrap:anywhere}

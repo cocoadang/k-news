@@ -331,6 +331,15 @@ export const firestoreRepo = {
   },
 
   // 4. Events (Investment News Events)
+  /** CEO 보조 자료용: 헤드라인·출처·등급만 가볍게 읽기 (본문·분석 필드 제외) */
+  async getEventHeadlines(limitCount = 4000): Promise<Array<Pick<NewsEvent, 'id' | 'sourceTier' | 'primarySource'>>> {
+    if (!getIsFirestoreAvailable()) return [];
+    const db = initFirestore();
+    if (!db) return [];
+    const snap = await db.collection('events').orderBy('firstSeenAt', 'desc').limit(limitCount).select('id', 'sourceTier', 'primarySource').get();
+    return snap.docs.map(d => d.data() as any);
+  },
+
   async getEvents(limitCount = 100): Promise<NewsEvent[]> {
     if (!getIsFirestoreAvailable()) return [];
     const db = initFirestore();

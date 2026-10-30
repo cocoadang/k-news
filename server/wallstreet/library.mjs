@@ -1,4 +1,6 @@
 import {PROGRAMMES} from './programmes.mjs';
+// Programmes the user removed from the site; their past summaries are hidden from the public screen.
+export const HIDDEN_PROGRAMMES=Object.freeze(['crypto']);
 // Public publication is independent of worker state, receipts and cost accounting.
 export function publicSummaryLibrary(state) {
   return {videos:Object.values(state.videos||{}).flatMap(r=>{
@@ -7,8 +9,10 @@ export function publicSummaryLibrary(state) {
     const manual=p?.reviewStatus==='approved' && ['transcript_review','supervised_trial'].includes(p.source) && typeof p.summary==='string' && p.summary.trim();
     const automatic=['sent','text_delivery'].includes(r.stage) && Array.isArray(r.parts) && r.parts.length>0 && r.parts.every(x=>typeof x.text==='string' && x.text.trim());
     if(!manual&&!automatic)return [];
+    const programmes=(r.programmes||[]).filter(x=>PROGRAMMES.some(p=>p.id===x)&&!HIDDEN_PROGRAMMES.includes(x));
+    if((r.programmes||[]).some(x=>HIDDEN_PROGRAMMES.includes(x))&&!programmes.length)return [];
     return [{id,title:typeof r.video.title==='string'?r.video.title:'영상 제목 미확인',publishedAt:Number.isFinite(r.video.publishedAt)?r.video.publishedAt:null,
-      programmes:(r.programmes||[]).filter(x=>PROGRAMMES.some(p=>p.id===x)),status:'ready',source:manual?p.source:'automatic',url:`https://www.youtube.com/watch?v=${id}`,
+      programmes,status:'ready',source:manual?p.source:'automatic',url:`https://www.youtube.com/watch?v=${id}`,
       summary:manual?p.summary:r.parts.map(x=>x.text).join('\n')}];
   }).sort((a,b)=>(b.publishedAt||0)-(a.publishedAt||0))};
 }

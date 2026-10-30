@@ -1,8 +1,9 @@
 import React, {useEffect,useState,useRef} from 'react';
 import {YoutubeSummaryBody} from './YoutubeSummaryBody';
+import {WallstreetRunButton} from './WallstreetRunButton';
 
 type Video={id:string;title:string;publishedAt:number|null;programmes:string[];status:string;source:string;url:string;summary:string|null};
-const programmes:Record<string,string>={wallstreet:'월가 뉴스레터',bullbear:'홍장원의 불앤베어',crypto:'크립토 PLUS'};
+const programmes:Record<string,string>={wallstreet:'월가 뉴스레터',bullbear:'홍장원의 불앤베어'};
 const statuses:Record<string,string>={ready:'요약 완료',review_required:'검증 보류',unavailable:'처리 실패 / 이용 불가',processing:'처리 중',not_generated:'요약 미생성'};
 const date=(value:number|null)=>value===null?'날짜 정보 없음':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'long',timeStyle:'short'}).format(value);
 
@@ -28,7 +29,7 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
   const button='min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-cyan-400';
   return <section aria-label="유튜브 요약" className="min-w-0 space-y-4 text-slate-200">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-bold text-white">유튜브 요약</h1><p className="mt-1 text-sm text-slate-400">영상별 상세 요약과 근거 장면을 확인하세요. 날짜는 한국시간 기준입니다.</p></div>
-      {<button type="button" className={button} onClick={()=>setVersion(v=>v+1)}>저장 결과 새로고침</button>}</div>
+      <div className="flex flex-wrap gap-2">{isAdmin&&<WallstreetRunButton className={button} onDone={()=>setVersion(v=>v+1)}/>}<button type="button" className={button} onClick={()=>setVersion(v=>v+1)}>저장 결과 새로고침</button></div></div>
     {     status==='loading'?<p role="status">저장된 요약을 불러오는 중입니다.</p>:
      status==='error'?<p role="alert">저장 결과를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</p>:
      video?<article className="youtube-detail min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">

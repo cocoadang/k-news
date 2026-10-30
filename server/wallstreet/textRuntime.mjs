@@ -101,17 +101,6 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(r.recipient!==c.recipient)continue;
           // 사용자가 끈 프로그램(예: 크립토 PLUS)은 대기 중인 기록도 더 처리하지 않음. 이미 보낸 기록은 그대로.
           if(r.programmes?.some(p=>c.disabledProgrammes?.includes(p))&&!['sent','historical_complete'].includes(r.stage)){if(r.hold!=='programme_disabled_by_user'){r.stage='text_review_required';r.hold='programme_disabled_by_user';}continue;}
-          // Web-only re-summary of already-sent videos after a summary-logic improvement. Never sends Telegram:
-          // new parts are stored as already 'sent' so the delivery step skips them; previous text is kept.
-          if(r.stage==='sent'&&c.resummarize?.ids?.includes(r.video.id)&&(r.resummaryVersion||0)<c.resummarize.version&&Array.isArray(r.transcript)&&r.transcript.length&&summarizer&&c.summaryApproved===true&&c.summaryProtocol==='evidence_ids_v1'){
-            if(!reserve(s,now,c))continue;
-            r.resummaryVersion=c.resummarize.version;await save();
-            try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:c.summaryReservationMicros});
-              const parts=splitMessage(renderGroundedBrief(r.video,result)).map(text=>({text,hash:hash(text),status:'sent',webOnly:true}));
-              r.previousParts=r.parts;r.parts=parts;r.resummarizedAt=now;delete r.resummaryFailure;
-            }catch(error){r.resummaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';}
-            await save();continue;
-          }
           if(r.stage==='text_waiting'&&now-r.firstSeen>=172800000){r.stage='text_caption_expired';r.hold='caption_not_obtained_within_48h';continue;}
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&['bullbear','crypto'].includes(r.programmes[0])&&c.supadataApproved===true&&supadata){
             let before;
@@ -179,6 +168,19 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;
           }if(r.parts.every(p=>p.status==='sent')){r.stage='sent';await save();}
+        }
+        // Web-only supplement of already-sent summaries: runs after new videos, reuses the stored result and only
+        // rewrites claims held for a missing caveat (no full re-summary, never Telegram). Skipped if a new video still awaits its summary.
+        const pendingSummary=Object.values(s.videos).some(x=>x.stage==='text_summary'&&x.recipient===c.recipient);
+        for(const r of pendingSummary?[]:Object.values(s.videos)){
+          if(!(r.stage==='sent'&&c.resummarize?.ids?.includes(r.video.id)&&(r.supplementVersion||0)<c.resummarize.version&&Array.isArray(r.transcript)&&r.transcript.length&&summarizer?.supplement&&c.summaryApproved===true&&c.summaryProtocol==='evidence_ids_v1'&&r.summaryCandidate?.validationJournal))continue;
+          if(!reserve(s,now,c))break;
+          r.supplementVersion=c.resummarize.version;await save();
+          try{const result=await summarizer.supplement({result:r.summaryCandidate,segments:r.transcript,maxCostMicros:c.summaryReservationMicros});
+            r.previousParts=r.parts;r.parts=splitMessage(renderGroundedBrief(r.video,result)).map(text=>({text,hash:hash(text),status:'sent',webOnly:true}));
+            r.summaryCandidate=result;r.supplementedAt=now;delete r.supplementFailure;
+          }catch(error){r.supplementFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';}
+          await save();
         }
         // CEO 발언 영상: 프로그램 처리 뒤 남는 Supadata 여유로 최대 1편. 실패해도 유튜브 요약 결과에 영향 없음.
         let ceoVideo={status:'ceo_video_disabled'};

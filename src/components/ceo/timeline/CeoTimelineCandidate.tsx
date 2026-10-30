@@ -19,6 +19,9 @@ function Source({ s }: { s: any }) {
 
 function Body({ s, open = false }: { s: any; open?: boolean }) {
   const t = displayText(s);
+  if (s.kind === 'reported_headline') {
+    return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag tl-warn">언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span></>;
+  }
   if (t.kind === 'original') {
     return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag">원문 · 한국어 번역 없음</span></>;
   }

@@ -27,6 +27,14 @@ export const COMPANY_QUESTIONS = {
     { id: 'org', label: '조직·인력 운영은 어떻게 설명했나?', hint: '감원·조직 개편', re: /\b(job eliminations|layoffs|headcount|new division|engineering organization|those who have left)\b/gi },
     { id: 'capex', label: 'AI 설비투자에 대한 언급은?', hint: 'CapEx', re: /\b(CapEx|capital expenditures?)\b/gi },
   ],
+  tsla: [
+    { id: 'autonomy', label: '자율주행·로보택시 전망은?', hint: 'FSD·Robotaxi·Cybercab', re: /\b(self-driving|FSD|robotaxis?|Cybercab|autonom\w*)\b/gi },
+    { id: 'optimus', label: 'Optimus(휴머노이드)를 어떻게 말했나?', hint: '휴머노이드 로봇', re: /\b(Optimus)\b/gi },
+    { id: 'energy', label: '에너지·Megapack 수요는?', hint: 'Megapack·에너지 저장', re: /\b(Megapacks?|energy|battery)\b/gi },
+    { id: 'demand', label: '차량 수요·생산 판단은?', hint: '수요·생산', re: /\b(demand|production|deliver\w*|sold out|vehicles?)\b/gi },
+    { id: 'merger', label: 'SpaceX 합병에 대한 입장은?', hint: '합병·결합', re: /\b(merg\w*|tie-up|combin\w*)\b/gi },
+    { id: 'value', label: '테슬라 가치의 원천을 어떻게 봤나?', hint: '기업가치', re: /\b(value|valuation)\b/gi },
+  ],
   spacex: [
     { id: 'space-ai', label: '우주 AI 인프라(AI 위성) 구상은?', hint: 'AI 위성·우주 데이터센터', re: /\b(AI satellites?|satellites?|data cent(?:er|re)s?)\b/gi },
     { id: 'missions', label: '유인 우주비행·NASA 협력은?', hint: 'NASA·JAXA·ESA', re: /\b(NASA|JAXA|ESA|astronauts?|crew|dream come true)\b/gi },
@@ -51,7 +59,7 @@ const NOT_A_CLAIM = [
 ];
 
 export function isComparableClaim(statement) {
-  const q = statement?.kind === 'direct_quote' ? String(statement.quoteText || '').trim() : '';
+  const q = statement?.kind === 'direct_quote' || statement?.kind === 'reported_headline' ? String(statement.quoteText || '').trim() : '';
   return !!q && !NOT_A_CLAIM.some(re => re.test(q));
 }
 
@@ -70,6 +78,7 @@ export function effectiveDate(statement) {
     if (rd.basis === 'spoken') return { value: rd.value, basis: 'spoken', label: '발언일' };
     if (rd.basis === 'released') return { value: rd.value, basis: 'released', label: '보도자료 발표일' };
     if (rd.basis === 'written') return { value: rd.value, basis: 'written', label: '게시일' };
+    if (rd.basis === 'reported') return { value: rd.value, basis: 'reported', label: '기사 보도일' };
   }
   return { value: null, basis: 'unknown', label: '날짜 미확인' };
 }

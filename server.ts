@@ -15,7 +15,7 @@ import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
 import { SystemStatus, NewsEvent, ArticleSource, RawArticle } from './server/types';
-import { getIsFirestoreAvailable, initFirestore, sanitizeForFirestore } from './server/firestore';
+import { getIsFirestoreAvailable, initFirestore, sanitizeForFirestore, firestoreRepo } from './server/firestore';
 import {
   SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
@@ -536,10 +536,22 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   );
   setSchedulerCeoRuntime(ceoRuntime);
 
+  // Tesla 보조 자료(기사 헤드라인)용 이벤트 목록: 12시간 캐시, 실패 시 메모리의 최근 이벤트로 대신합니다.
+  let headlineCache: { at: number; items: any[] } | null = null;
+  const cachedEventHeadlines = async () => {
+    if (headlineCache && Date.now() - headlineCache.at < 12 * 3600_000) return headlineCache.items;
+    try {
+      const items = await firestoreRepo.getEventHeadlines(4000);
+      if (items.length) { headlineCache = { at: Date.now(), items }; return items; }
+    } catch { /* fall through */ }
+    return db.getEventsForRead();
+  };
+
   app.use(createCeoRouter({
     runtime: ceoRuntime,
     getRuntime: () => getSchedulerCeoRuntime() || ceoRuntime,
     verifyAdmin: verifyAdminAuth,
+    getReportedEvents: cachedEventHeadlines,
   }));
 
   // 5. Single Event Detail (Public read)

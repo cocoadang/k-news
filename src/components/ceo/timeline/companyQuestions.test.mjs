@@ -54,7 +54,14 @@ test('display text prefers reviewed translation, then AI title, then original', 
 });
 
 test('unknown company falls back to generic questions; empty data invents nothing', () => {
-  assert.equal(companyQuestions([], 'p', 'tsla').questions.length, 0);
-  const r = companyQuestions([st('z', 'tsla', 'Capital expenditures will rise', rel('2026-01-01'))], 'p', 'tsla');
+  assert.equal(companyQuestions([], 'p', 'zzzz').questions.length, 0);
+  const r = companyQuestions([st('z', 'zzzz', 'Capital expenditures will rise', rel('2026-01-01'))], 'p', 'zzzz');
   assert.deepEqual(r.questions.map(q => q.id), ['investment']);
+});
+
+test('reported headlines are comparable but labelled by report date', () => {
+  const h = { statementId: 'r', personId: 'p', companyId: 'tsla', kind: 'reported_headline', quoteText: 'Elon Musk Says Tesla Megapacks Are Nearly Sold Out', referenceDate: { value: '2026-10-25', basis: 'reported', precision: 'day' } };
+  const r = companyQuestions([h], 'p', 'tsla');
+  assert.ok(r.questions.find(q => q.id === 'energy'));
+  assert.equal(r.questions[0].items[0].date.label, '기사 보도일');
 });

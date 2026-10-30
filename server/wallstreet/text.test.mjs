@@ -122,3 +122,10 @@ test('user-disabled programme is not collected and pending records stop',async()
  await x.store.exclusive(async(s,save)=>{s.videos.old00000001={video:{...crypto,id:'old00000001'},programmes:['crypto'],recipient:'123',stage:'text_summary',transcript:[{start:0,text:'x'}],firstSeen:now};await save();});
  await x.run().run();assert.equal(x.store.state.videos.old00000001.hold,'programme_disabled_by_user');assert.equal(x.sent.length,0);
 });
+
+test('after a validator fix, a recently failed summary (old version, already retried) is re-attempted once',async()=>{
+ const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
+ const r=x.run();await r.importTranscript(source(video()));
+ await x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='evidence_topic_span';v.summaryFailedAt=now-3*3600000;v.summaryRetried=true;await save();});
+ await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');
+});

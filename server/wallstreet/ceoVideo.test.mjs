@@ -51,3 +51,12 @@ test('definite no-caption with no charge is refunded and retried once',async()=>
   await runCeoVideoStep({s,save:async()=>{},now,c:cfg,discovery,supadata,extractor:{extract:async()=>{throw Error('no')}}});
   assert.equal(s.supadata.used,0);assert.equal(s.ceoVideos.aaaaaaaaaaa.stage,'waiting');
 });
+
+test('CEO videos leave the last two daily caption credits for programme summaries',async()=>{
+  const s=memoryState();s.supadata={cycle:String(cfg.supadataCycleStart),end:cfg.supadataCycleEnd,used:2,shadowRemaining:90,days:{[new Date(now+9*3600000).toISOString().slice(0,10)]:2}};
+  let gets=0;
+  const discovery={list:async ch=>ch==='UCrp_UI8XtuYfpiqluWLD7Lw'?[v('aaaaaaaaaaa','Jensen Huang interview')]:[]};
+  const supadata={balance:async()=>({organizationId:'org',maximum:100,remaining:88}),get:async()=>{gets++;return {status:'unavailable'};}};
+  const r=await runCeoVideoStep({s,save:async()=>{},now,c:cfg,discovery,supadata,extractor:{extract:async()=>({items:[]})}});
+  assert.equal(r.status,'ceo_video_supadata_reserved_for_programmes');assert.equal(gets,0);
+});

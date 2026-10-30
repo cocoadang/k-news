@@ -114,18 +114,20 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
     const scan=await call(counterEvidencePrompt(items),700,3000);journal.counterEvidence=scan;
     const screenedContext=applyCounterEvidence(items,scan);journal.counterEvidenceHeld=screenedContext.held;
     items=screenedContext.items;
-    if(items.length<floor){
+    // Claims held only for a missing caveat (e.g. "damage not yet confirmed") get one rewrite that adds it,
+    // so important topics are kept with their caveat instead of silently dropped.
+    {
      const entries=screenedContext.held.filter(h=>h.review?.status==='qualifies').map(h=>({index:h.index,item:screened.items[h.index],review:h.review})).filter(e=>e.item);
      if(entries.length){
       try{
-       const fixed=await call(qualifyPrompt(entries),900,2500);journal.qualifyRepair=fixed;
+       const fixed=await call(qualifyPrompt(entries),900,3500);journal.qualifyRepair=fixed;
        const added=[];
        for(const x of Array.isArray(fixed?.items)?fixed.items:[]){
         if(!entries.some(e=>e.index===x?.index))continue;
         try{const [g]=groundCandidate({items:[{text:x.text,kind:x.kind,evidenceIds:x.evidenceIds}]},blocks,{minimum:1,contextRadius:1,topicContext:true});
          if(!items.some(i=>i.text===g.text)&&!added.some(i=>i.text===g.text))added.push({...g,qualified:true});}catch{}
        }
-       items=[...items,...added];journal.qualifyAdded=added.length;
+       items=[...items,...added].sort((a,b)=>a.start-b.start);journal.qualifyAdded=added.length;
       }catch(e){journal.qualifyError=/^[a-z_]{1,60}$/.test(e?.message||'')?e.message:'unclassified';}
      }
      if(items.length<floor)throw Error('insufficient_context_reviewed_items');

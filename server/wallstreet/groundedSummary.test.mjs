@@ -119,3 +119,18 @@ test('held "qualifies" claims get one grounded rewrite that can restore the floo
  const result=await s.summarize({segments:seg,maxCostMicros:20000});
  assert.equal(calls,4);assert.equal(result.items.length,3);assert.match(result.items[2].text,/조건부로/);
 });
+
+test('a caveat-held claim is rewritten even when enough other points remain (kept in time order)',async()=>{
+ const seg=Array.from({length:18},(_,i)=>({start:i*3,text:`방송 구간 ${i}의 조건부 전망입니다.`}));
+ const bl=evidenceBlocks(seg);
+ const item=(b,i)=>({text:`출연자는 구간 ${i*3}에 관해 전망했습니다.`,kind:'outlook',evidenceIds:[b.id]});
+ const five={items:bl.slice(0,5).map(item)};
+ const findings={findings:[0,1,2,3,4].map(index=>index===1?{index,status:'qualifies',sourceIds:[bl[1].id],reason:'피해 미확인'}:{index,status:'clear',sourceIds:[],reason:'추가 단서 없음'})};
+ const fixed={items:[{index:1,text:'출연자는 구간 3에 관해 조건부로 전망했습니다.',kind:'outlook',evidenceIds:[bl[1].id]}]};
+ const checks=n=>({checks:Array.from({length:n},(_,index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',reason:'근거 일치'}))});
+ let calls=0;const responses=[five,findings,fixed,checks(5)];
+ const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(responses[calls++])})};
+ const s=groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,approved:true,minimumSummaryItems:5,acceptMinimumItems:3,counterEvidenceRequired:true});
+ const result=await s.summarize({segments:seg,maxCostMicros:20000});
+ assert.equal(calls,4);assert.equal(result.items.length,5);assert.match(result.items[1].text,/조건부로/);
+});

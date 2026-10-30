@@ -53,19 +53,21 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div>
-      <PageHeader title="CEO 발언" description="같은 질문에 대한 CEO의 발언을 날짜순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않고, 원문과 수치를 나란히 비교할 수 있게 합니다."
+      <PageHeader title="CEO 발언" description="같은 질문에 대한 CEO의 발언을 최신순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않습니다. 원문과 수치를 함께 확인하세요."
         status={notice || undefined}
         actions={<>{isAdmin && <CollectButton onClick={onRefresh} busy={refreshing} label="공식 원문 수집 (관리자)" />}<RefreshButton onClick={load} /></>} />
-      {/* 관리자 전용 제어 영역: 조건부 렌더링 (비관리자 방문자에게는 렌더링하지 않음) */}
-      {isAdmin && (
-        <section aria-label="CEO 발언 관리자 영역" className="mb-5 rounded-2xl border border-cyan-800/60 bg-cyan-950/20 p-4" data-testid="ceo-admin-panel">
-          <h3 className="mb-3 text-sm font-semibold text-cyan-200">CEO 발언 관리자 영역 · 한국어 번역 관리</h3>
-          {api?.dataset && api.koSummary && (
-            <CeoKoAdmin info={api.koSummary} statements={legacyStatements} onChanged={load} />
-          )}
-        </section>
-      )}
       {state.status === 'ready' ? <><p className="mb-3 text-xs text-slate-500">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><SectionBoundary label="CEO 발언 타임라인"><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-sm text-slate-400">기존 목록과 수집 상태 보기</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
+      {/* 관리자 도구는 화면 맨 아래 접힌 상태로만 (비관리자에게는 렌더링하지 않음) */}
+      {isAdmin && (
+        <details className="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-testid="ceo-admin-panel">
+          <summary className="cursor-pointer text-sm text-slate-400">관리자 도구 · 한국어 번역 관리</summary>
+          <section aria-label="CEO 발언 관리자 영역" className="mt-3">
+            {api?.dataset && api.koSummary && (
+              <CeoKoAdmin info={api.koSummary} statements={legacyStatements} onChanged={load} />
+            )}
+          </section>
+        </details>
+      )}
     </div>
   );
 }

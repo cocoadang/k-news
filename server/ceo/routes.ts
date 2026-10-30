@@ -5,6 +5,7 @@
  *   실패 코드: 409 진행 중·펜싱 거절, 429 최소 간격, 413 저장 크기 초과, 502 모든 출처 실패, 503 저장소 없음·불가·권한, 504 기한·저장 시간 초과
  * db 싱글턴을 불러오지 않습니다. 운영에서는 server.ts가 이벤트 목록 함수와 관리자 인증 미들웨어를 주입합니다.
  */
+import { headlineKey } from './koHeadlines';
 import express from 'express';
 import Parser from 'rss-parser';
 import { CeoRuntime, ceoAllowedHosts, feedCompanyIds } from './runtime';
@@ -66,6 +67,12 @@ export function createCeoRuntime(getEvents: () => EventLike[], getFirestore: () 
   });
 }
 
+/** 아직 번역되지 않은 보도 헤드라인을 묶어 번역 (호출 최대 1회) */
+export async function translatePendingHeadlines(runtime: CeoRuntime, getReportedEvents: () => HeadlineEvent[] | Promise<HeadlineEvent[]>, deadline: number) {
+  const texts = reportedCeoStatements(await getReportedEvents()).map((x: any) => String(x.quoteText || ''));
+  return runtime.translateHeadlines(texts, deadline);
+}
+
 export function createCeoRouter(deps: {
   runtime?: CeoRuntime;
   getReportedEvents?: () => HeadlineEvent[] | Promise<HeadlineEvent[]>;
@@ -87,7 +94,11 @@ export function createCeoRouter(deps: {
       // Tesla 공식 출처가 403으로 막혀 있어, 이미 수집한 기사 헤드라인의 '머스크 발언 보도'를 따로 표시합니다(직접 인용 아님).
       if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getReportedEvents) {
         try {
-          const extra = reportedCeoStatements(await deps.getReportedEvents());
+          const results = await getActiveRuntime().koResults();
+          const extra = reportedCeoStatements(await deps.getReportedEvents()).map((x: any) => {
+            const t = results[headlineKey(x.quoteText)];
+            return t?.title ? { ...x, aiTranslationKo: t.title } : x;
+          });
           const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
           snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...extra.filter(x => !ids.has(x.statementId))] };
         } catch { /* 보조 자료 실패는 공식 자료 응답에 영향 없음 */ }
@@ -109,6 +120,8 @@ export function createCeoRouter(deps: {
     res.setHeader('Cache-Control', 'no-store');
     try {
       const r = await getActiveRuntime().refresh();
+      // 공식 원문 수집 뒤 언론 헤드라인 번역도 함께(최대 1회 호출, 실패해도 응답에 영향 없음)
+      if (deps.getReportedEvents) await translatePendingHeadlines(getActiveRuntime(), deps.getReportedEvents, Date.now() + 90_000).catch(() => null);
       if (r.httpStatus === 200) return res.json(r.response);
       res.status(r.httpStatus).json({ ...r.response, error: r.error, reason: r.reason });
     } catch (e: any) {

@@ -20,6 +20,7 @@ import { CURATED_SEC_EXHIBITS, CuratedSecExhibit, extractSecQuotes, SEC_HASH, se
 import { withTranslation } from './translations';
 import { KoLedger } from './koLedger';
 import { KoClient, KoRunReport, koInfo, koSummaryFor, runKoSummaries } from './koSummary';
+import { translateHeadlines } from './koHeadlines';
 import { reconcileHistory, visibleStatements } from './history';
 import { ceoUrlHash } from './urlHash';
 import { htmlToText } from './htmlText';
@@ -318,6 +319,19 @@ export class CeoRuntime {
     const report = await runKoSummaries([s], { ledger, client: this.opts.koClient?.() ?? null, now: () => this.now(), deadline: now + 60_000, overrideReviewed: !!opts.overrideReviewed, maxCalls: 1 });
     this.lastKoReport = report;
     return { httpStatus: 200, report };
+  }
+
+  /** 언론 헤드라인 AI 번역 (매일 수집 뒤·관리자 공식 원문 수집 뒤). 결과는 원장 캐시에 저장 */
+  async translateHeadlines(texts: string[], deadline: number) {
+    const ledger = this.opts.koLedger?.();
+    if (!ledger) return { pending: 0, sent: 0, translated: 0, stoppedReason: '원장 없음' };
+    return translateHeadlines(texts, { ledger, client: this.opts.koClient?.() ?? null, now: () => this.now(), deadline });
+  }
+  /** 읽기 전용: 헤드라인 번역 결과 캐시 */
+  async koResults(): Promise<Record<string, { title: string }>> {
+    const ledger = this.opts.koLedger?.();
+    if (!ledger) return {};
+    try { return (await ledger.read()).results; } catch { return {}; }
   }
 
   /** 관리자 전용: 켜기·끄기·한도(USD 1 이하) */

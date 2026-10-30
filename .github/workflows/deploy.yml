@@ -27,7 +27,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run lint
       - run: node --test candidates/ceo-timeline/*.test.mjs src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs server/wallstreet/*.test.mjs
-      - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts
+      - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts
       - run: python3 -m unittest discover -s ops -p "test_*.py"
       - run: npm run build
 

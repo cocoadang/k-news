@@ -10,7 +10,7 @@ import { sendEventToTelegram, sendTestMessage, handleTelegramCommand } from './s
 import { analyzeArticleWithGemini, suggestCompanyKeywords, createUnanalyzedEvent } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords } from './server/companyRenewal';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
-import { createCeoRouter, createCeoRuntime } from './server/ceo/routes';
+import { createCeoRouter, createCeoRuntime, translatePendingHeadlines } from './server/ceo/routes';
 import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
@@ -289,6 +289,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   // Strictly POST only. Requires CRON_SECRET in all environments (timing-safe comparison).
   // Query parameters ?secret and ?adminSecret are strictly rejected.
   // ADMIN_SECRET has zero influence on cron authentication.
+  let pollHeadlineHook: ((deadline: number) => Promise<unknown>) | null = null;
   app.post('/api/jobs/poll', async (req, res) => {
     const cronAuth = verifyCronAuth(req);
 
@@ -305,6 +306,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     }
 
     console.log('[POLL] start: Cloud Scheduler trigger authenticated for POST /api/jobs/poll');
+    const pollStartedAt = Date.now();
 
     try {
       // Ensure Firestore is connected and data synchronized
@@ -333,6 +335,10 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       }
 
       console.log(`[POLL] success: new_articles=${result.newArticlesCount}, new_events=${result.newEventsCreated.length}, telegram_alerts=${result.telegramAlertsSentCount}`);
+      // 매일 수집 뒤: CEO 화면의 언론 헤드라인 중 아직 번역되지 않은 것을 묶어 AI 번역(호출 최대 1회, 시간이 남을 때만, 실패해도 수집 결과에 영향 없음)
+      if (Date.now() - pollStartedAt < 200_000 && pollHeadlineHook) {
+        try { const t = await pollHeadlineHook(Math.min(pollStartedAt + 270_000, Date.now() + 70_000)); console.log(`[POLL] headline_ko: ${JSON.stringify(t)}`); } catch { /* ignore */ }
+      }
       res.json({
         success: true,
         triggeredBy: 'Cloud Scheduler /api/jobs/poll',
@@ -559,6 +565,8 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     videoCache = { at: Date.now(), items };
     return items;
   };
+
+  pollHeadlineHook = (deadline: number) => translatePendingHeadlines(getSchedulerCeoRuntime() || ceoRuntime, cachedEventHeadlines, deadline);
 
   app.use(createCeoRouter({
     runtime: ceoRuntime,

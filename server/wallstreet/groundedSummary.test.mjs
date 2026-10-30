@@ -75,3 +75,20 @@ test('optional one source repair preserves accepted claims and still needs a fre
  assert.equal(calls,3);assert.equal(result.items.length,3);assert.ok(result.validationJournal.sourceRepair);
  assert.equal(result.items[0].text,candidate.items[0].text);
 });
+
+test('detailed request still delivers when one of five points fails grounding (floor 3)',async()=>{
+ const seg=Array.from({length:18},(_,i)=>({start:i*3,text:`방송 구간 ${i}의 조건부 전망입니다.`}));
+ const bl=evidenceBlocks(seg);assert.equal(bl.length,6);
+ const item=(b,i)=>({text:`출연자는 구간 ${i*3}에 관해 전망했습니다.`,kind:'outlook',evidenceIds:[b.id]});
+ const five={items:bl.slice(0,5).map(item)};five.items[4]={...five.items[4],text:'CTA 펀드의 전망입니다.'};
+ const findings=n=>({findings:Array.from({length:n},(_,index)=>({index,status:'clear',sourceIds:[],reason:'추가 단서 없음'}))});
+ const checks=n=>({checks:Array.from({length:n},(_,index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',reason:'근거 일치'}))});
+ const make=responses=>{let calls=0;const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(responses[calls++])})};
+  return {client,count:()=>calls,s:groundedSummarizer({client,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,approved:true,minimumSummaryItems:5,acceptMinimumItems:3,counterEvidenceRequired:true})};};
+ const a=make([five,findings(4),checks(4)]);
+ const result=await a.s.summarize({segments:seg,maxCostMicros:20000});
+ assert.equal(result.items.length,4);assert.equal(a.count(),3);
+ const two={items:bl.slice(0,5).map((b,i)=>i<2?item(b,i):{...item(b,i),text:'CTA 펀드의 전망입니다.'})};
+ const b=make([two]);
+ await assert.rejects(b.s.summarize({segments:seg,maxCostMicros:20000}),/insufficient_source_grounded_items/);
+});

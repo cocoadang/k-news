@@ -80,7 +80,10 @@ export function renderGroundedBrief(video,result){
  if(!verified.has(result))throw Error('verification_required');
  return [video.title,`https://www.youtube.com/watch?v=${video.id}`,'자동 자막 기반 · 방송의 주장과 해석이며 독립적으로 확인된 사실이 아닙니다.',...result.items.flatMap(x=>[`• [${x.kind==='outlook'?'출연자의 해석·전망':'방송에서 소개한 내용'}] ${x.text}`,...x.starts.map(start=>`https://www.youtube.com/watch?v=${video.id}&t=${Math.floor(start)}s`)])].join('\n');
 }
-export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicrosPerToken,approved=false,allowSourceRepair=false,counterEvidenceRequired=false,minimumSummaryItems=3}){
+export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicrosPerToken,approved=false,allowSourceRepair=false,counterEvidenceRequired=false,minimumSummaryItems=3,acceptMinimumItems=Math.min(3,minimumSummaryItems)}){
+ // minimumSummaryItems sizes the request (5-8 detailed points); acceptMinimumItems is the delivery floor.
+ // Every delivered point is still individually grounded, counter-checked and audited.
+ const floor=Math.max(3,Math.min(acceptMinimumItems,minimumSummaryItems));
  return {async summarize({segments,maxCostMicros,video}){
   if(!approved||model!=='gemini-3.5-flash-lite'||inputMicrosPerToken!==0.3||outputMicrosPerToken!==2.5||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>20000)throw Error('grounded_budget_config');
   // Detailed generation (2500), counter review (700), audit (700), excluding all input tokens.
@@ -104,17 +107,17 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
     for(const accepted of screened.items)if(!next.items.some(x=>x.text===accepted.text&&x.kind===accepted.kind&&JSON.stringify(x.evidenceIds)===JSON.stringify(accepted.evidenceIds)))throw Error('accepted_claim_changed');
     screened=next;journal.repairedSourceScreen=next;
    }
-   if(screened.items.length<minimumSummaryItems)throw Error('insufficient_source_grounded_items');let items=screened.items;
+   if(screened.items.length<floor)throw Error('insufficient_source_grounded_items');let items=screened.items;
    if(counterEvidenceRequired){
     const scan=await call(counterEvidencePrompt(items),700,3000);journal.counterEvidence=scan;
     const screenedContext=applyCounterEvidence(items,scan);journal.counterEvidenceHeld=screenedContext.held;
     items=screenedContext.items;
-    if(items.length<minimumSummaryItems)throw Error('insufficient_context_reviewed_items');
+    if(items.length<floor)throw Error('insufficient_context_reviewed_items');
    }
    let audit=await call(verificationPrompt(items),700,0);journal.audit=audit;({items,audit}=conservativeClassification(items,audit));
    if(Array.isArray(audit?.checks)&&audit.checks.length===items.length&&audit.checks.every((x,i)=>x.index===i)){
     const kept=items.map((item,index)=>({item,index})).filter(({index})=>audit.checks[index].supported===true&&audit.checks[index].classificationCorrect===true);
-    if(kept.length>=minimumSummaryItems){
+    if(kept.length>=floor){
      const filtered={checks:kept.map(({index},i)=>({...audit.checks[index],index:i}))};
      const result=acceptVerification(kept.map(x=>x.item),filtered);result.validationJournal=journal;result.omittedIndices=items.map((_,i)=>i).filter(i=>!kept.some(x=>x.index===i));return result;
     }

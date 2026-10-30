@@ -1,19 +1,133 @@
-import React,{useState}from'react';
-import{timelineRecord}from'./timelineFoundation.mjs';
-import{questionsFor}from'./topicQuestions.mjs';
+import React, { useMemo, useState } from 'react';
+import { companyQuestions, displayText } from './companyQuestions.mjs';
 import './timeline.css';
-export function CeoTimeline({dataset}:{dataset:any}){
- const roles=[...new Map(dataset.roles.map((r:any)=>[r.personId+'|'+r.companyId,r])).values()] as any[];
- const [scope,setScope]=useState((roles[0]?.personId||'')+'|'+(roles[0]?.companyId||'')),[topic,setTopic]=useState('investment'),[pair,setPair]=useState<string[]>([]);
- const [person,company]=scope.split('|'),questions=questionsFor(dataset.statements,person,company),q=questions.find(x=>x.id===topic)||questions[0];
- const items=(q?.items||[]).map(x=>({...x,record:timelineRecord(x.statement)}));
- const dated=items.filter(x=>x.record.spokenDate).sort((a,b)=>a.record.spokenDate.localeCompare(b.record.spokenDate));
- const unknown=items.filter(x=>!x.record.spokenDate).sort((a,b)=>(a.record.referenceDate?.value||'').localeCompare(b.record.referenceDate?.value||''));
- const selected=pair.map(id=>items.find(x=>x.statement.statementId===id)).filter(Boolean).sort((a,b)=>a.record.spokenDate&&b.record.spokenDate?a.record.spokenDate.localeCompare(b.record.spokenDate):0);
- function toggle(id:string){setPair(p=>p.includes(id)?p.filter(x=>x!==id):p.length<2?[...p,id]:[p[1],id]);}
- function point(x:any){const s=x.statement,r=x.record;return <button className={'point '+(pair.includes(s.statementId)?'selected':'')} key={s.statementId} onClick={()=>toggle(s.statementId)} aria-pressed={pair.includes(s.statementId)}><span className="date">{r.spokenDate||r.referenceDate?.value||'날짜 없음'}{!r.spokenDate&&' · '+(r.referenceDate?.basis==='written'?'작성일':r.referenceDate?.basis==='released'?'발표일':'발언일 미확인')}</span><strong>{s.koSummary?.status==='ready'?s.koSummary.title:(s.translationKo?.status==='reviewed'?s.translationKo.text:s.quoteText||'원문 확인 필요')}</strong><small>분류 근거: {x.matchedTerms.join(', ')} · {pair.includes(s.statementId)?'비교 선택됨':'비교에 선택'}</small></button>}
- return <section className="ceo-timeline"><header><span className="eyebrow">저장된 공식 자료 · 주제별 비교</span><h1>CEO 발언의 변화</h1><p>같은 회사·같은 질문에서 두 기록을 선택해 원문과 조건을 비교합니다.</p><label>인물 · 회사 <select value={scope} onChange={e=>{setScope(e.target.value);setPair([])}}>{roles.map(r=><option key={r.personId+'|'+r.companyId} value={r.personId+'|'+r.companyId}>{dataset.persons.find((p:any)=>p.personId===r.personId)?.displayName} · {r.companyName}</option>)}</select></label></header>
- <div className="workspace"><aside><h2>비교할 질문</h2><p className="muted">원문 근거가 있는 질문만 표시합니다. 자동 분류는 검토 전입니다.</p>{questions.map(t=><button className={'topic '+(t.id===q?.id?'active':'')} key={t.id} onClick={()=>{setTopic(t.id);setPair([])}}>{t.label}<small>{t.items.length}개 기록{t.items.length===1?' · 변화 비교 자료 부족':''}</small></button>)}{!questions.length&&<p>분류 가능한 기록이 없습니다. 다른 회사의 발언으로 채우지 않습니다.</p>}</aside>
- <main><h2>{q?.label||'자료 없음'}</h2><p className="muted">날짜순이며 간격은 실제 시간에 비례하지 않습니다. 날짜 사이의 빈 구간은 발언이 없었다는 뜻이 아닙니다. 수집 범위에 공백이 있습니다.</p><h3>실제 발언일 확인 <span>{dated.length}건</span></h3><div className="rail">{dated.map(point)}</div>{dated.length<2&&<p className="notice">확인된 서로 다른 날짜의 발언이 부족해 변화는 판단하지 않습니다.</p>}<details open><summary>실제 발언일 미확인 · 작성/발표 기록 {unknown.length}건</summary><div className="rail uncertain">{unknown.map(point)}</div></details>
- <section className="comparison"><h2>선택한 두 기록 비교</h2><p className="muted">{selected.length}/2 선택 · 자동으로 입장 변경을 단정하지 않습니다.</p><div className="columns">{selected.map((x:any)=>{const s=x.statement,r=x.record;return <article key={s.statementId}><h3>{r.spokenDate?'발언일 '+r.spokenDate:'실제 발언일 미확인'}</h3><p className="muted">{r.sourceType} · {r.verification?.status==='not_rechecked'?'원문 재확인 필요':'저장 근거 기준'}</p><h4>원문 발췌</h4><blockquote>{r.originalQuote||'직접 인용 근거를 확인하지 못했습니다.'}</blockquote><h4>한국어 번역</h4><p>{r.translation?.status==='reviewed'?r.translation.text:'검토 번역 없음'}</p>{r.summary?.status==='ready'&&<><h4>AI 한국어 요약 · 별도 검토 필요</h4><p>{r.summary.summary}</p></>}<h4>조건 · 수치 · 단위 · 기간</h4><p>원문에서 함께 확인하세요. 구조화 검토 전이므로 빈 항목을 추정하지 않습니다.</p><details><summary>분류·날짜·출처 근거</summary><p>분류 단어: {x.matchedTerms.join(', ')}</p><p>{r.spokenDateEvidence?.basis}</p>{r.publicationDates.map((e:any,i:number)=><p key={i}>자료 발행일: {e.date||'미확인'}</p>)}<p>SEC 제출일: {r.filingDate||'별도 저장되지 않음'}</p>{r.evidence.map((e:any,i:number)=><p key={i}><a href={e.url} target="_blank" rel="noreferrer">{e.sourceName} ↗</a></p>)}</details></article>})}</div>{selected.length<2&&<p>위 시간축에서 비교할 기록 두 개를 선택하세요.</p>}</section></main></div></section>;
+
+type Item = { statement: any; matchedTerms: string[]; date: { value: string | null; basis: string; label: string }; metrics: string[] };
+
+const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : '날짜 미확인');
+const month = (d: string) => d.slice(0, 7).replace('-', '.');
+
+function Metrics({ values }: { values: string[] }) {
+  if (!values.length) return null;
+  return <div className="tl-metrics">{values.map(m => <span key={m}>{m}</span>)}</div>;
+}
+
+function Source({ s }: { s: any }) {
+  const e = (s.evidence || [])[0];
+  return e?.url ? <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{e.sourceName || '출처'} ↗</a> : null;
+}
+
+function Body({ s, open = false }: { s: any; open?: boolean }) {
+  const t = displayText(s);
+  if (t.kind === 'original') {
+    return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag">원문 · 한국어 번역 없음</span></>;
+  }
+  return <>
+    <p className="tl-text">{t.text}</p>
+    <span className="tl-tag">{t.kind === 'translation' ? '검토된 번역' : 'AI 요약 제목'}</span>
+    <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+  </>;
+}
+
+export function CeoTimeline({ dataset }: { dataset: any }) {
+  const scopes = useMemo(() => {
+    const seen = new Map<string, any>();
+    for (const r of dataset.roles || []) {
+      const key = r.personId + '|' + r.companyId;
+      if (seen.has(key)) continue;
+      const person = (dataset.persons || []).find((p: any) => p.personId === r.personId);
+      const count = (dataset.statements || []).filter((s: any) => s.personId === r.personId && s.companyId === r.companyId).length;
+      seen.set(key, { key, personId: r.personId, companyId: r.companyId, name: person?.displayName || r.personId, company: r.companyName, count });
+    }
+    return [...seen.values()].sort((a, b) => b.count - a.count);
+  }, [dataset]);
+
+  const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
+  const scope = scopes.find(s => s.key === scopeKey);
+  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyId) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope]);
+  const [questionId, setQuestionId] = useState<string>('');
+  const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
+  const [pair, setPair] = useState<string[]>([]);
+
+  const items: Item[] = q?.items || [];
+  const dated = items.filter(x => x.date.value);
+  const first = dated[0], latest = dated[dated.length - 1];
+  const selected = pair.map(id => items.find(x => x.statement.statementId === id)).filter(Boolean)
+    .sort((a: any, b: any) => (a.date.value || '').localeCompare(b.date.value || '')) as Item[];
+
+  const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); setPair([]); };
+  const pickQuestion = (id: string) => { setQuestionId(id); setPair([]); };
+  const toggle = (id: string) => setPair(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 2 ? [...p, id] : [p[1], id]);
+
+  return <section className="ceo-tl">
+    <header className="tl-head">
+      <h1>CEO 발언의 변화</h1>
+      <p className="tl-muted">같은 질문에 대한 CEO의 발언을 날짜순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않고, 원문과 수치를 나란히 비교할 수 있게 합니다.</p>
+      <div className="tl-scopes" role="tablist" aria-label="인물 · 회사">
+        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count}>
+          {s.name} · {s.company}<span>{s.count ? s.count + '건' : '자료 없음'}</span>
+        </button>)}
+      </div>
+    </header>
+
+    {!result.questions.length ? <p className="tl-empty">이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.</p> :
+    <div className="tl-layout">
+      <nav className="tl-questions" aria-label="비교할 질문">
+        <h2>질문</h2>
+        {result.questions.map((x: any) => <button key={x.id} className={'tl-q' + (x.id === q?.id ? ' on' : '')} onClick={() => pickQuestion(x.id)} aria-pressed={x.id === q?.id}>
+          <strong>{x.label}</strong>
+          <small>{x.items.length}건{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
+          {!x.comparable && <em>변화 비교 자료 부족</em>}
+        </button>)}
+      </nav>
+
+      <main className="tl-main">
+        <div className="tl-qhead"><h2>{q.label}</h2><p className="tl-muted">{q.hint} · 원문 단어로 분류 · {items.length}건</p></div>
+
+        {q.comparable && first && latest && <section className="tl-span" aria-label="처음과 최근 비교">
+          {[['처음', first], ['최근', latest]].map(([label, x]: any) => <article key={label}>
+            <span className="tl-span-label">{label} · {fmt(x.date.value)}</span>
+            <p>{displayText(x.statement).text}</p>
+            <Metrics values={x.metrics} />
+          </article>)}
+        </section>}
+        {!q.comparable && <p className="tl-notice">날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.</p>}
+
+        <ol className="tl-list">
+          {items.map(x => {
+            const s = x.statement, on = pair.includes(s.statementId);
+            return <li key={s.statementId} className={on ? 'on' : ''}>
+              <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{x.date.label}</small></div>
+              <div className="tl-card">
+                <Body s={s} />
+                <Metrics values={x.metrics} />
+                <div className="tl-foot">
+                  <Source s={s} />
+                  <button className={'tl-pick' + (on ? ' on' : '')} onClick={() => toggle(s.statementId)} aria-pressed={on}>{on ? '비교 해제' : '비교에 추가'}</button>
+                </div>
+              </div>
+            </li>;
+          })}
+        </ol>
+
+        <section className="tl-compare" aria-live="polite">
+          <h3>두 발언 나란히 보기 <span className="tl-muted">{selected.length}/2</span></h3>
+          {selected.length < 2 ? <p className="tl-muted">위 목록에서 ‘비교에 추가’를 두 번 누르세요.</p> :
+          <div className="tl-cols">{selected.map(x => <article key={x.statement.statementId}>
+            <span className="tl-span-label">{fmt(x.date.value)} · {x.date.label}</span>
+            <Body s={x.statement} open />
+            <Metrics values={x.metrics} />
+            <p className="tl-muted">분류 단어: {x.matchedTerms.join(', ')}</p>
+            <Source s={x.statement} />
+          </article>)}</div>}
+          {selected.length === 2 && <p className="tl-muted">조건·수치·기간이 같은지 원문에서 함께 확인하세요. 표현이 달라졌다고 입장이 바뀐 것은 아닙니다.</p>}
+        </section>
+
+        {(result.other.length > 0 || result.excludedCount > 0) && <details className="tl-other">
+          <summary>질문에 분류되지 않은 발언 {result.other.length}건{result.excludedCount ? ` · 인사말·편집자 주 ${result.excludedCount}건 제외` : ''}</summary>
+          <ul>{result.other.map((s: any) => <li key={s.statementId}><span className="tl-muted">{fmt(s.referenceDate?.value || s.spokenAt?.value || null)}</span> {displayText(s).text}</li>)}</ul>
+        </details>}
+      </main>
+    </div>}
+  </section>;
 }

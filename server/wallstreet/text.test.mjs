@@ -84,3 +84,18 @@ test('twice-daily runtime admits at most two slots and excludes prior trial vide
  assert.deepEqual(Object.keys(x.store.state.videos),[]);assert.equal(x.sent.length,0);
  assert.equal((await x.run().importTranscript(source(video()))).status,'previously_delivered_excluded');
 });
+
+test('validation-rejected summary is retried once within 48h; unknown outcomes never are',async()=>{
+ const x=setup();let calls=0;
+ x.deps.summarizer.summarize=async()=>{calls++;if(calls===1){const e=Error('insufficient_source_grounded_items');e.candidate={protocol:'evidence_ids_v1',calls:[{ceiling:1,status:'completed',raw:'{}'}]};throw e;}return result;};
+ const r=x.run();await r.importTranscript(source(video()));
+ await r.run();assert.equal(calls,1);
+ const held=x.store.state.videos.Idn_d5ArZvA;assert.equal(held.hold,'summary_failed_or_uncertain');assert.equal(held.summaryFailure,'insufficient_source_grounded_items');
+ await r.run();assert.equal(calls,2);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');assert.equal(x.sent.length,1);
+ const y=setup();let ycalls=0;
+ y.deps.summarizer.summarize=async()=>{ycalls++;const e=Error('insufficient_source_grounded_items');e.candidate={calls:[{ceiling:1,status:'completed'}]};throw e;};
+ const ry=y.run();await ry.importTranscript(source(video()));await ry.run();await ry.run();await ry.run();assert.equal(ycalls,2);
+ const z=setup();let zcalls=0;
+ z.deps.summarizer.summarize=async()=>{zcalls++;const e=Error('timeout');e.candidate={calls:[{ceiling:1,status:'inflight'}]};throw e;};
+ const rz=z.run();await rz.importTranscript(source(video()));await rz.run();await rz.run();assert.equal(zcalls,1);
+});

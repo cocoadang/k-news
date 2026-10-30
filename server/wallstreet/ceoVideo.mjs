@@ -101,6 +101,8 @@ export async function runCeoVideoStep({s,save,now,c,discovery,supadata,extractor
   const r=waiting[0];if(!r)return {status:'ceo_video_none'};
   if((B.days[day]||0)>=cfg.dailyVideos||(B.months[month]||0)>=cfg.monthlyVideos)return {status:'ceo_video_cap'};
   if((B.spend[day]||0)+cfg.reservationMicros>cfg.dailyMicros||(B.spend[month]||0)+cfg.reservationMicros>cfg.monthlyMicros)return {status:'ceo_video_budget'};
+  // Programme summaries (Bull&Bear etc.) have priority: CEO videos never use the last 2 caption credits of the day.
+  if((s.supadata?.days?.[day]||0)+1>c.supadataDailyLimit-2)return {status:'ceo_video_supadata_reserved_for_programmes'};
   let before;try{before=await supadata.balance();if(!reserveSupadata(s,before,now,c))return {status:'ceo_video_supadata_limit'};}catch{return {status:'ceo_video_supadata_unverified'};}
   B.days[day]=(B.days[day]||0)+1;B.months[month]=(B.months[month]||0)+1;r.stage='caption_inflight';await save();
   let segments;

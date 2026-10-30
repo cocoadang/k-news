@@ -1,3 +1,4 @@
+import {telegramHtml} from './telegramFormat.mjs';
 import { CHANNEL } from './core.mjs';
 function required(approved) { if (approved !== true) throw Error('live_access_not_enabled'); }
 export function parseVidiqTranscript(data) {
@@ -64,10 +65,13 @@ export function telegramTransport({token,approved=false,fetcher=fetch}) {
     required(approved);
     if(!token || !chatId || text.length>3500) throw Error('invalid_telegram_request');
     try {
-      const r=await fetcher(`https://api.telegram.org/bot${token}/sendMessage`,{
+      const post=body=>fetcher(`https://api.telegram.org/bot${token}/sendMessage`,{
         method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
-        body:JSON.stringify({chat_id:chatId,text,link_preview_options:{is_disabled:true}})});
-      const data=await r.json();
+        body:JSON.stringify({chat_id:chatId,link_preview_options:{is_disabled:true},...body})});
+      let r=await post({text:telegramHtml(text),parse_mode:'HTML'});
+      let data=await r.json();
+      // A 400 means Telegram rejected the formatted message (nothing was sent); retry once as plain text.
+      if(r.status===400&&data.ok===false){r=await post({text});data=await r.json();}
       if(r.ok && data.ok && data.result?.message_id) return {status:'sent',messageId:String(data.result.message_id)};
       if(r.status===429 && data.ok===false) return {status:'rate_limited',definitelyNotSent:true,retryAfterMs:Math.max(60,Number(data.parameters?.retry_after)||60)*1000};
       if(r.status>=400 && r.status<500 && data.ok===false) return {status:'rejected'};

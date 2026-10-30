@@ -19,10 +19,15 @@ export function eligible(v, now, activatedAt, config) {
 }
 export function splitMessage(text, limit = 3400) {
   const chunks = []; let current = '';
+  // Prefer line boundaries (a link or point is never cut in half); fall back to characters for a single over-long line.
   // Count UTF-16 units conservatively; never cut a surrogate pair.
-  for (const ch of text) {
-    if (current.length + ch.length > limit) { chunks.push(current); current = ''; }
-    current += ch;
+  for (const line of text.split(/(?<=\n)/)) {
+    if (current && current.length + line.length > limit) { chunks.push(current.replace(/\n$/, '')); current = ''; }
+    if (line.length <= limit) { current += line; continue; }
+    for (const ch of line) {
+      if (current.length + ch.length > limit) { chunks.push(current); current = ''; }
+      current += ch;
+    }
   }
   if (current) chunks.push(current);
   return chunks.map((s, i) => `[${i + 1}/${chunks.length}]\n${s}`);

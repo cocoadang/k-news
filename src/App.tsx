@@ -1,3 +1,4 @@
+import { PageHeader, RefreshButton, CollectButton } from './components/ui';
 import { YoutubeMenu } from './components/YoutubeMenu';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
@@ -38,7 +39,7 @@ export default function App() {
 
   // Toast Notification
   // 상단 메뉴: 뉴스 피드 / CEO 발언 (CEO 발언은 읽기 전용 API /api/ceo/dataset, 예시 데이터 대체 없음)
-  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube'>('news');
+  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube'>('youtube');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -468,8 +469,6 @@ export default function App() {
       {/* Header */}
       <Header
         authStatus={authStatus}
-        isPolling={isPolling}
-        onManualPoll={handleManualPoll}
         onOpenSettings={() => {
           setIsSettingsOpen(true);
           if (authStatus.isAuthenticated) {
@@ -478,14 +477,13 @@ export default function App() {
         }}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
-        hideManualPoll={mainView !== 'news'}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
         <nav className="mb-4 flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label="주 메뉴">
-          {([['news', '뉴스 피드'], ['ceo', 'CEO 발언'], ['youtube', '유튜브 요약']] as const).map(([key, label]) => (
+          {([['youtube', '유튜브 요약'], ['news', '뉴스 피드'], ['ceo', 'CEO 발언']] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -502,6 +500,8 @@ export default function App() {
         {mainView === 'youtube' ? (<YoutubeMenu isAdmin={!!authStatus?.isAuthenticated} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
           <CeoMenu isAdmin={!!authStatus?.isAuthenticated} />
         ) : (<>
+        <PageHeader title="뉴스 피드" description="감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다."
+          actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(); fetchStatus(); }} /></>} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}
         <CompanyTabs
           companies={companies}
@@ -551,7 +551,7 @@ export default function App() {
               선택한 기업 및 조건에 맞는 뉴스가 없습니다.
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              다른 기업 탭을 선택하거나 [새로고침] 버튼을 눌러 최신 뉴스를 확인해 보세요.
+              다른 기업 탭을 선택하거나 [새로고침] 버튼을 눌러 저장된 최신 뉴스를 다시 불러오세요.
             </p>
           </div>
         ) : (
@@ -575,7 +575,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 text-xs text-slate-500 text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Investment Intelligence Monitor · Multi-Company AI Intelligence Platform</span>
+          <span>미국주식 모니터링</span>
           <span className="text-[11px] text-slate-400">
             감시 대상: SpaceX · Alphabet/Google · Tesla · Microsoft · NVIDIA & 주요 글로벌 경제지
           </span>

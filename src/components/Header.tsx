@@ -1,26 +1,19 @@
 import React from 'react';
-import { Activity, RefreshCw, Settings, Lock, ShieldCheck } from 'lucide-react';
+import { Activity, Settings, Lock, ShieldCheck } from 'lucide-react';
 import { AuthStatus } from '../types';
 
 interface HeaderProps {
   authStatus: AuthStatus | null;
-  isPolling: boolean;
-  onManualPoll: () => void;
   onOpenSettings: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
-  /** CEO 발언 화면 등 뉴스 수집과 무관한 화면에서는 수집 버튼(/api/poll)을 숨김 */
-  hideManualPoll?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   authStatus,
-  isPolling,
-  onManualPoll,
   onOpenSettings,
   onOpenLogin,
   onLogout,
-  hideManualPoll = false,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
@@ -34,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate flex items-center gap-1.5">
-                Investment <span className="text-cyan-400">Intelligence</span>
+                미국주식 <span className="text-cyan-400">모니터링</span>
               </h1>
             </div>
           </div>
@@ -63,16 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
               )
             )}
 
-            {/* Manual Fetch Button (뉴스 피드에서만) */}
-            {!hideManualPoll && <button
-              onClick={onManualPoll}
-              disabled={isPolling}
-              className="flex items-center px-2.5 sm:px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-sm disabled:opacity-50 transition-all cursor-pointer"
-              title="최신 뉴스 수집 & AI 분석 실행"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''} sm:mr-1`} />
-              <span className="hidden sm:inline">{isPolling ? '수집 중...' : '새로고침'}</span>
-            </button>}
+            {/* 수집 실행·새로고침 버튼은 각 메뉴 머리말(PageHeader)로 옮겼습니다. */}
 
             {/* Settings Gear Button (⚙️) */}
             <button

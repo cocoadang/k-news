@@ -158,7 +158,12 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
     // Strictly adheres to 하루 1회 Asia/Seoul policy, Firestore lease/fencing/cache, and minInterval.
     // CEO collection failure MUST be isolated from news monitoring cycle results.
     const ceoRuntime = getSchedulerCeoRuntime();
-    if (ceoRuntime) {
+    // CEO collection takes ~30s. Start it only while the whole cycle can still answer the
+    // scheduler before Cloud Run's 300s request timeout; otherwise it runs on the next cycle.
+    const CEO_START_LIMIT_MS = 210 * 1000;
+    if (ceoRuntime && Date.now() - startTime > CEO_START_LIMIT_MS) {
+      db.addLog('Scheduler', 'info', '[TimeBudget] 사이클 시간 한도로 CEO 공식 자료 수집은 다음 사이클로 미룹니다.');
+    } else if (ceoRuntime) {
       try {
         const snap = await ceoRuntime.snapshot();
         const lastSeoulDate = snap.refreshedAt ? getSeoulDateString(new Date(snap.refreshedAt)) : null;

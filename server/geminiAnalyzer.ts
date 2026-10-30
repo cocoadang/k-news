@@ -1592,13 +1592,14 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
     if (event.screening?.evidenceKey === screeningEvidenceKey(event)) {
       if (needsDetailedAnalysis(event)) {
         summary.awaitingDetail++;
-        if (event.analysisStatus !== 'failed') await commit(event, { analysisDeferredReason:
-          summary.isRateLimited ? '할당량 초과로 상세 분석 이월' : '상세 분석 예산/실행 한도로 이월' });
+        const reason = summary.isRateLimited ? '할당량 초과로 상세 분석 이월' : '상세 분석 예산/실행 한도로 이월';
+        // Skip no-op writes: the backlog grows daily and rewriting the same reason made each cycle slower.
+        if (event.analysisStatus !== 'failed' && event.analysisDeferredReason !== reason) await commit(event, { analysisDeferredReason: reason });
       }
     } else {
       summary.unassessed++;
-      if (event.analysisStatus !== 'failed') await commit(event, { analysisDeferredReason:
-        !generate ? 'API 키 미설정: 미평가' : summary.isRateLimited ? '할당량 초과: 미평가 이월' : '간단 평가 예산/실행 한도: 미평가 이월' });
+      const reason = !generate ? 'API 키 미설정: 미평가' : summary.isRateLimited ? '할당량 초과: 미평가 이월' : '간단 평가 예산/실행 한도: 미평가 이월';
+      if (event.analysisStatus !== 'failed' && event.analysisDeferredReason !== reason) await commit(event, { analysisDeferredReason: reason });
     }
   }
   db.addLog('Gemini','info',`[TwoStage] ${JSON.stringify(summary)}; estimatedTokenBudget=${budget}. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다.`);

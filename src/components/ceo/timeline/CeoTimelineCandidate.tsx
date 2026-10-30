@@ -64,8 +64,8 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const [pair, setPair] = useState<string[]>([]);
 
   const items: Item[] = q?.items || [];
-  const dated = items.filter(x => x.date.value);
-  const first = dated[0], latest = dated[dated.length - 1];
+  // 목록은 최신순(날짜 미확인은 맨 아래). 분류·비교 로직은 그대로 오래된 순 데이터를 씁니다.
+  const newestFirst = [...items].sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''));
   const selected = pair.map(id => items.find(x => x.statement.statementId === id)).filter(Boolean)
     .sort((a: any, b: any) => (a.date.value || '').localeCompare(b.date.value || '')) as Item[];
 
@@ -94,19 +94,12 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </nav>
 
       <main className="tl-main">
-        <div className="tl-qhead"><h2>{q.label}</h2><p className="tl-muted">{q.hint} · 원문 단어로 분류 · {items.length}건</p></div>
+        <div className="tl-qhead"><h2>{q.label}</h2><p className="tl-muted">{q.hint} · 원문 단어로 분류 · {items.length}건 · 최신순</p></div>
 
-        {q.comparable && first && latest && <section className="tl-span" aria-label="처음과 최근 비교">
-          {[['처음', first], ['최근', latest]].map(([label, x]: any) => <article key={label}>
-            <span className="tl-span-label">{label} · {fmt(x.date.value)}</span>
-            <p>{displayText(x.statement).text}</p>
-            <Metrics values={x.metrics} />
-          </article>)}
-        </section>}
         {!q.comparable && <p className="tl-notice">날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.</p>}
 
         <ol className="tl-list">
-          {items.map(x => {
+          {newestFirst.map(x => {
             const s = x.statement, on = pair.includes(s.statementId);
             return <li key={s.statementId} className={on ? 'on' : ''}>
               <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{x.date.label}</small></div>

@@ -256,6 +256,11 @@ export function isEventQualifiedForTelegramAutoDispatch(
     };
   }
 
+  // 0-1. 밀린 과거 뉴스(처음 수집 후 72시간 경과)는 분석만 하고 자동 발송하지 않음
+  if (Date.now() - (Date.parse(event.firstSeenAt) || 0) > 72 * 3600 * 1000) {
+    return { qualified: false, reason: 'Telegram auto-dispatch skipped: backlog event first seen more than 72h ago (analysis only)' };
+  }
+
   // 1. [Rule 1: Telegram 5★ Only] Auto-dispatch strictly limited to 5★
   if (event.importance !== 5) {
     return {

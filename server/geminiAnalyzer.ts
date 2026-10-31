@@ -1455,6 +1455,8 @@ export interface TwoStageOptions {
   commit?: (expected: NewsEvent, patch: Partial<NewsEvent>) => Promise<NewsEvent | null>;
   // 이 시각(ms) 이후에는 새 Gemini 호출을 시작하지 않음 (Cloud Run/Scheduler 요청 시간 제한 안에서 사이클 종료 보장)
   deadlineAt?: number;
+  /** 72시간 지난 미평가 뉴스도 (최근 뉴스 다음 순서로) 간단 평가. 알림은 보내지 않음 */
+  includeBacklog?: boolean;
 }
 
 export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
@@ -1533,8 +1535,12 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
   // Screening: newest first, only items seen in the last 72h (older unscreened items have lost their news value;
   // they stay visible as unassessed without extra writes). 16 items per call halves the number of calls.
   const SCREEN_MAX_AGE_MS = 72 * 3600 * 1000, SCREEN_BATCH = 16;
-  const unassessed = fairAnalysisOrder(eligible.filter(e => e.screening?.evidenceKey !== screeningEvidenceKey(e)
-    && now.getTime() - (Date.parse(e.firstSeenAt) || 0) <= SCREEN_MAX_AGE_MS), 'newest');
+  // Recent items (72h) first, newest first; then the older backlog (also newest first) when time remains.
+  // Older items are analysed for the record only — Telegram never auto-sends them (see telegram freshness rule).
+  const notScreened = eligible.filter(e => e.screening?.evidenceKey !== screeningEvidenceKey(e));
+  const isRecent = (e: NewsEvent) => now.getTime() - (Date.parse(e.firstSeenAt) || 0) <= SCREEN_MAX_AGE_MS;
+  const unassessed = [...fairAnalysisOrder(notScreened.filter(isRecent), 'newest'),
+    ...(options.includeBacklog ? fairAnalysisOrder(notScreened.filter(e => !isRecent(e)), 'newest') : [])];
   for (let offset = 0; offset < unassessed.length; offset += SCREEN_BATCH) {
     const batch = unassessed.slice(offset, offset + SCREEN_BATCH);
     const prompt = `Evaluate EVERY item independently. Return exactly one {id,score:1..5,reason:Korean <=120 chars,uncertain:boolean} per input in {items:[]}.\nScores: 1 routine/minor, 2 commentary/unverified rumor, 3 meaningful incremental fact, 4 material business/financial change, 5 confirmed structural enterprise-value change. Source prestige alone does not imply importance. If magnitude/context is missing set uncertain=true. This is preliminary screening, not a final rating.\n` + JSON.stringify(batch.map(e => ({
@@ -1569,8 +1575,11 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
     }
   }
   // Refresh authoritative cache after screening commits; never reuse stale candidate references.
-  let detailedQueue = priorityAnalysisOrder(db.getEvents().filter(e => !resolved(e) && e.analysisStatus !== 'skipped' &&
-    (e.analysisRetryCount || 0) < 3 && e.screening?.evidenceKey === screeningEvidenceKey(e) && needsDetailedAnalysis(e)));
+  const detailCandidates = db.getEvents().filter(e => !resolved(e) && e.analysisStatus !== 'skipped' &&
+    (e.analysisRetryCount || 0) < 3 && e.screening?.evidenceKey === screeningEvidenceKey(e) && needsDetailedAnalysis(e));
+  // 최근 72시간 뉴스의 상세 분석이 먼저(알림 대상), 과거분은 남는 시간에만
+  let detailedQueue = [...priorityAnalysisOrder(detailCandidates.filter(isRecent)),
+    ...priorityAnalysisOrder(detailCandidates.filter(e => !isRecent(e)))];
   for (const event of detailedQueue) {
     const reservation = 16000 + Buffer.byteLength(event.primarySource.snippet || '', 'utf8');
     if ((!ai && !options.analyze) || summary.isRateLimited || summary.detailedCalls >= maxDetailCalls || !reserve(reservation) || pastDeadline()) break;

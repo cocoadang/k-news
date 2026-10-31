@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
 import { db, getEventEffectivePublishedTime } from './server/db';
-import { runMonitoringCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
+import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
 import { sendEventToTelegram, sendTestMessage, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords, createUnanalyzedEvent } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords } from './server/companyRenewal';
@@ -290,6 +290,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   // Query parameters ?secret and ?adminSecret are strictly rejected.
   // ADMIN_SECRET has zero influence on cron authentication.
   let pollHeadlineHook: ((deadline: number) => Promise<unknown>) | null = null;
+  let pollStatusHook: ((result: any, headline: any) => Promise<void>) | null = null;
   app.post('/api/jobs/poll', async (req, res) => {
     const cronAuth = verifyCronAuth(req);
 
@@ -320,6 +321,13 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       db.addLog('Scheduler', 'info', 'Cloud Scheduler trigger authenticated & executing for /api/jobs/poll.');
       const result = await runMonitoringCycle(false);
 
+      if (result.skipped && result.skipReason === 'already_completed') {
+        // 오늘 수집은 이미 끝남 → 같은 호출로 '분석만' 진행 (Cloud Scheduler가 3시간마다 호출)
+        const analysis = await runAnalysisOnlyCycle(150_000);
+        console.log(`[POLL] analysis_only: ${JSON.stringify({ skipped: analysis.skipped, screened: analysis.summary?.screened, detailed: analysis.summary?.detailed, telegram: analysis.telegramAlertsSentCount })}`);
+        return res.json({ success: true, status: 'analysis_only', date: result.seoulDate, triggeredBy: 'Cloud Scheduler /api/jobs/poll', timestamp: new Date().toISOString(),
+          screened: analysis.summary?.screened ?? 0, detailed: analysis.summary?.detailed ?? 0, telegramAlertsSentCount: analysis.telegramAlertsSentCount });
+      }
       if (result.skipped) {
         console.log(`[POLL] skipped: daily_guard_active - date=${result.seoulDate}, reason=${result.skipReason}`);
         return res.json({
@@ -336,9 +344,12 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
 
       console.log(`[POLL] success: new_articles=${result.newArticlesCount}, new_events=${result.newEventsCreated.length}, telegram_alerts=${result.telegramAlertsSentCount}`);
       // 매일 수집 뒤: CEO 화면의 언론 헤드라인 중 아직 번역되지 않은 것을 묶어 AI 번역(호출 최대 1회, 시간이 남을 때만, 실패해도 수집 결과에 영향 없음)
+      let headlineReport: any = null;
       if (Date.now() - pollStartedAt < 200_000 && pollHeadlineHook) {
-        try { const t = await pollHeadlineHook(Math.min(pollStartedAt + 270_000, Date.now() + 70_000)); console.log(`[POLL] headline_ko: ${JSON.stringify(t)}`); } catch { /* ignore */ }
+        try { headlineReport = await pollHeadlineHook(Math.min(pollStartedAt + 270_000, Date.now() + 70_000)); console.log(`[POLL] headline_ko: ${JSON.stringify(headlineReport)}`); } catch { /* ignore */ }
       }
+      // 관리자에게 하루 1회 상태 보고(실패해도 수집 결과에 영향 없음)
+      if (pollStatusHook) { try { await pollStatusHook(result, headlineReport); } catch (e) { console.warn('[POLL] status_report_failed', e); } }
       res.json({
         success: true,
         triggeredBy: 'Cloud Scheduler /api/jobs/poll',
@@ -349,6 +360,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(`[POLL] failed: ${errorMsg}`);
       db.addLog('Scheduler', 'error', `Cloud Scheduler /api/jobs/poll execution failed: ${errorMsg}`);
+      if (pollStatusHook) { try { await pollStatusHook({ error: errorMsg.slice(0, 120) }, null); } catch { /* ignore */ } }
       res.status(500).json({
         success: false,
         error: `Execution failed: ${errorMsg}`,
@@ -567,6 +579,23 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   };
 
   pollHeadlineHook = (deadline: number) => translatePendingHeadlines(getSchedulerCeoRuntime() || ceoRuntime, cachedEventHeadlines, deadline);
+  pollStatusHook = async (result: any, headline: any) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+    const { buildStatusReport } = await import('./server/statusReport.mjs');
+    let youtube: any = null;
+    try {
+      const fs = getIsFirestoreAvailable() ? initFirestore() : null;
+      if (fs) { const { FirestoreWallstreetStore } = await import('./server/wallstreet/firestoreStore.mjs'); youtube = await new FirestoreWallstreetStore(fs as any).read(); }
+    } catch { youtube = null; }
+    let ko: any = null;
+    try { ko = (await (getSchedulerCeoRuntime() || ceoRuntime).snapshot() as any).koSummary || null; } catch { ko = null; }
+    const date = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }).format(new Date());
+    const text = buildStatusReport({ date, poll: { error: result.error, articles: result.newArticlesCount, events: result.newEventsCreated?.length ?? 0, elapsed: result.elapsedSeconds, telegram: result.telegramAlertsSentCount },
+      analysis: result.analysisSummary, ceoStatus: result.ceoStatus, headline, ko, youtube });
+    const { sendTelegramMessage } = await import('./server/telegram');
+    await sendTelegramMessage(token, chatId, text);
+  };
 
   app.use(createCeoRouter({
     runtime: ceoRuntime,

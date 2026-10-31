@@ -31,6 +31,7 @@ jobs:
       - name: stale CEO test diagnostics (temporary)
         shell: bash
         run: |
+          set +e +o pipefail
           for f in ceoSec ceoPages ceoStore.firestore; do
             out=$(node --import tsx --test server/ceo/$f.test.ts 2>&1 | grep -E -B2 -A14 "not ok|AssertionError|Error:" | grep -v '^#   *at ' | head -120 | tr '\n' '|' | cut -c1-6000)
             echo "::warning title=$f::$out"

@@ -29,10 +29,22 @@ jobs:
       - run: node --test candidates/ceo-timeline/*.test.mjs src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs server/statusReport.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts
       - name: CEO server tests
-        run: node --import tsx --test server/ceo/*.test.ts
+        shell: bash
+        run: |
+          fail=0
+          for f in server/ceo/*.test.ts; do
+            if ! node --import tsx --test "$f" > /tmp/t.txt 2>&1; then
+              echo "::error title=$f::$(grep -E 'not ok|rror|xpected|actual' /tmp/t.txt | head -12 | tr '\n' ' ' | cut -c1-1500)"; fail=1
+            fi
+          done
+          exit $fail
       - name: Monitoring / dedup integration tests
         timeout-minutes: 8
-        run: npx tsx server/monitoringAndDedup.test.ts
+        shell: bash
+        run: |
+          if ! npx tsx server/monitoringAndDedup.test.ts > /tmp/m.txt 2>&1; then
+            echo "::error title=monitoringAndDedup::$(grep -E 'not ok|rror|xpected|actual|✖|FAIL' /tmp/m.txt | head -15 | tr '\n' ' ' | cut -c1-1500)"; tail -40 /tmp/m.txt; exit 1
+          fi
       - run: python3 -m unittest discover -s ops -p "test_*.py"
       - run: npm run build
 

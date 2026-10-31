@@ -28,6 +28,13 @@ jobs:
       - run: npm run lint
       - run: node --test candidates/ceo-timeline/*.test.mjs src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs server/statusReport.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts
+      - name: stale CEO test diagnostics (temporary)
+        shell: bash
+        run: |
+          for f in ceoSec ceoPages ceoStore.firestore; do
+            out=$(node --import tsx --test server/ceo/$f.test.ts 2>&1 | grep -E -B2 -A14 "not ok|AssertionError|Error:" | grep -v '^#   *at ' | head -120 | tr '\n' '|' | cut -c1-6000)
+            echo "::warning title=$f::$out"
+          done
       - name: CEO server tests
         shell: bash
         run: |
@@ -39,8 +46,7 @@ jobs:
             fi
           done
           exit $fail
-      - name: Monitoring / dedup integration tests (non-blocking until the stale two-stage assertion is fixed — see HANDOFF)
-        continue-on-error: true
+      - name: Monitoring / dedup integration tests
         timeout-minutes: 8
         shell: bash
         run: |

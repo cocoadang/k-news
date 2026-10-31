@@ -591,7 +591,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   pollStatusHook = async (result: any, headline: any) => {
     const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) return;
-    const { buildStatusReport } = await import('./server/statusReport.mjs');
+    const { buildStatusReport, statusHasIssue } = await import('./server/statusReport.mjs');
     let youtube: any = null;
     try {
       const fs = getIsFirestoreAvailable() ? initFirestore() : null;
@@ -602,6 +602,8 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     const date = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }).format(new Date());
     const text = buildStatusReport({ date, poll: { error: result.error, articles: result.newArticlesCount, events: result.newEventsCreated?.length ?? 0, elapsed: result.elapsedSeconds, telegram: result.telegramAlertsSentCount },
       analysis: result.analysisSummary, ceoStatus: result.ceoStatus, headline, ko, youtube });
+    db.addLog('Scheduler', statusHasIssue(text) ? 'warn' : 'info', `[StatusReport] ${text.replace(/<[^>]+>/g, '').replace(/\n+/g, ' | ').slice(0, 600)}`);
+    if (!statusHasIssue(text)) return; // 이상 없을 때는 텔레그램을 보내지 않음(로그에만 남김)
     const { sendTelegramMessage } = await import('./server/telegram');
     await sendTelegramMessage(token, chatId, text);
   };

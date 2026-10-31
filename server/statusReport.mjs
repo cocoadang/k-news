@@ -1,7 +1,8 @@
-// 매일 아침 수집 뒤 관리자(TELEGRAM_CHAT_ID)에게만 보내는 한 장짜리 상태 보고. 순수 함수(테스트 가능).
+// 매일 아침 수집 뒤 관리자(TELEGRAM_CHAT_ID)에게만 보내는 상태 보고. 이상이 있을 때만 발송(statusHasIssue). 순수 함수(테스트 가능).
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const usd = n => Number.isFinite(n) ? `$${n.toFixed(3)}` : '?';
 
+export function statusHasIssue(text){return /⚠️/.test(String(text));}
 export function buildStatusReport({ date, now = Date.now(), poll = {}, analysis = null, ceoStatus = '', headline = null, ko = null, youtube = null }) {
   const warn = [];
   const a = analysis || {};

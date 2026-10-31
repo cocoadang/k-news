@@ -3,7 +3,11 @@ import express from 'express';
 
 export const SESSION_COOKIE_NAME = '__session';
 export const LEGACY_SESSION_COOKIE_NAME = 'admin_session';
-export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// 30일. 관리자가 사이트를 열 때마다(/api/auth/status) 새 30일로 연장되므로, 30일 넘게 접속하지 않을 때만 다시 로그인
+export const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+/** 남은 기간이 이보다 짧으면 새 토큰으로 연장 */
+export const SESSION_RENEW_BELOW_MS = 29 * 24 * 60 * 60 * 1000;
+export function sessionExpiry(token: string): number | null { const n = parseInt(String(token || '').split('.')[0], 10); return Number.isFinite(n) ? n : null; }
 
 // ==========================================
 // Session Token (HMAC-SHA256) Generation & Verification

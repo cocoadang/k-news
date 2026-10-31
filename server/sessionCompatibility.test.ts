@@ -36,7 +36,7 @@ test('Firebase-compatible session uses existing security policy on both hosts', 
       const cookies = login.headers.getSetCookie();
       const session = cookies.find(x => x.startsWith('__session='))!;
       assert.ok(session);
-      for (const attr of ['HttpOnly', 'Secure', 'SameSite=Lax', 'Path=/', 'Max-Age=604800']) assert.ok(session.includes(attr), attr);
+      for (const attr of ['HttpOnly', 'Secure', 'SameSite=Lax', 'Path=/', 'Max-Age=2592000']) assert.ok(session.includes(attr), attr);
       assert.ok(!/Domain=/i.test(session));
       assert.ok(cookies.some(x => x.startsWith('admin_session=;') && /Expires=/i.test(x)));
       const cookie = session.split(';')[0];
@@ -68,4 +68,13 @@ test('expiry, missing origin, exact origin and preview policy remain strict', ()
   assert.equal(getCookieOptions({ headers: { origin: 'https://news.dsoom.com', 'x-forwarded-proto': 'https' } }).sameSite, 'lax');
   const preview = getCookieOptions({ headers: { origin: 'https://aistudio.google.com', 'x-forwarded-proto': 'https' } });
   assert.equal(preview.sameSite, 'none'); assert.equal(preview.secure, true); assert.equal(preview.httpOnly, true);
+});
+
+test('session renewal helpers: expiry is read from the token; renewal threshold below max age', async () => {
+  const { generateSessionToken, sessionExpiry, SESSION_MAX_AGE_MS, SESSION_RENEW_BELOW_MS } = await import('./security');
+  const t = generateSessionToken('secret-for-test');
+  const exp = sessionExpiry(t)!;
+  assert.ok(Math.abs(exp - (Date.now() + SESSION_MAX_AGE_MS)) < 5000);
+  assert.ok(SESSION_RENEW_BELOW_MS < SESSION_MAX_AGE_MS);
+  assert.equal(sessionExpiry('garbage'), null);
 });

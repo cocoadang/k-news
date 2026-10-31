@@ -20,6 +20,8 @@ import {
   SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_MS,
+  SESSION_RENEW_BELOW_MS,
+  sessionExpiry,
   generateSessionToken,
   verifySessionToken,
   SlidingRateLimiter,
@@ -183,6 +185,13 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     const adminSecret = process.env.ADMIN_SECRET;
     const isConfigured = Boolean(adminSecret && adminSecret.trim() !== '');
     const auth = checkAdminAuth(req);
+    // 쿠키 로그인 상태면 접속할 때마다 30일로 연장(슬라이딩 만료): 자주 쓰는 관리자는 로그아웃되지 않음
+    if (auth.authenticated && auth.authMethod === 'cookie' && isConfigured) {
+      const exp = sessionExpiry(req.cookies?.[SESSION_COOKIE_NAME]);
+      if (exp !== null && exp - Date.now() < SESSION_RENEW_BELOW_MS) {
+        res.cookie(SESSION_COOKIE_NAME, generateSessionToken(adminSecret!.trim()), getCookieOptions(req));
+      }
+    }
 
     res.json({
       configured: isConfigured,
@@ -988,6 +997,8 @@ export {
   startServer,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_MS,
+  SESSION_RENEW_BELOW_MS,
+  sessionExpiry,
   generateSessionToken,
   verifySessionToken,
   checkAdminAuth,

@@ -128,7 +128,8 @@ async function main() {
     assert.strictEqual(ev, `JAMIE DIMON: ${B_SYN.question} ELON MUSK: We think it’s easier than building communication satellites.`);
     assert.ok(ev.length <= 600 && ev.indexOf('JAMIE DIMON:') < ev.indexOf('AI data centers in space') && ev.indexOf('AI data centers in space') < ev.indexOf('ELON MUSK:'), 'question precedes the Musk label (not attributed to Musk)');
     assert.ok(!s.quoteText!.includes('data centers'));
-    assert.strictEqual(s.evidence[0].articlePublishedAt, '2026-06-08T00:00:00.000Z', 'SEC Filing Detail date, distinct from interview and Accepted timestamp');
+    // SEC 제출 문서는 문서 게시일을 따로 채우지 않음(publishedAt null): 인터뷰 날짜·Accepted 시각을 게시일로 쓰지 않음
+    assert.strictEqual(s.evidence[0].articlePublishedAt, null, 'filing date is not stored; interview date and Accepted timestamp are never used as publication date');
     assert.strictEqual(s.evidence[0].publishedAtBasis, undefined);
     assert.strictEqual(s.context, undefined, 'no separate context branch');
     assert.ok(s.provenance!.some(p => /편집된 전사 고지/.test(p.label) && p.excerpt === 'Transcript slightly edited for clarity.'));
@@ -144,7 +145,7 @@ async function main() {
     const v = s.provenance!.find(p => /영상 게시일.*실제 발언일 아님/.test(p.label))!;
     assert.strictEqual(v.excerpt, 'Elon Musk by Dan Huot and Ian Dahl was posted on X on June 8, 2026 and is attached as Exhibit B');
     assert.ok(!v.excerpt.includes('CFO') && !v.excerpt.includes('Exhibit A'), 'repost sentence of another interview not used');
-    assert.strictEqual(s.evidence[0].articlePublishedAt, '2026-06-09T00:00:00.000Z');
+    assert.strictEqual(s.evidence[0].articlePublishedAt, null, '문서 게시일 필드 비움');
     assert.strictEqual(s.evidence[0].excerpt, ENTRY_A.quote, 'no context turn for A: evidence = quote sentence');
     assert.strictEqual(s.companyId, 'spacex'); assert.strictEqual(s.roleTitleAtTime, 'SpaceX CEO·최고기술책임자(CTO)·이사회 의장'); assert.strictEqual(s.roleStatusAtTime, 'unknown');
     assert.strictEqual(s.roleDateBasis, undefined, 'video date is never used as a role date');
@@ -557,22 +558,26 @@ async function main() {
     for (const [id, at] of first) assert.strictEqual(st.find(s => s.statementId === id)!.verification!.firstVerifiedAt, at, id);
     const fresh = st.filter(s => !first.some(f => f[0] === s.statementId));
     assert.deepStrictEqual(fresh.map(s => s.personId).sort(), ['elon-musk', 'elon-musk', 'sundar-pichai']);
-    assert.deepStrictEqual([w.ko.count, w.ko.gen], [3, 3]);
-    assert.deepStrictEqual([rt.lastKoReport!.considered, rt.lastKoReport!.calls, rt.lastKoReport!.settled, rt.lastKoReport!.uncertain], [3, 3, 3, 0]);
-    assert.strictEqual(w.ko.contents.filter(c => c.includes('JAMIE DIMON: ')).length, 1, 'question context only in document B input');
+    // 검토 번역 사전(translationsHashed)에 있는 새 발언은 AI 요약을 부르지 않음 → 유료 대상 = 검토 번역이 없는 새 발언
+    const paid = fresh.filter(s => s.translationKo?.status !== 'reviewed');
+    const n = paid.length;
+    assert.ok(n >= 1 && n <= 3);
+    assert.deepStrictEqual([w.ko.count, w.ko.gen], [n, n]);
+    assert.deepStrictEqual([rt.lastKoReport!.considered, rt.lastKoReport!.calls, rt.lastKoReport!.settled, rt.lastKoReport!.uncertain], [3, n, n, 0]);
+    assert.ok(w.ko.contents.filter(c => c.includes('JAMIE DIMON: ')).length <= 1, 'question context only in document B input');
     const ls = await w.ledger.read();
-    assert.strictEqual(Object.keys(ls.results).length, 3);
-    // 정산 = 실제 usage(prompt 210, 출력 total-prompt 50) × 2026년 단가(750/3750 나노달러) × 3건, 예약 잔액 0
-    assert.strictEqual(ls.months['2026-10'].spentNano, 3 * (210 * 750 + 50 * 3750));
-    assert.ok(fresh.every(s => ls.results[koJobKey(s)!]));
+    assert.strictEqual(Object.keys(ls.results).length, n);
+    // 정산 = 실제 usage(prompt 210, 출력 total-prompt 50) × 2026년 단가(750/3750 나노달러) × n건, 예약 잔액 0
+    assert.strictEqual(ls.months['2026-10'].spentNano, n * (210 * 750 + 50 * 3750));
+    assert.ok(paid.every(s => ls.results[koJobKey(s)!]));
     w.clock.t += 86_400_000;
     const rt3 = w.mk({ pages: allExcludingNasa, withKo: true });
     const r3 = await rt3.refresh();
     assert.strictEqual(r3.httpStatus, 200);
-    assert.deepStrictEqual([w.ko.count, w.ko.gen], [3, 3], 'no re-summary');
+    assert.deepStrictEqual([w.ko.count, w.ko.gen], [n, n], 'no re-summary');
     assert.strictEqual(rt3.lastKoReport!.considered, 0);
     const g = await w.mk({ pages: allExcludingNasa, withKo: true }).snapshot();
-    assert.strictEqual(g.dataset!.statements.filter(s => s.koSummary?.status === 'ready').length, 3);
+    assert.strictEqual(g.dataset!.statements.filter(s => s.koSummary?.status === 'ready').length, n);
     assert.strictEqual(g.koSummary!.outstandingUsd, 0);
   });
 

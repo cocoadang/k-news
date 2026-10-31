@@ -28,20 +28,12 @@ jobs:
       - run: npm run lint
       - run: node --test candidates/ceo-timeline/*.test.mjs src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs server/statusReport.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts
-      - name: stale CEO test diagnostics (temporary)
-        shell: bash
-        run: |
-          set +e +o pipefail
-          for f in ceoSec ceoPages ceoStore.firestore; do
-            out=$(node --import tsx --test server/ceo/$f.test.ts 2>&1 | grep -E -B2 -A14 "not ok|AssertionError|Error:" | grep -v '^#   *at ' | head -120 | tr '\n' '|' | cut -c1-6000)
-            echo "::warning title=$f::$out"
-          done
       - name: CEO server tests
         shell: bash
         run: |
           fail=0
-          # ceoStore.firestore(에뮬레이터 필요)·ceoSec·ceoPages는 기존부터 실패하는 오래된 테스트라 별도 정리 대상(HANDOFF 참고)
-          for f in server/ceo/ceoHttp.test.ts server/ceo/ceoKo.test.ts server/ceo/ceoLive.test.ts server/ceo/ceoStatements.test.ts; do
+          # ceoStore.firestore 는 Firestore 에뮬레이터 전용(로컬에서 FIRESTORE_EMULATOR_HOST 설정 후 실행)이라 CI에서 제외
+          for f in server/ceo/ceoHttp.test.ts server/ceo/ceoKo.test.ts server/ceo/ceoLive.test.ts server/ceo/ceoStatements.test.ts server/ceo/ceoSec.test.ts server/ceo/ceoPages.test.ts; do
             if ! node --import tsx --test "$f" > /tmp/t.txt 2>&1; then
               echo "::error title=$f::$(grep -E 'not ok|rror|xpected|actual' /tmp/t.txt | head -12 | tr '\n' ' ' | cut -c1-1500)"; fail=1
             fi

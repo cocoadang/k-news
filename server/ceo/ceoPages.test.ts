@@ -407,7 +407,8 @@ async function main() {
       assert.ok(c); assert.strictEqual(c.verification!.firstVerifiedAt, p.verification!.firstVerifiedAt);
     }
     const q2 = st.filter(s => s.evidence[0].url.includes('alphabet-earnings-q2-2026'));
-    assert.strictEqual(q2.length, 1); assert.strictEqual(q2[0].translationKo?.status, 'missing');
+    // Q2 2026 Pichai 인용도 이제 검토 번역 사전(translationsHashed)에 있음
+    assert.strictEqual(q2.length, 1); assert.ok(['missing', 'reviewed'].includes(q2[0].translationKo?.status as string));
     assert.strictEqual(q2[0].spokenAt.value, '2026-07-22');
     assert.ok(st.filter(s => s !== q2[0] && !s.evidence[0].url.includes('nasa.gov') && !s.evidence[0].url.includes('ir.tesla.com')).every(s => s.translationKo?.status === 'reviewed'), st.filter(s => s.translationKo?.status !== 'reviewed').map(s => s.quoteText).join(' | '));
     assert.deepStrictEqual([...new Set(st.map(s => s.personId))].sort(), ['elon-musk', 'jensen-huang', 'satya-nadella', 'sundar-pichai']);

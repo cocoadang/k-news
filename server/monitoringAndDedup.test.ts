@@ -2560,7 +2560,8 @@ async function runMonitoringAndDedupTests() {
 async function runTwoStageRegressionTests() {
   console.log('--- TEST 22: two-stage coverage, validation, quota, fairness, optimistic persistence ---');
   _setIsFirestoreAvailableForTesting(false);
-  const now = new Date('2026-10-15T02:00:00Z');
+  // 현재 시각 기준(고정 날짜는 '오래된 기사' 자동 제외 규칙에 걸려 시간이 지나면 깨짐)
+  const now = new Date();
   const fixture = (id: string, title = 'Google community overview') => createUnanalyzedEvent({
     id, title: `${title} ${id}`, link: `https://example.com/${id}`, source: 'Reuters',
     publishedAt: now.toISOString(), firstSeenAt: now.toISOString(),
@@ -2586,12 +2587,12 @@ async function runTwoStageRegressionTests() {
     const events = Array.from({length:20},(_,i)=>event(i===19?'high':`low-${i}`));
     db._setEventsForTesting(events);
     const result = await runTwoStageAnalysis({now,generate,analyze,commit});
-    assert.equal(result.screeningCalls,3,'20 events all receive batch screening, not first 8 only');
+    assert.equal(result.screeningCalls,2,'20 events all receive batch screening (16 per call), not first batch only');
     assert.equal(result.screened,20);
     assert.equal(result.detailed,1);
     assert.equal(result.unassessed,0);
     assert.equal(result.awaitingDetail,0);
-    assert.equal(result.actualTokens,500);
+    assert.equal(result.actualTokens,400);
     assert.equal(db.getEventById('low-0')!.analysisStatus,'screened');
     assert.equal(db.getEventById('low-0')!.importance,0,'preliminary score never presented as final');
     assert.equal(db.getEventById('high')!.analysisStatus,'completed');
@@ -2640,7 +2641,7 @@ async function runTwoStageRegressionTests() {
     assert.deepEqual(fairAnalysisOrder([a1,a2,b1]).map(e=>e.id),['a1','b1','a2']);
 
     const completed={...event('done'),analysisStatus:'completed' as const,importance:4};
-    const stale=event('stale');stale.primarySource.publishedAt='2026-10-01T00:00:00Z';
+    const stale=event('stale');stale.primarySource.publishedAt=new Date(now.getTime()-30*86400000).toISOString();
     db._setEventsForTesting([completed,stale]);
     const excluded=await runTwoStageAnalysis({now,generate,analyze,commit});
     assert.equal(excluded.screeningCalls,0);assert.equal(excluded.excluded,1);

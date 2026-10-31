@@ -33,6 +33,34 @@ export function _setCollectArticlesForTesting(fn: (() => Promise<{ totalFetched:
 let pollTimer: NodeJS.Timeout | null = null;
 let isPollingInProgress = false;
 
+/**
+ * 분석 전용 사이클: 수집 없이 밀린 간단 평가·상세 분석만 진행(하루 1회 수집 뒤 남은 시간대에 Cloud Scheduler가 호출).
+ * 72시간 이내 뉴스가 먼저, 그다음 과거 미평가분. 텔레그램은 72시간 이내 + 기존 발송 조건(5★)을 만족할 때만.
+ */
+export async function runAnalysisOnlyCycle(deadlineMs = 150_000): Promise<{ skipped?: boolean; summary?: any; telegramAlertsSentCount: number }> {
+  if (isPollingInProgress) return { skipped: true, telegramAlertsSentCount: 0 };
+  isPollingInProgress = true;
+  const startTime = Date.now();
+  let telegramAlertsSentCount = 0;
+  try {
+    const settings = db.getSettings();
+    if (settings.autoAnalyzeWithGemini === false) return { skipped: true, telegramAlertsSentCount: 0 };
+    const summary = await runTwoStageAnalysis({ deadlineAt: startTime + deadlineMs, includeBacklog: true });
+    const completedIds = new Set(summary?.completedEventIds || []);
+    if (settings.autoSendTelegram) {
+      for (const event of db.getEvents().filter(e => completedIds.has(e.id))) {
+        if (!isEventQualifiedForTelegramAutoDispatch(event, settings).qualified) continue;
+        const r = await sendEventToTelegram(event);
+        if (r.success) telegramAlertsSentCount++;
+      }
+    }
+    db.addLog('Scheduler', 'success', `[AnalysisOnly] finished in ${((Date.now() - startTime) / 1000).toFixed(1)}s. screened=${summary.screened}, detailed=${summary.detailed}, failed=${summary.failed}, telegram=${telegramAlertsSentCount}`);
+    return { summary, telegramAlertsSentCount };
+  } finally {
+    isPollingInProgress = false;
+  }
+}
+
 export async function runMonitoringCycle(isManual: boolean = false): Promise<{
   newArticlesCount: number;
   newEventsCreated: NewsEvent[];
@@ -40,6 +68,9 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
   skipped?: boolean;
   skipReason?: string;
   seoulDate?: string;
+  analysisSummary?: any;
+  ceoStatus?: string;
+  elapsedSeconds?: number;
 }> {
   if (isPollingInProgress) {
     db.addLog('Scheduler', 'warn', 'Monitoring cycle requested while previous cycle is still in progress. Skipping.');
@@ -82,6 +113,8 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
   let newArticlesCount = 0;
   let newEventsCreated: NewsEvent[] = [];
   let telegramAlertsSentCount = 0;
+  let analysisSummaryOut: any = null;
+  let ceoStatus = '미실행';
 
   try {
     const settings = db.getSettings();
@@ -106,8 +139,9 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
     // 시한을 넘긴 기사는 다음 사이클로 이월되며, 사이클 종료 기록(lastPollTime)은 항상 남습니다.
     const CYCLE_ANALYSIS_DEADLINE_MS = 140 * 1000;
     const analysisSummary = settings.autoAnalyzeWithGemini !== false
-      ? await runTwoStageAnalysis({ deadlineAt: startTime + CYCLE_ANALYSIS_DEADLINE_MS })
+      ? await runTwoStageAnalysis({ deadlineAt: startTime + CYCLE_ANALYSIS_DEADLINE_MS, includeBacklog: true })
       : null;
+    analysisSummaryOut = analysisSummary;
     if (analysisSummary?.timeBudgetExceeded) {
       db.addLog('Scheduler', 'info', '[TimeBudget] 사이클 시간 한도로 남은 분석은 다음 사이클로 이월합니다.');
     }
@@ -163,25 +197,30 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
     const CEO_START_LIMIT_MS = 210 * 1000;
     if (ceoRuntime && Date.now() - startTime > CEO_START_LIMIT_MS) {
       db.addLog('Scheduler', 'info', '[TimeBudget] 사이클 시간 한도로 CEO 공식 자료 수집은 다음 사이클로 미룹니다.');
+      ceoStatus = '시간 부족으로 미룸';
     } else if (ceoRuntime) {
       try {
         const snap = await ceoRuntime.snapshot();
         const lastSeoulDate = snap.refreshedAt ? getSeoulDateString(new Date(snap.refreshedAt)) : null;
         if (!isManual && lastSeoulDate === seoulDate) {
           db.addLog('Scheduler', 'info', `[CEO Daily] Today's CEO collection (${seoulDate}) already completed. Skipping.`);
+          ceoStatus = '오늘 이미 수집함';
         } else {
           db.addLog('Scheduler', 'info', `[CEO Daily] Starting scheduled CEO official collection for Asia/Seoul ${seoulDate}...`);
           const ceoResult = await ceoRuntime.refresh();
           if (ceoResult.accepted) {
             db.addLog('Scheduler', 'success', `[CEO Daily] CEO collection completed (revision: ${ceoResult.response.storeRevision}).`);
+            ceoStatus = '수집 완료';
           } else {
             db.addLog('Scheduler', 'warn', `[CEO Daily] CEO collection skipped or not accepted: ${ceoResult.error || ceoResult.reason}`);
+            ceoStatus = `건너뜀(${String(ceoResult.reason || ceoResult.error || '').slice(0, 40)})`;
           }
         }
       } catch (ceoErr: unknown) {
         // Non-fatal error: news monitoring cycle succeeds even if CEO collection encounters an issue
         const cMsg = ceoErr instanceof Error ? ceoErr.message : String(ceoErr);
         db.addLog('Scheduler', 'warn', `[CEO Daily] CEO official collection encountered a non-fatal error: ${cMsg}`);
+        ceoStatus = '오류';
       }
     }
 
@@ -218,6 +257,9 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
     newArticlesCount,
     newEventsCreated,
     telegramAlertsSentCount,
+    analysisSummary: analysisSummaryOut,
+    ceoStatus,
+    elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
   };
 }
 

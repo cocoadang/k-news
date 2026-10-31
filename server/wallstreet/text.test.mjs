@@ -139,3 +139,13 @@ test('web-only supplement reuses the stored result, never re-summarizes or sends
  const r=x.store.state.videos.Idn_d5ArZvA;
  assert.equal(full,0);assert.equal(sup,1);assert.equal(x.sent.length,0);assert.equal(r.parts[0].text,'old');assert.equal(r.supplementFailure,'nothing_to_supplement');
 });
+
+test('finished videos drop their transcript and validation journal after 3 days, keeping the summary',async()=>{
+ const x=setup();
+ await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA={video:video(),programmes:['wallstreet'],recipient:'123',stage:'sent',transcript:[{start:0,text:'a'}],parts:[{text:'요약',status:'sent'}],summaryCandidate:{items:[1],validationJournal:{big:'x'}},firstSeen:now-4*86400000};
+  s.videos['annR-E8m5WQ']={video:video('annR-E8m5WQ'),programmes:['bullbear'],recipient:'123',stage:'sent',transcript:[{start:0,text:'b'}],parts:[{text:'요약',status:'sent'}],firstSeen:now-86400000};await save();});
+ await x.run().run();
+ const old=x.store.state.videos.Idn_d5ArZvA,fresh=x.store.state.videos['annR-E8m5WQ'];
+ assert.equal(old.transcript,undefined);assert.equal(old.summaryCandidate.validationJournal,undefined);assert.deepEqual(old.summaryCandidate.items,[1]);assert.equal(old.parts[0].text,'요약');
+ assert.ok(Array.isArray(fresh.transcript));
+});

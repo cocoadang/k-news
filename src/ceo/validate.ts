@@ -158,6 +158,9 @@ export function validateStatement(input: CeoStatement, articles: Map<string, Art
     refDate = { value: docEv.articlePublishedAt.slice(0, 10), precision: 'day', basis: 'released' };
   } else if (docEv && s.sourceType === 'authored_post' && docEv.publishedAtBasis?.kind === 'written' && docEv.articlePublishedAt) {
     refDate = { value: docEv.articlePublishedAt.slice(0, 10), precision: 'day', basis: 'written' };
+  } else if (s.sourceType === 'filed_transcript' && s.referenceDate?.basis === 'video' && s.referenceDate.precision === 'day' && /^\d{4}-\d{2}-\d{2}$/.test(s.referenceDate.value)) {
+    // SEC 제출 문서 도입부에서 검증한 영상 게시일(발언일 아님): 타임라인 위치용으로만 유지
+    refDate = { value: s.referenceDate.value, precision: 'day', basis: 'video' };
   }
   if (refDate) s.referenceDate = refDate; else delete s.referenceDate;
   // CEO가 아닌 역할로 재임 중이고 같은 회사 CEO 역할이 그 뒤에 시작하면 'CEO 취임 전'을 덧붙임 (현재 직함 소급 금지)

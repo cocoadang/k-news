@@ -130,7 +130,7 @@ export const CURATED_SEC_EXHIBITS: CuratedSecExhibit[] = [
 ];
 
 /** 고정 항목이 바뀌면 추출기 버전이 바뀌어 다시 추출 */
-export const SEC_HASH = shortHash('sec-2' + JSON.stringify(CURATED_SEC_EXHIBITS));
+export const SEC_HASH = shortHash('sec-3' + JSON.stringify(CURATED_SEC_EXHIBITS));
 
 /** 운영 요청 가능 여부: PC 실원문 통과 확인 + 미확인 표시 없음 */
 export function secReady(e: CuratedSecExhibit): { ok: true } | { ok: false; reason: string } {
@@ -288,11 +288,14 @@ export function extractSecQuotes(e: CuratedSecExhibit, body: string): { items: R
   ];
   // 날짜
   let spokenAt: RawStatement['spokenAt'] = { value: null, precision: 'unknown', basisType: 'none', basis: 'SEC 제출 문서의 편집된 인터뷰 전사 — 실제 발언일 미상' };
+  let referenceDate: RawStatement['referenceDate'];
   if (e.videoPosted) {
     const v = dateSpan(intro, e.videoPosted);
     if (v.ok === false) return reject(`도입 페이지 영상 게시일: ${v.reason}`);
     provenance.push({ label: '영상 게시일(문서 도입부 표기) — 실제 발언일 아님', excerpt: v.raw });
     spokenAt = { ...spokenAt, basis: `SEC 제출 문서의 편집된 인터뷰 전사 — 실제 발언일 미상(영상 게시일 ${e.videoPosted.value}은 발언일이 아님)` };
+    // 타임라인 위치용 기준일: 문서 도입부에 적힌 영상 게시일(화면에 '영상 게시일'로 표시, 발언일로 쓰지 않음)
+    referenceDate = { value: e.videoPosted.value, precision: 'day', basis: 'video' };
   }
   if (e.spokenDate) {
     const bad = [...e.notSpokenDates, ...(e.videoPosted ? [{ value: e.videoPosted.value, why: '영상 게시일' }] : [])].find(x => x.value === e.spokenDate!.value);
@@ -300,11 +303,13 @@ export function extractSecQuotes(e: CuratedSecExhibit, body: string): { items: R
     const d = dateSpan(intro, e.spokenDate);
     if (d.ok === false) return reject(`도입 페이지 인터뷰 날짜: ${d.reason}`);
     spokenAt = { value: e.spokenDate.value, precision: 'day', basisType: 'explicit_in_text', basis: `SEC 제출 문서 도입부의 인터뷰 날짜 ("${d.raw}")`, basisExcerpt: d.raw };
+    referenceDate = undefined;
   }
   return { items: [{
     speaker: { name: e.speakerName, companyId: e.companyId },
     topicId: e.topicId,
     spokenAt,
+    ...(referenceDate ? { referenceDate } : {}),
     kind: 'direct_quote',
     quoteText: ws(q[0].raw).replace(/[.,]\s*$/, ''),
     quoteLanguage: 'en',

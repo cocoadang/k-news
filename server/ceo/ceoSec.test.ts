@@ -146,6 +146,7 @@ async function main() {
     assert.strictEqual(v.excerpt, 'Elon Musk by Dan Huot and Ian Dahl was posted on X on June 8, 2026 and is attached as Exhibit B');
     assert.ok(!v.excerpt.includes('CFO') && !v.excerpt.includes('Exhibit A'), 'repost sentence of another interview not used');
     assert.strictEqual(s.evidence[0].articlePublishedAt, null, '문서 게시일 필드 비움');
+    assert.deepStrictEqual(s.referenceDate, { value: '2026-06-08', precision: 'day', basis: 'video' }, '타임라인 위치는 영상 게시일(발언일 아님)');
     assert.strictEqual(s.evidence[0].excerpt, ENTRY_A.quote, 'no context turn for A: evidence = quote sentence');
     assert.strictEqual(s.companyId, 'spacex'); assert.strictEqual(s.roleTitleAtTime, 'SpaceX CEO·최고기술책임자(CTO)·이사회 의장'); assert.strictEqual(s.roleStatusAtTime, 'unknown');
     assert.strictEqual(s.roleDateBasis, undefined, 'video date is never used as a role date');

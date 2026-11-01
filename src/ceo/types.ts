@@ -148,8 +148,8 @@ export interface CeoStatement {
 export interface StatementReferenceDate {
   value: string;
   precision: DatePrecision;
-  /** spoken: 발언일 / released: 서면 공식 발표문 발표일 / written: 본인 작성글 작성일 */
-  basis: 'spoken' | 'released' | 'written';
+  /** spoken: 발언일 / released: 서면 공식 발표문 발표일 / written: 본인 작성글 작성일 / video: 문서에 적힌 영상 게시일(발언일 아님) */
+  basis: 'spoken' | 'released' | 'written' | 'video';
 }
 
 export type ComparisonVerdict =

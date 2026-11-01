@@ -2607,10 +2607,12 @@ async function runTwoStageRegressionTests() {
     const short = event('short'); short.primarySource.snippet='';
     const uncertain = parseScreeningBatch(JSON.stringify({items:[{id:'short',score:1,reason:'정보 부족',uncertain:false}]}),[short],now).get('short')!;
     assert(uncertain.uncertain,'missing evidence forces uncertainty, not a low-score dismissal');
-    assert(needsDetailedAnalysis({...short,screening:uncertain}));
+    assert(!needsDetailedAnalysis({...short,screening:uncertain}),'only score>=4 gets detailed analysis');
     const critical=event('critical','Google earnings guidance');
     critical.screening={...uncertain,score:2,uncertain:false,evidenceKey:screeningEvidenceKey(critical)};
-    assert(needsDetailedAnalysis(critical),'material signal gets review even with low provisional score');
+    assert(!needsDetailedAnalysis(critical),'keyword alone no longer triggers detailed analysis');
+    critical.screening={...critical.screening,score:4};
+    assert(needsDetailedAnalysis(critical),'score 4 gets detailed analysis');
 
     db._setEventsForTesting([event('high')]);
     const limited = await runTwoStageAnalysis({now,generate,analyze,commit,maxDetailedCalls:0});

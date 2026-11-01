@@ -1387,11 +1387,14 @@ export function screeningEvidenceKey(event: NewsEvent): string {
 }
 
 export function needsDetailedAnalysis(event: NewsEvent): boolean {
-  if (!event.screening) return false;
-  // Safety net affects review order only, never assigns final importance.
-  const materialSignal = /earnings|guidance|acquisition|merger|contract|antitrust|bankrupt|recall|launch|실적|계약|수주|인수|합병|규제|리콜|파산|발사/i
-    .test(`${event.originalTitle || event.title} ${event.primarySource?.snippet || ''}`);
-  return event.screening.score >= 4 || event.screening.uncertain || materialSignal;
+  // 사용자 결정(2026-11-01): 간단 평가 4점 이상만 상세 분석(애매·키워드 기사는 간단 평가 결과만 표시)
+  return !!event.screening && event.screening.score >= 4;
+}
+
+/** 상세 분석은 최근 7일 기사만 (오래된 기사는 간단 평가 결과만 표시) */
+export const DETAIL_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+export function withinDetailWindow(event: NewsEvent, now: Date): boolean {
+  return now.getTime() - (Date.parse(event.firstSeenAt) || 0) <= DETAIL_MAX_AGE_MS;
 }
 
 // Oldest waiting work gets a turn in each company; multi-company events are queued once.
@@ -1559,7 +1562,7 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
       const results = parseScreeningBatch(response.text || '', batch, now);
       for (const event of batch) {
         const screening = results.get(event.id)!;
-        const needsDetail = needsDetailedAnalysis({ ...event, screening });
+        const needsDetail = needsDetailedAnalysis({ ...event, screening }) && withinDetailWindow(event, now);
         const saved = await commit(event, { screening, importance: 0, isImportant: false,
           analysisStatus: needsDetail ? 'pending' : 'screened', analysisError: '',
           analysisDeferredReason: needsDetail ? '상세 분석 대기' : '',
@@ -1576,7 +1579,7 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
   }
   // Refresh authoritative cache after screening commits; never reuse stale candidate references.
   const detailCandidates = db.getEvents().filter(e => !resolved(e) && e.analysisStatus !== 'skipped' &&
-    (e.analysisRetryCount || 0) < 3 && e.screening?.evidenceKey === screeningEvidenceKey(e) && needsDetailedAnalysis(e));
+    (e.analysisRetryCount || 0) < 3 && e.screening?.evidenceKey === screeningEvidenceKey(e) && needsDetailedAnalysis(e) && withinDetailWindow(e, now));
   // 최근 72시간 뉴스의 상세 분석이 먼저(알림 대상), 과거분은 남는 시간에만
   let detailedQueue = [...priorityAnalysisOrder(detailCandidates.filter(isRecent)),
     ...priorityAnalysisOrder(detailCandidates.filter(e => !isRecent(e)))];
@@ -1608,10 +1611,15 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
       summary.failed++;
     }
   }
+  let demoted = 0;
   for (const event of db.getEvents()) {
     if (resolved(event) || event.analysisStatus === 'skipped') continue;
     if (event.screening?.evidenceKey === screeningEvidenceKey(event)) {
-      if (needsDetailedAnalysis(event)) {
+      if (!needsDetailedAnalysis(event) || !withinDetailWindow(event, now)) {
+        // 상세 분석 대상이 아니게 된 대기 건(4점 미만·7일 경과)은 간단 평가 완료로 정리
+        // 한 번에 몰아서 쓰지 않도록 실행당 최대 200건
+        if ((event.analysisStatus === 'pending' || event.analysisStatus === 'failed') && demoted < 200) { demoted++; await commit(event, { analysisStatus: 'screened', analysisDeferredReason: '', analysisError: '' }); }
+      } else {
         summary.awaitingDetail++;
         const reason = summary.isRateLimited ? '할당량 초과로 상세 분석 이월' : '상세 분석 예산/실행 한도로 이월';
         // Skip no-op writes: the backlog grows daily and rewriting the same reason made each cycle slower.

@@ -888,19 +888,6 @@ class Database {
     }
   }
 
-  public async clearLogs(): Promise<void> {
-    this.data.logs = [];
-    this.saveLocalData();
-
-    if (getIsFirestoreAvailable()) {
-      try {
-        await firestoreRepo.clearLogs();
-      } catch (e: any) {
-        console.error('[Firestore] clearLogs error:', e.message);
-      }
-    }
-  }
-
   // Telegram Subscribers API
   public getTelegramSubscriber(chatId: string): TelegramSubscriber | null {
     const sub = (this.data.telegramSubscribers || []).find(s => String(s.chatId) === String(chatId));

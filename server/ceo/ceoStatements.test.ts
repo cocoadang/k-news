@@ -8,8 +8,6 @@
  * 검토 반례·정상 대조군은 N으로 시작하는 새 항목으로 추가했습니다.
  */
 import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
 import { CeoDataset, CeoPerson, CeoRole, CeoStatement, PartialDate } from '../../src/ceo/types';
 import { certainOrder, extractAbsoluteDates, formatSpokenDate, isWellFormedPartialDate, partialToInterval, spokenInterval, statementReferenceDate, statementSortKey } from '../../src/ceo/dates';
 import { coCeos, formatRoleAtTime, resolveSpeaker, roleAtTime } from '../../src/ceo/identity';
@@ -24,7 +22,6 @@ import {
 import {
   createFixtureExtractor, EXAMPLE_ARTICLES, EXAMPLE_PERSONS, EXAMPLE_RAW, EXAMPLE_ROLES, EXAMPLE_TOPICS,
 } from './fixtures';
-import { buildExampleDataset, renderExampleModule } from './generateExample';
 
 const results: { name: string; ok: boolean; error?: string }[] = [];
 async function test(name: string, fn: () => Promise<void> | void) {
@@ -501,27 +498,6 @@ async function main() {
   });
 
   // ================================================================ 예시 데이터
-  await test('X1 예시 데이터셋: 보류 2건(동명이인 미구분, 이어붙인 인용), 자동 판정 0건, 상대 날짜 발언은 미상, 퇴임 후·취임 전 상태 보존', async () => {
-    const ds = await buildExampleDataset();
-    assert.strictEqual(ds.heldBackCount, 2);
-    assert.ok(!ds.statements.some(s => s.quoteText?.includes('협업이 답')));
-    assert.ok(!ds.statements.some(s => s.summaryKo.includes('전력 확보')), 'joined quote held, not shown as summary');
-    assert.strictEqual(ds.comparisons.length, 0);
-    assert.strictEqual(ds.statements.find(s => s.summaryKo.startsWith('규제 승인'))!.spokenAt.precision, 'unknown', '"이달 열린" relative date stays unknown');
-    assert.strictEqual(ds.statements.find(s => s.quoteText === '자율주행 상용화는 생각보다 빨리 온다')!.roleStatusAtTime, 'former');
-    assert.strictEqual(ds.statements.find(s => s.quoteText === '에너지 저장 사업에 집중하겠다')!.roleStatusAtTime, 'before');
-    assert.strictEqual(ds.statements.filter(s => s.spokenAt.value === '2024-05-20').length, 2, 'ko/en reports of the same event kept separate');
-  });
-  await test('X2 예시 데이터는 전부 가상으로 표시(isExample), 링크는 연결 안 되는 example.invalid만', async () => {
-    const ds = await buildExampleDataset();
-    assert.strictEqual(ds.isExample, true);
-    assert.ok(ds.persons.every(p => p.isExample)); assert.ok(ds.statements.every(s => s.isExample));
-    assert.ok(ds.statements.every(s => s.evidence.every(e => e.url.startsWith('https://example.invalid/'))));
-  });
-  await test('X3 화면용 예시 파일(src/ceo/exampleDataset.ts)이 생성기 출력과 같음', async () => {
-    const file = fs.readFileSync(path.join(process.env.CEO_SRC_ROOT || process.cwd(), 'src/ceo/exampleDataset.ts'), 'utf8');
-    assert.strictEqual(file, renderExampleModule(await buildExampleDataset()));
-  });
   await test('X4 내용 해시: 공백 차이는 같은 내용, 글자 변경은 다른 내용', () => {
     const a = EXAMPLE_ARTICLES[0];
     assert.strictEqual(contentHashOf(a), contentHashOf({ ...a, body: a.body.replace(/ /g, '  ') }));

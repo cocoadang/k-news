@@ -827,21 +827,6 @@ export const firestoreRepo = {
     }
   },
 
-  async clearLogs(): Promise<void> {
-    if (!getIsFirestoreAvailable()) return;
-    const db = initFirestore();
-    if (!db) return;
-    try {
-      const snap = await db.collection('logs').limit(300).get();
-      if (snap.empty) return;
-      const batch = db.batch();
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-    } catch (e: any) {
-      handleFirestoreError('clearLogs', e);
-    }
-  },
-
   // 6. Telegram Subscribers
   async getTelegramSubscriber(chatId: string): Promise<TelegramSubscriber | null> {
     if (!getIsFirestoreAvailable()) return null;

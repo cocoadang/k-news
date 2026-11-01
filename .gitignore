@@ -9,5 +9,4 @@ transcript-review/
 *ledger*.json
 *credentials*.json
 *service-account*.json
-candidates/**/evidence/
-candidates/**/preview-dist/
+__pycache__/

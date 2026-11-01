@@ -895,12 +895,12 @@ async function runMonitoringAndDedupTests() {
       });
       assert.strictEqual(cronQueryRes.status, 401, 'POST /api/jobs/poll with only query secret must return 401 Unauthorized');
 
-      // 3. Unauthenticated admin routes rejection (GET /api/settings and GET /api/logs -> 401)
+      // 3. Unauthenticated admin routes rejection (GET /api/settings and POST /api/poll -> 401)
       const settingsUnauthRes = await originalFetch(`${baseUrl}/api/settings`);
       assert.strictEqual(settingsUnauthRes.status, 401, 'GET /api/settings without auth must return 401');
 
-      const logsUnauthRes = await originalFetch(`${baseUrl}/api/logs`);
-      assert.strictEqual(logsUnauthRes.status, 401, 'GET /api/logs without auth must return 401');
+      const pollUnauthRes = await originalFetch(`${baseUrl}/api/poll`, { method: 'POST' });
+      assert.strictEqual(pollUnauthRes.status, 401, 'POST /api/poll without auth must return 401');
 
       // 4. Bypass headers check on real Express route (x-client-app, x-dashboard-request -> still 401)
       const bypassAttemptRes = await originalFetch(`${baseUrl}/api/settings`, {

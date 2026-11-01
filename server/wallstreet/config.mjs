@@ -14,7 +14,7 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   // 사용자 요청(2026-10-30): 크립토 PLUS 수집 제외
   disabledProgrammes:Object.freeze(['crypto']),
   // Supplement these already-sent summaries once per version bump, web only (no Telegram), reusing the stored result.
-  resummarize:Object.freeze({version:2,ids:Object.freeze(['mz6n4udbfwc','KNn5AQQu7ag'])}),
+  resummarize:Object.freeze({version:2,ids:Object.freeze([])}), // 웹 전용 보완 대상(완료된 10/29·10/30 건은 제거). 필요할 때만 id 추가
   // CEO 발언 영상(Supadata 무료 한도 공유): 하루 1편·월 15편, Gemini 영상당 2센트·하루 4센트·월 40센트 상한
   ceoVideo:Object.freeze({enabled,dailyVideos:1,monthlyVideos:15,reservationMicros:20000,dailyMicros:40000,monthlyMicros:400000}),
   excludedVideoIds:Object.freeze(['Idn_d5ArZvA','annR-E8m5WQ','IggP39LRnT8','LtT_k6wCOek']),

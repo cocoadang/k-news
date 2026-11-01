@@ -204,7 +204,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             onClick={() => onOpenDetail(event)}
             className="text-sm sm:text-base font-bold text-white leading-snug cursor-pointer hover:text-cyan-300 transition-colors"
           >
-            {event.title}
+            {event.titleKo || event.title}
           </h2>
         </div>
 

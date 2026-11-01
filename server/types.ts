@@ -90,6 +90,7 @@ export interface NewsEvent {
   id: string;
   title: string; // Korean headline synthesized
   originalTitle: string; // Original primary source headline
+  titleKo?: string; // 표시용 AI 한국어 제목(상세 분석 전 뉴스). 분석에는 쓰지 않음
   category: NewsCategory;
   importance: number; // 1 to 5 (0 if pending/failed unanalyzed)
   isImportant: boolean; // true if importance >= 4 (5 is 🚨 긴급 중요)

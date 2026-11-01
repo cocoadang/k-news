@@ -433,27 +433,3 @@ export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean
     }
   }
 }
-
-export async function sendTestMessage(): Promise<{ success: boolean; error?: string }> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  if (!token || !chatId) {
-    return {
-      success: false,
-      error: '서버 환경변수에 TELEGRAM_BOT_TOKEN 또는 TELEGRAM_CHAT_ID가 설정되어 있지 않습니다. 배포 환경 설정이나 Secret을 확인해주세요.',
-    };
-  }
-
-  const testText = `🚨 <b>Investment Intelligence Monitor 연동 완료</b>
-
-시스템과 텔레그램 봇의 실시간 알림 채널이 성공적으로 활성화되었습니다!
-
-• <b>감시 대상 기업</b>: SpaceX, Alphabet/Google, Tesla, Microsoft, NVIDIA
-• <b>분석 엔진</b>: Gemini 다중 기업 교차 영향 & 팩트 검증 분석
-• <b>알림 기준</b>: 투자 중요도 ★★★ 이상 및 🚨 긴급 5★ 속보
-
-글로벌 주요 경제지와 공식 출처(NASA, FAA, SEC, IR 등)를 24시간 실시간 모니터링하여, 투자 가치가 있는 핵심 인텔리전스만 선별하여 전달해 드립니다.`;
-
-  return sendTelegramMessage(token, chatId, testText);
-}

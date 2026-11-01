@@ -1,13 +1,10 @@
-# K-news
+# K-news (미국주식 모니터링)
 
-Private source snapshot corresponding to production revision `00034-vsp` (2026-10-29), with export-only sanitization. The eight files in the deployment patch manifest match the verified local source. This is not a claim that AI Studio editor contents match production.
+https://news.dsoom.com 운영 소스. 운영 현황·배포 절차는 HANDOFF.md를 보세요.
 
 ## Local development
-Node.js 22; `npm install`, `npm run dev`. Configure your own local environment and replace Firebase configuration placeholders first. Never use production credentials for local tests. Starting the application can connect configured services; use isolated test settings.
+Node.js 22; `npm install`, `npm run dev`. Configure your own local environment and replace Firebase configuration placeholders first. Never use production credentials for local tests.
 
-Checks: `npm run lint`, `npm run build`, `npm run test:wallstreet`. Some source-review regressions requiring private local transcripts/results were intentionally omitted. CEO candidate checks: `node --test candidates/ceo-timeline/*.test.mjs`.
+Checks: `npm run lint`, `npm run build`, and the test steps in `.github/workflows/deploy.yml` (run automatically on every push and PR).
 
-## Undeployed candidate
-`candidates/ceo-timeline/` is separate from the app entry point. It adds question-based chronology and two-record comparison. The candidate is preserved for reference. Its integrated version is in src/components/ceo/timeline and is type-checked and built; production integration deployed as revision 00035-jbl; see HANDOFF.md. No production data snapshot or local preview bundle is included.
-
-No credentials, operational ledgers, transcripts, actual summary datasets or generated build output are included. `.github/workflows/deploy.yml` validates every push and PR; production deployment runs only when the owner manually runs the workflow on main (see HANDOFF.md).
+No credentials, operational ledgers, transcripts, actual summary datasets or generated build output are included. Production deployment runs only via the deploy workflow on main (see HANDOFF.md).

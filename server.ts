@@ -4,18 +4,18 @@ import path from 'path';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
-import { db, getEventEffectivePublishedTime } from './server/db';
+import { db } from './server/db';
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
-import { sendEventToTelegram, sendTestMessage, handleTelegramCommand } from './server/telegram';
-import { analyzeArticleWithGemini, suggestCompanyKeywords, createUnanalyzedEvent } from './server/geminiAnalyzer';
+import { sendEventToTelegram, handleTelegramCommand } from './server/telegram';
+import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords } from './server/companyRenewal';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
 import { createCeoRouter, createCeoRuntime, translatePendingHeadlines } from './server/ceo/routes';
 import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
-import { SystemStatus, NewsEvent, ArticleSource, RawArticle } from './server/types';
-import { getIsFirestoreAvailable, initFirestore, sanitizeForFirestore, firestoreRepo } from './server/firestore';
+import { SystemStatus } from './server/types';
+import { getIsFirestoreAvailable, initFirestore, firestoreRepo } from './server/firestore';
 import {
   SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
@@ -727,168 +727,6 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   });
 
   // 9. Settings GET & POST (Strictly Admin Auth Required)
-  // 8-1. 기사 묶음 정리 (관리자 전용 1회성 작업)
-  // 기본은 미리보기(dryRun). dryRun:false일 때만 백업 후 반영합니다.
-  // body: { dryRun?: boolean, plan: [{ eventId, keepUrls, newPrimaryUrl?, syncOriginalTitle?, moves?: [{ targetEventId, urls }], newEvents?: [{ urls }] }] }
-  // keepUrls·moves·newEvents 어디에도 없는 기사는 백업에만 남고 카드에서 빠집니다.
-  app.post('/api/admin/cluster-cleanup', verifyAdminAuth, async (req, res) => {
-    type CleanupItem = {
-      eventId: string;
-      keepUrls: string[];
-      newPrimaryUrl?: string;
-      syncOriginalTitle?: boolean;
-      moves?: { targetEventId: string; urls: string[] }[];
-      newEvents?: { urls: string[] }[];
-    };
-    const dryRun = req.body?.dryRun !== false;
-    const plan: CleanupItem[] = Array.isArray(req.body?.plan) ? req.body.plan : [];
-    if (plan.length === 0 || plan.length > 50) {
-      return res.status(400).json({ error: 'plan must contain 1~50 items' });
-    }
-
-    const planIds = new Set(plan.map(p => p.eventId));
-    const working = new Map<string, NewsEvent>();
-    const backups = new Map<string, NewsEvent>();
-    const getWorking = (id: string): NewsEvent | undefined => {
-      if (working.has(id)) return working.get(id);
-      const e = db.getEventById(id);
-      if (!e) return undefined;
-      const copy = JSON.parse(JSON.stringify(e)) as NewsEvent;
-      working.set(id, copy);
-      backups.set(id, JSON.parse(JSON.stringify(e)) as NewsEvent);
-      return copy;
-    };
-    const createdEvents: NewsEvent[] = [];
-    const report: Array<Record<string, unknown> & { errors: string[] }> = [];
-
-    for (const item of plan) {
-      const entry: Record<string, unknown> & { errors: string[] } = { eventId: item.eventId, errors: [] };
-      report.push(entry);
-      const current = db.getEventById(item.eventId);
-      if (!current) { entry.errors.push('event not found'); continue; }
-      if (current.dataCleanup) { entry.errors.push('already cleaned up'); continue; }
-
-      const all = [current.primarySource, ...(current.relatedSources || [])].filter(Boolean) as ArticleSource[];
-      const byUrl = new Map<string, ArticleSource>();
-      for (const s of all) if (s.url && !byUrl.has(s.url)) byUrl.set(s.url, s);
-      const used = new Set<string>();
-      const take = (url: string): ArticleSource | null => {
-        if (!byUrl.has(url)) { entry.errors.push(`url not in event: ${url}`); return null; }
-        if (used.has(url)) { entry.errors.push(`url used twice: ${url}`); return null; }
-        used.add(url);
-        return byUrl.get(url)!;
-      };
-
-      const keep = (item.keepUrls || []).map(take).filter((s): s is ArticleSource => !!s);
-      const moves = (item.moves || []).map(m => ({
-        targetEventId: m.targetEventId,
-        sources: (m.urls || []).map(take).filter((s): s is ArticleSource => !!s),
-      }));
-      const groups = (item.newEvents || [])
-        .map(g => (g.urls || []).map(take).filter((s): s is ArticleSource => !!s))
-        .filter(g => g.length > 0);
-
-      if (keep.length === 0) entry.errors.push('keepUrls must keep at least one article');
-      const newPrimary = item.newPrimaryUrl
-        ? keep.find(s => s.url === item.newPrimaryUrl)
-        : keep.find(s => s.url === current.primarySource.url) || keep[0];
-      if (!newPrimary) entry.errors.push('newPrimaryUrl must be one of keepUrls');
-      for (const m of moves) {
-        if (planIds.has(m.targetEventId)) entry.errors.push(`move target is also in plan: ${m.targetEventId}`);
-        else if (!db.getEventById(m.targetEventId)) entry.errors.push(`move target not found: ${m.targetEventId}`);
-      }
-      if (entry.errors.length > 0 || !newPrimary) continue;
-
-      const backupOnly = [...byUrl.values()].filter(s => !used.has(s.url));
-      const now = new Date().toISOString();
-
-      const evt = getWorking(item.eventId)!;
-      evt.primarySource = newPrimary;
-      evt.relatedSources = keep.filter(s => s.url !== newPrimary.url);
-      if (item.syncOriginalTitle && newPrimary.title) evt.originalTitle = newPrimary.title;
-      evt.articleCount = 1 + evt.relatedSources.length;
-      evt.corroboratedSourceCount = evt.articleCount;
-      evt.dataCleanup = { at: now, note: '기사 묶음 오류 정리', removedCount: byUrl.size - keep.length };
-      evt.updatedAt = now;
-
-      for (const m of moves) {
-        const target = getWorking(m.targetEventId)!;
-        const urls = new Set([target.primarySource.url, ...(target.relatedSources || []).map(s => s.url)]);
-        target.relatedSources = target.relatedSources || [];
-        for (const s of m.sources) {
-          if (!urls.has(s.url)) { target.relatedSources.push(s); urls.add(s.url); }
-        }
-        target.articleCount = 1 + target.relatedSources.length;
-        target.corroboratedSourceCount = target.articleCount;
-        target.updatedAt = now;
-      }
-
-      const createdTitles: string[] = [];
-      for (const g of groups) {
-        const [p, ...rest] = g;
-        const raw: RawArticle = {
-          id: `cleanup-${evt.id}-${createdEvents.length}`,
-          title: p.title || evt.title,
-          link: p.url,
-          source: p.name,
-          publishedAt: p.publishedAt || evt.firstSeenAt,
-          snippet: p.snippet || '',
-          firstSeenAt: current.firstSeenAt,
-          sourceType: p.sourceType,
-        };
-        const ne = createUnanalyzedEvent(raw, '기사 묶음 정리로 분리된 기사 (분석 대기)');
-        ne.firstSeenAt = current.firstSeenAt;
-        ne.relatedSources = rest;
-        ne.articleCount = 1 + rest.length;
-        ne.corroboratedSourceCount = ne.articleCount;
-        ne.telegramSuppressed = true;
-        ne.dataCleanup = { at: now, note: '기사 묶음 정리로 분리 생성', fromEventId: evt.id };
-        createdEvents.push(ne);
-        createdTitles.push(`${ne.originalTitle} (+${rest.length})`);
-      }
-
-      entry.newPrimary = newPrimary.title;
-      entry.originalTitle = evt.originalTitle;
-      entry.kept = keep.length;
-      entry.moved = moves.map(m => ({ to: m.targetEventId, count: m.sources.length }));
-      entry.newEvents = createdTitles;
-      entry.backupOnly = backupOnly.map(s => s.title);
-    }
-
-    const hasErrors = report.some(r => r.errors.length > 0);
-    const summary = {
-      items: plan.length,
-      updatedEvents: working.size,
-      newEvents: createdEvents.length,
-      backupOnlyArticles: report.reduce((n, r) => n + (Array.isArray(r.backupOnly) ? r.backupOnly.length : 0), 0),
-    };
-    if (dryRun || hasErrors) {
-      return res.json({ dryRun: true, hasErrors, summary, report });
-    }
-
-    // 반영 전 백업 (Firestore 필수: 백업 없이 반영하지 않음)
-    const fsdb = getIsFirestoreAvailable() ? initFirestore() : null;
-    if (!fsdb) {
-      return res.status(503).json({ error: 'Firestore unavailable: backup is required before applying cleanup' });
-    }
-    try {
-      const backedUpAt = new Date().toISOString();
-      for (const [id, original] of backups) {
-        await fsdb.collection('event_cleanup_backups').doc(id).set(
-          sanitizeForFirestore({ eventId: id, backedUpAt, original: JSON.parse(JSON.stringify(original)) })
-        );
-      }
-      for (const e of working.values()) await db.saveEvent(e);
-      for (const e of createdEvents) await db.saveEvent(e);
-      db.addLog('Dedup', 'success', `[Cluster Cleanup] ${working.size}개 카드 정리, ${createdEvents.length}개 카드 분리 생성 (백업 ${backups.size}건: event_cleanup_backups)`);
-      res.json({ dryRun: false, applied: true, summary, backups: backups.size, report });
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      db.addLog('Dedup', 'error', `[Cluster Cleanup] failed: ${errorMsg}`);
-      res.status(500).json({ error: errorMsg });
-    }
-  });
-
   app.get('/api/settings', verifyAdminAuth, (req, res) => {
     res.json(db.getSettings());
   });
@@ -900,18 +738,6 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     }
     db.addLog('System', 'info', 'Settings updated by admin.');
     res.json(updated);
-  });
-
-  // 10. Test Telegram Connection (Admin only + Rate Limited)
-  app.post('/api/telegram/test', verifyAdminAuth, telegramRateLimitMiddleware, async (req, res) => {
-    const result = await sendTestMessage();
-    if (result.success) {
-      db.addLog('Telegram', 'success', 'Telegram test alert successfully dispatched using server secrets.');
-      res.json({ success: true, message: '서버 환경변수/Secret에 설정된 텔레그램 봇으로 테스트 메시지가 성공적으로 전송되었습니다!' });
-    } else {
-      db.addLog('Telegram', 'error', `Telegram test failed: ${result.error}`);
-      res.status(400).json({ success: false, error: result.error });
-    }
   });
 
   // 10-1. Telegram Webhook Endpoint (Bot Commands: /start, /stop, /status, /help)
@@ -964,21 +790,6 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       // Respond with 500 so Telegram will retry; failed updateId is NOT cached as completed
       return res.status(500).json({ ok: false, error: errorMsg });
     }
-  });
-
-  // 11. Raw Articles (Public read)
-  app.get('/api/articles', (req, res) => {
-    res.json(db.getRawArticles());
-  });
-
-  // 12. Logs (Strictly Admin Auth Required)
-  app.get('/api/logs', verifyAdminAuth, (req, res) => {
-    res.json(db.getLogs(150));
-  });
-
-  app.post('/api/logs/clear', verifyAdminAuth, async (req, res) => {
-    await db.clearLogs();
-    res.json({ success: true });
   });
 
   // Catch-all for undefined API routes so they return JSON, never HTML

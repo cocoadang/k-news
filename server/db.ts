@@ -6,6 +6,8 @@ import { firestoreRepo, getIsFirestoreAvailable, initFirestore } from './firesto
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+// 시작·복구 때 Firestore에서 불러올 최근 이벤트 수(뉴스피드 표시·번역·분석 대상). 약 10일치
+const EVENT_WINDOW = 1500;
 
 export const DEFAULT_CATEGORIES: NewsCategory[] = [
   'IPO / 주식',
@@ -97,6 +99,7 @@ class Database {
   private isFirestoreSynced = false;
   private inFlightInitPromise: Promise<void> | null = null;
   private inFlightEventsRead: Promise<void> | null = null;
+  private eventWindowLoaded = false;
   private telegramFingerprints = new Map<string, { status: 'sending' | 'sent'; claimedAt: number; eventId: string }>();
   private dailyPollRuns = new Map<string, { status: 'running' | 'completed' | 'failed'; startedAt: number }>();
 
@@ -157,7 +160,7 @@ class Database {
       const syncPromise = Promise.all([
         firestoreRepo.getSettings(),
         firestoreRepo.getCompanies(),
-        firestoreRepo.getEvents(100),
+        firestoreRepo.getEvents(EVENT_WINDOW),
         firestoreRepo.getLogs(50),
       ]);
 
@@ -213,7 +216,8 @@ class Database {
       }
 
       if (cloudEvents && cloudEvents.length > 0) {
-        this.data.events = cloudEvents.sort(compareEventsLatestFirst);
+        this.mergeEvents(cloudEvents);
+        this.eventWindowLoaded = true;
       }
 
       if (cloudLogs && cloudLogs.length > 0) {
@@ -510,15 +514,21 @@ class Database {
 
   public async getEventsForRead(): Promise<NewsEvent[]> {
     // A cold-start background hydration can time out while request CPU is idle.
-    // Recover the existing news view with a read only; never run init, polling,
+    // Recover the news view with a read only; never run init, polling,
     // settings initialization, model generation, or notification code here.
-    if (!this.data.events.length && !this.isFirestoreReady() && getIsFirestoreAvailable()) {
-      this.inFlightEventsRead ||= firestoreRepo.getEvents(100).then(events => {
-        if (!this.data.events.length && events.length) this.data.events = events;
+    if (!this.isFirestoreReady() && !this.eventWindowLoaded && getIsFirestoreAvailable()) {
+      this.inFlightEventsRead ||= firestoreRepo.getEvents(EVENT_WINDOW).then(events => {
+        if (events.length) { this.mergeEvents(events); this.eventWindowLoaded = true; }
       }).finally(() => { this.inFlightEventsRead = null; });
       await this.inFlightEventsRead;
     }
     return this.getEvents();
+  }
+
+  /** 클라우드에서 읽은 이벤트를 합침: 같은 id는 클라우드(원본) 기준, 메모리에만 있는 건 유지 */
+  private mergeEvents(events: NewsEvent[]): void {
+    const cloud = new Set(events.map(e => e.id));
+    this.data.events = [...events, ...this.data.events.filter(e => !cloud.has(e.id))].sort(compareEventsLatestFirst);
   }
 
   public _setEventsForTesting(events: NewsEvent[]): void {

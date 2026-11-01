@@ -10,7 +10,7 @@ import { createCeoRuntime } from './ceo/routes';
 import { GoogleGenAI } from '@google/genai';
 import { firestoreRepo } from './firestore';
 
-/** 뉴스 제목 한국어 번역(표시 전용, Flash-Lite, 월 USD 1 상한). 분석 사이클 뒤 남는 시간에만 */
+/** 뉴스 제목 한국어 번역(표시 전용, Flash-Lite, 월 USD 1 상한). 분석만 하는 사이클 시작 때 최대 30초 */
 export async function runNewsTitleTranslation(deadline: number) {
   const apiKey = process.env.GEMINI_API_KEY;
   const fs = getIsFirestoreAvailable() ? initFirestore() : null;
@@ -74,7 +74,9 @@ export async function runAnalysisOnlyCycle(deadlineMs = 150_000): Promise<{ skip
   try {
     const settings = db.getSettings();
     if (settings.autoAnalyzeWithGemini === false) return { skipped: true, telegramAlertsSentCount: 0 };
-    const summary = await runTwoStageAnalysis({ deadlineAt: startTime + deadlineMs, includeBacklog: true });
+    // 제목 번역을 먼저 짧게(최대 30초) 처리: 분석이 시간을 다 써서 번역이 밀리지 않게
+    try { await runNewsTitleTranslation(startTime + 30_000); } catch (e) { db.addLog('Gemini', 'warn', `[TitleKo] failed: ${String(e).slice(0, 120)}`); }
+    const summary = await runTwoStageAnalysis({ deadlineAt: startTime + 30_000 + deadlineMs, includeBacklog: true });
     const completedIds = new Set(summary?.completedEventIds || []);
     if (settings.autoSendTelegram) {
       for (const event of db.getEvents().filter(e => completedIds.has(e.id))) {
@@ -83,7 +85,6 @@ export async function runAnalysisOnlyCycle(deadlineMs = 150_000): Promise<{ skip
         if (r.success) telegramAlertsSentCount++;
       }
     }
-    try { await runNewsTitleTranslation(startTime + 240_000); } catch (e) { db.addLog('Gemini', 'warn', `[TitleKo] failed: ${String(e).slice(0, 120)}`); }
     db.addLog('Scheduler', 'success', `[AnalysisOnly] finished in ${((Date.now() - startTime) / 1000).toFixed(1)}s. screened=${summary.screened}, detailed=${summary.detailed}, failed=${summary.failed}, telegram=${telegramAlertsSentCount}`);
     return { summary, telegramAlertsSentCount };
   } finally {

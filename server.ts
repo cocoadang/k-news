@@ -608,6 +608,31 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     await sendTelegramMessage(token, chatId, text);
   };
 
+  // 운영 점검용 공개 요약: 숫자/상태만(비밀값·IP·로그 원문 없음). Firestore 읽기를 줄이려고 10분 캐시.
+  let opsHealthCache: { at: number; body: any } | null = null;
+  app.get('/api/ops/health', async (_req, res) => {
+    try {
+      if (!opsHealthCache || Date.now() - opsHealthCache.at > 10 * 60_000) {
+        const { buildOpsHealth } = await import('./server/opsHealth.mjs');
+        const { wallstreetConfig } = await import('./server/wallstreet/config.mjs');
+        let logs: any[] = [];
+        try { logs = await firestoreRepo.getLogs(200); } catch { logs = []; }
+        if (!logs.length) logs = db.getLogs(200);
+        let youtube: any = null;
+        try {
+          const fs = getIsFirestoreAvailable() ? initFirestore() : null;
+          if (fs) { const { FirestoreWallstreetStore } = await import('./server/wallstreet/firestoreStore.mjs'); youtube = await new FirestoreWallstreetStore(fs as any).read(); }
+        } catch { youtube = null; }
+        let ko: any = null;
+        try { ko = (await (getSchedulerCeoRuntime() || ceoRuntime).snapshot() as any).koSummary || null; } catch { ko = null; }
+        opsHealthCache = { at: Date.now(), body: buildOpsHealth({ lastPollTime: db.getSettings().lastPollTime || null, logs, youtube, ko, config: wallstreetConfig }) };
+      }
+      res.set('Cache-Control', 'no-store').json(opsHealthCache.body);
+    } catch {
+      res.status(500).json({ ok: false, error: 'ops_health_failed' });
+    }
+  });
+
   app.use(createCeoRouter({
     runtime: ceoRuntime,
     getRuntime: () => getSchedulerCeoRuntime() || ceoRuntime,

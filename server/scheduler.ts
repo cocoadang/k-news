@@ -7,6 +7,35 @@ import { getSeoulDateString, getIsFirestoreAvailable, initFirestore } from './fi
 import { runWeeklyCompanyRenewalsBatch } from './companyRenewal';
 import { CeoRuntime } from './ceo/runtime';
 import { createCeoRuntime } from './ceo/routes';
+import { GoogleGenAI } from '@google/genai';
+import { firestoreRepo } from './firestore';
+
+/** 뉴스 제목 한국어 번역(표시 전용, Flash-Lite, 월 USD 1 상한). 분석 사이클 뒤 남는 시간에만 */
+export async function runNewsTitleTranslation(deadline: number) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const fs = getIsFirestoreAvailable() ? initFirestore() : null;
+  if (!apiKey || !fs) return { skipped: true };
+  const { translateTitles, TITLE_KO_MODEL, MAX_OUTPUT } = await import('./newsTitleKo.mjs');
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+  const ref = fs.collection('news_title_ko_budget').doc('state');
+  const result = await translateTitles(db.getEvents(), {
+    now: () => Date.now(), deadline, maxBatches: 8,
+    generate: async (prompt: string) => {
+      const r = await ai.models.generateContent({ model: TITLE_KO_MODEL, contents: prompt, config: { responseMimeType: 'application/json', maxOutputTokens: MAX_OUTPUT, temperature: 0.2, httpOptions: { timeout: 40_000 } } });
+      const u: any = r.usageMetadata || {};
+      return { text: r.text, usage: { in: u.promptTokenCount, out: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) } };
+    },
+    budget: {
+      read: async () => { const s = await ref.get(); return (s.exists ? s.data() : { month: '', nano: 0 }) as any; },
+      add: async (month: string, nano: number) => { await fs.runTransaction(async tx => { const s = await tx.get(ref); const d: any = s.exists ? s.data() : { month, nano: 0 }; tx.set(ref, { month, nano: (d.month === month ? d.nano : 0) + nano }); }); },
+    },
+    save: async (id: string, titleKo: string) => {
+      if (await firestoreRepo.setTitleKo(id, titleKo)) { const e = db.getEventById(id); if (e) db.syncEventFromCloud({ ...e, titleKo }); }
+    },
+  });
+  db.addLog('Gemini', 'info', `[TitleKo] ${JSON.stringify(result)}`);
+  return result;
+}
 
 let schedulerCeoRuntime: CeoRuntime | null = null;
 
@@ -54,6 +83,7 @@ export async function runAnalysisOnlyCycle(deadlineMs = 150_000): Promise<{ skip
         if (r.success) telegramAlertsSentCount++;
       }
     }
+    try { await runNewsTitleTranslation(startTime + 240_000); } catch (e) { db.addLog('Gemini', 'warn', `[TitleKo] failed: ${String(e).slice(0, 120)}`); }
     db.addLog('Scheduler', 'success', `[AnalysisOnly] finished in ${((Date.now() - startTime) / 1000).toFixed(1)}s. screened=${summary.screened}, detailed=${summary.detailed}, failed=${summary.failed}, telegram=${telegramAlertsSentCount}`);
     return { summary, telegramAlertsSentCount };
   } finally {

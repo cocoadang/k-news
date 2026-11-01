@@ -203,11 +203,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
 
             <h2 className="text-sm sm:text-lg font-bold text-white leading-snug pt-1">
-              {event.title}
+              {event.titleKo || event.title}
             </h2>
-            {event.originalTitle && event.originalTitle !== event.title && (
+            {(event.originalTitle || event.title) !== (event.titleKo || event.title) && (
               <p className="text-xs text-slate-400 italic">
-                원문: {event.originalTitle}
+                {event.titleKo ? 'AI 번역 제목 · ' : ''}원문: {event.originalTitle || event.title}
               </p>
             )}
           </div>

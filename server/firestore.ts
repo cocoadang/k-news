@@ -556,6 +556,15 @@ export const firestoreRepo = {
   },
 
   // Optimistic, field-limited update: preserve completed analysis and concurrent source/Telegram changes.
+  /** 표시용 한국어 제목만 저장(updatedAt·분석 상태는 건드리지 않아 분석 조건부 저장과 충돌하지 않음) */
+  async setTitleKo(id: string, titleKo: string): Promise<boolean> {
+    if (!getIsFirestoreAvailable()) return false;
+    const fs = initFirestore();
+    if (!fs) return false;
+    try { await fs.collection('events').doc(id).set({ titleKo }, { merge: true }); return true; }
+    catch (error) { handleFirestoreError('setTitleKo', error); return false; }
+  },
+
   async commitScreeningAnalysis(expected: NewsEvent, patch: Partial<NewsEvent>): Promise<NewsEvent | null> {
     if (!getIsFirestoreAvailable()) return null;
     const fs = initFirestore();

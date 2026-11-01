@@ -126,6 +126,7 @@ export interface NewsEvent {
   id: string;
   title: string;
   originalTitle?: string;
+  titleKo?: string;
   category: NewsCategory;
   importance: number; // 1 to 5 (0 if pending/failed)
   impact: InvestmentImpact;

@@ -20,15 +20,33 @@ function parseCycle(msg) {
   return m ? { seconds: +m[1], articles: +m[2], events: +m[3], telegram: +m[4] } : null;
 }
 
+// 요약 실패 진단: 개수·상태 코드만(자막·요약 문장·모델 원문 없음).
+function summaryDiag(r) {
+  const j = r.summaryCandidate && typeof r.summaryCandidate === 'object' ? r.summaryCandidate : null;
+  if (!j) return null;
+  const n = v => (Array.isArray(v?.items) ? v.items.length : null);
+  const held = {};
+  for (const h of Array.isArray(j.counterEvidenceHeld) ? j.counterEvidenceHeld : []) {
+    const k = h?.review?.reason === 'counter_evidence_malformed' ? 'malformed' : String(h?.review?.status || 'unknown').slice(0, 20);
+    held[k] = (held[k] || 0) + 1;
+  }
+  return { segments: Array.isArray(r.transcript) ? r.transcript.length : null, calls: Array.isArray(j.calls) ? j.calls.length : null,
+    candidate: n(j.candidate), sourceScreen: n(j.sourceScreen), repaired: n(j.repairedSourceScreen), held,
+    qualifyAdded: Number.isInteger(j.qualifyAdded) ? j.qualifyAdded : null, qualifyError: typeof j.qualifyError === 'string' ? j.qualifyError.slice(0, 60) : null,
+    retried: !!r.summaryRetried, laterRunRetried: !!r.summaryLaterRunRetried };
+}
+
 export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [], youtube = null, ko = null, config = {} } = {}) {
   const issues = [];
   const sorted = [...logs].filter(l => l && l.timestamp && typeof l.message === 'string').sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
   const since = t => sorted.filter(l => Date.parse(l.timestamp) >= now - t);
 
   // 뉴스 수집
+  const cycleLog = sorted.find(l => l.message.startsWith('Monitoring cycle finished'));
+  // 콜드 스타트 직후에는 메모리 설정(lastPollTime)이 아직 비어 있을 수 있어, 마지막 사이클 종료 로그 시각으로 보완합니다.
+  if (!lastPollTime && cycleLog) lastPollTime = cycleLog.timestamp;
   const pollAgeH = lastPollTime ? (now - Date.parse(lastPollTime)) / H : null;
   if (pollAgeH == null || pollAgeH > 26) issues.push('뉴스 수집이 26시간 넘게 실행되지 않음');
-  const cycleLog = sorted.find(l => l.message.startsWith('Monitoring cycle finished'));
   const reportLog = sorted.find(l => l.message.startsWith('[StatusReport]'));
   const reportText = reportLog ? reportLog.message.replace(/^\[StatusReport\]\s*/, '') : null;
   const reportWarn = reportText && reportText.includes('⚠️') ? reportText.slice(reportText.indexOf('⚠️') + 2).trim() : null;
@@ -57,7 +75,7 @@ export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [
     const recent = Object.values(youtube.videos || {})
       .filter(r => (r.firstSeen || 0) >= now - 72 * H && !(r.programmes || []).some(p => (config.disabledProgrammes || []).includes(p)))
       .sort((a, b) => (b.firstSeen || 0) - (a.firstSeen || 0))
-      .map(r => ({ id: r.video?.id || null, programmes: r.programmes || [], publishedAt: r.video?.publishedAt || null, firstSeen: r.firstSeen || null, stage: r.stage || null, hold: r.hold || null, summaryFailure: r.summaryFailure || null }));
+      .map(r => ({ id: r.video?.id || null, programmes: r.programmes || [], publishedAt: r.video?.publishedAt || null, firstSeen: r.firstSeen || null, stage: r.stage || null, hold: r.hold || null, summaryFailure: r.summaryFailure || null, ...(r.stage === 'text_review_required' ? { summaryDiag: summaryDiag(r) } : {}) }));
     const failed = recent.filter(r => r.stage === 'text_review_required' || /expired|failed/.test(r.stage || ''));
     if (failed.length) issues.push(`유튜브 요약 실패/보류 ${failed.length}건`);
     const iso = new Date(now).toISOString();

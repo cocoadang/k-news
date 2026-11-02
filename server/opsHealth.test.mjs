@@ -38,3 +38,21 @@ test('flags stale poll, warn report, two days without detailed analysis, YouTube
   for (const re of [/26시간/, /상세 분석 0건이 이틀/, /정기 실행 오류 1건/, /유튜브 요약 실패\/보류 1건/, /요약 예산 85%/, /Supadata 사용량 83.3%/, /CEO 번역 원장 90%/]) assert.ok(r.issues.some(i => re.test(i)), re.source);
   assert.ok(!r.issues.some(i => /아침 상태 보고/.test(i)), 'report older than 26h is not re-flagged');
 });
+
+test('cold start: missing lastPollTime falls back to the last cycle log', () => {
+  const now = Date.parse('2026-11-02T00:18:00Z');
+  const h = buildOpsHealth({ now, lastPollTime: null, logs: [{ timestamp: '2026-11-01T22:03:13Z', level: 'success', module: 'Scheduler', message: 'Monitoring cycle finished in 183.9s. New articles: 171, Events: 160, Telegram alerts: 0.' }] });
+  assert.equal(h.issues.includes('뉴스 수집이 26시간 넘게 실행되지 않음'), false);
+  assert.equal(h.news.lastPollTime, '2026-11-01T22:03:13Z');
+});
+
+test('held summary exposes count-only diagnostics', () => {
+  const now = Date.parse('2026-11-02T00:18:00Z');
+  const youtube = { videos: { a: { video: { id: 'a' }, programmes: ['wallstreet'], firstSeen: now - 3600000, stage: 'text_review_required', hold: 'summary_failed_or_uncertain', summaryFailure: 'insufficient_context_reviewed_items', transcript: [{ start: 0, text: 'secret words' }], summaryRetried: true,
+    summaryCandidate: { calls: [{}, {}, {}], candidate: { items: [1, 2, 3, 4, 5] }, sourceScreen: { items: [1, 2, 3, 4] }, counterEvidenceHeld: [{ review: { status: 'uncertain', reason: 'x' } }, { review: { status: 'qualifies' } }], qualifyAdded: 0 } } }, budgets: {} };
+  const h = buildOpsHealth({ now, youtube });
+  const d = h.youtube.recent[0].summaryDiag;
+  assert.deepEqual(d.held, { uncertain: 1, qualifies: 1 });
+  assert.equal(d.candidate, 5); assert.equal(d.sourceScreen, 4); assert.equal(d.segments, 1);
+  assert.equal(JSON.stringify(h).includes('secret words'), false);
+});

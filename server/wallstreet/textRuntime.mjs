@@ -9,6 +9,7 @@ import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
 // Bump when summary validation is fixed so recently failed videos are re-attempted once.
 export const SUMMARY_FIX_VERSION=2;
+const LATER_RUN_RETRY_FAILURES=['insufficient_context_reviewed_items','insufficient_source_grounded_items'];
 export const TRANSCRIPT_KEEP_MS=3*86400000;
 const TRANSCRIPT_DONE_STAGES=['sent','historical_complete','text_review_required','text_caption_expired'];
 export const TEXT_PROJECT='gen-lang-client-0064554427';
@@ -146,6 +147,11 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           }
           if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
             r.summaryRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
+          }
+          // Context-review shortfalls (too few claims left after counter-evidence) vary run to run; the same validators get
+          // one more single attempt at a later scheduled run (>=1h after the failure, within 24h of discovery). No caption credits.
+          if(r.stage==='text_review_required'&&r.summaryRetried&&!r.summaryLaterRunRetried&&validationRejected(r)&&LATER_RUN_RETRY_FAILURES.includes(r.summaryFailure)&&r.summaryFailedAt&&now-r.summaryFailedAt>=3600000&&now-(r.firstSeen||0)<86400000){
+            r.summaryLaterRunRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }
           if(r.stage==='text_summary'){
             if(c.summaryApproved!==true||!summarizer||c.combinedTokenCapVerified!==true){r.hold='text_summary_approval_or_verified_cap_required';continue;}

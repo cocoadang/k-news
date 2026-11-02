@@ -23,4 +23,4 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   discoverySource:process.env.KNEWS_YOUTUBE_DISCOVERY_SOURCE||'official_rss',
   discoveryApproved:enabled,summaryApproved:enabled,deliveryApproved:enabled,combinedTokenCapVerified:true,deliveryMode:'immediate',deliveryTime:null,recipient:process.env.TELEGRAM_CHAT_ID||null,
   dailyCredits:5,monthlyCredits:110,dailySummaryMicros:260000,monthlySummaryMicros:2000000,
-  summaryReservationMicros:20000,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,maxOutputTokens:2500});
+  summaryReservationMicros:30000,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,maxOutputTokens:2500});

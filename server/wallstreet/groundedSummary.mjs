@@ -91,7 +91,7 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
  // Reuse a finished result: only claims that were held for a missing caveat are rewritten and audited
  // (two small calls). Already-verified points are kept as they are, no full re-summary.
  async supplement({result,segments,maxCostMicros}){
-  if(!approved||model!=='gemini-3.5-flash-lite'||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>20000)throw Error('grounded_budget_config');
+  if(!approved||model!=='gemini-3.5-flash-lite'||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>30000)throw Error('grounded_budget_config');
   const j=result?.validationJournal,screen=j?.repairedSourceScreen||j?.sourceScreen;
   if(!Array.isArray(result?.items)||!Array.isArray(result?.audit?.checks)||result.audit.checks.length!==result.items.length||!Array.isArray(j?.counterEvidenceHeld)||!Array.isArray(screen?.items))throw Error('supplement_source_missing');
   const entries=j.counterEvidenceHeld.filter(h=>h.review?.status==='qualifies').map(h=>({index:h.index,item:screen.items[h.index],review:h.review})).filter(e=>e.item);
@@ -125,7 +125,7 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
   }catch(error){error.candidate=journal;throw error;}
  },
  async summarize({segments,maxCostMicros,video}){
-  if(!approved||model!=='gemini-3.5-flash-lite'||inputMicrosPerToken!==0.3||outputMicrosPerToken!==2.5||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>20000)throw Error('grounded_budget_config');
+  if(!approved||model!=='gemini-3.5-flash-lite'||inputMicrosPerToken!==0.3||outputMicrosPerToken!==2.5||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>30000)throw Error('grounded_budget_config');
   // Detailed generation (2500), counter review (700), audit (700), excluding all input tokens.
   if(minimumSummaryItems>=5&&counterEvidenceRequired&&maxCostMicros<9750)throw Error('detailed_budget_below_output_ceiling');
   const blocks=evidenceBlocks(segments),journal={protocol:'evidence_ids_v1',calls:[]};let reserved=0;

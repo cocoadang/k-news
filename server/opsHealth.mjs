@@ -25,6 +25,7 @@ function summaryDiag(r) {
   const j = r.summaryCandidate && typeof r.summaryCandidate === 'object' ? r.summaryCandidate : null;
   if (!j) return null;
   const n = v => (Array.isArray(v?.items) ? v.items.length : null);
+  const codes = v => (Array.isArray(v) ? v.slice(0, 8).map(x => (/^[a-z_]{1,40}$/.test(x?.reason || '') ? x.reason : 'other')) : null);
   const held = {};
   for (const h of Array.isArray(j.counterEvidenceHeld) ? j.counterEvidenceHeld : []) {
     const k = h?.review?.reason === 'counter_evidence_malformed' ? 'malformed' : String(h?.review?.status || 'unknown').slice(0, 20);
@@ -32,6 +33,7 @@ function summaryDiag(r) {
   }
   return { segments: Array.isArray(r.transcript) ? r.transcript.length : null, calls: Array.isArray(j.calls) ? j.calls.length : null,
     candidate: n(j.candidate), sourceScreen: n(j.sourceScreen), repaired: n(j.repairedSourceScreen), held,
+    rejected: codes(j.sourceScreen?.rejected), repairItems: n(j.sourceRepair), repairRejected: codes(j.repairedSourceScreen?.rejected),
     qualifyAdded: Number.isInteger(j.qualifyAdded) ? j.qualifyAdded : null, qualifyError: typeof j.qualifyError === 'string' ? j.qualifyError.slice(0, 60) : null,
     retried: !!r.summaryRetried, laterRunRetried: !!r.summaryLaterRunRetried };
 }

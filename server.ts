@@ -625,7 +625,9 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
         } catch { youtube = null; }
         let ko: any = null;
         try { ko = (await (getSchedulerCeoRuntime() || ceoRuntime).snapshot() as any).koSummary || null; } catch { ko = null; }
-        opsHealthCache = { at: Date.now(), body: buildOpsHealth({ lastPollTime: db.getSettings().lastPollTime || null, logs, youtube, ko, config: wallstreetConfig }) };
+        const lastPollTime = db.getSettings().lastPollTime || null;
+        // 콜드 스타트 중(설정 미적재)에는 캐시하지 않아 10분간 잘못된 '미실행' 경고가 고정되지 않게 합니다.
+        opsHealthCache = { at: lastPollTime ? Date.now() : 0, body: buildOpsHealth({ lastPollTime, logs, youtube, ko, config: wallstreetConfig }) };
       }
       res.set('Cache-Control', 'no-store').json(opsHealthCache.body);
     } catch {

@@ -149,3 +149,14 @@ test('finished videos drop their transcript and validation journal after 3 days,
  assert.equal(old.transcript,undefined);assert.equal(old.summaryCandidate.validationJournal,undefined);assert.deepEqual(old.summaryCandidate.items,[1]);assert.equal(old.parts[0].text,'요약');
  assert.ok(Array.isArray(fresh.transcript));
 });
+
+test('context-review shortfall gets exactly one more attempt at a later run within 24h',async()=>{
+ const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('insufficient_context_reviewed_items');};
+ const r=x.run();await r.importTranscript(source(video()));
+ const hold=async(failedAgo)=>x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='insufficient_context_reviewed_items';v.summaryFailedAt=now-failedAgo;v.summaryRetried=true;v.summaryFixVersion=2;v.firstSeen=now-3*3600000;await save();});
+ await hold(30*60000);await r.run();assert.equal(calls,0); // same run window: no extra attempt
+ await hold(2*3600000);await r.run();assert.equal(calls,1);
+ assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_review_required');assert.equal(x.store.state.videos.Idn_d5ArZvA.summaryLaterRunRetried,true);
+ await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA.summaryFailedAt=now-2*3600000;await save();});
+ await r.run();assert.equal(calls,1);
+});

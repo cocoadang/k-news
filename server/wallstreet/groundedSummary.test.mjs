@@ -42,7 +42,8 @@ test('separate evidence blocks retain individual source links and conservative o
  const items=groundCandidate(input,blocks);assert.equal(items[0].kind,'outlook');assert.deepEqual(items[0].starts,[0,18]);
  assert.ok(items[0].quote.includes('[B0000]'));assert.ok(items[0].quote.includes('[B0002]'));
  const output=renderGroundedBrief({id:'test',title:'방송'},acceptVerification(items,audit));assert.ok(output.includes('&t=18s'));
- assert.throws(()=>groundCandidate({items:input.items.map(x=>({...x,evidenceIds:['B0002','B0000']}))},blocks),/grounded_ids/);
+ assert.deepEqual(groundCandidate({items:[{...input.items[0],evidenceIds:['B0002','B0000']}]},blocks,{minimum:1})[0].evidenceIds,['B0000','B0002']); // unsorted IDs are normalized
+ assert.throws(()=>groundCandidate({items:[{...input.items[0],evidenceIds:['B9999']}]},blocks,{minimum:1}),/grounded_ids/);
 });
 test('two calls share one ceiling; failed generation is not retried and preserves draft',async()=>{
  let calls=0;const client={countTokens:async()=>({totalTokens:100}),generate:async()=>({text:JSON.stringify(++calls===1?candidate:audit)})};
@@ -159,4 +160,27 @@ test('optional topic title is kept only when grounded; a bad title is dropped wi
  assert.equal(ok.title,'구글 클라우드 성장');
  const [bad]=groundCandidate({items:[{title:'매출 99% 급증',text:'구글 클라우드 매출이 늘었습니다.',kind:'reported',evidenceIds:[bl[0].id]}]},bl,{minimum:1});
  assert.equal(bad.title,undefined);assert.equal(bad.text,'구글 클라우드 매출이 늘었습니다.');
+});
+
+test('evidence IDs are normalized: short form, unsorted, repeated and unknown IDs', async () => {
+ const { normalizeEvidenceIds } = await import('./groundedSummary.mjs');
+ const bl = Array.from({ length: 20 }, (_, i) => ({ id: `B${String(i).padStart(4, '0')}`, start: i * 9, text: 't' }));
+ assert.deepEqual(normalizeEvidenceIds(['B12', 'b0003', 'B0003', 'B9999', 'x', 5], bl), [3, 12]);
+ assert.deepEqual(normalizeEvidenceIds(['B9999'], bl), []);
+});
+
+test('short source repair keeps the already-grounded claims and adds new ones', async () => {
+ const seg = Array.from({ length: 18 }, (_, i) => ({ start: i * 3, text: `방송 구간 ${i}의 조건부 전망입니다.` }));
+ const bl = evidenceBlocks(seg);
+ const item = (b, i) => ({ text: `출연자는 구간 ${i * 3}에 관해 전망했습니다.`, kind: 'outlook', evidenceIds: [b.id] });
+ const bad = { text: 'CTA 펀드의 전망입니다.', kind: 'outlook', evidenceIds: ['B0001'] };
+ const first = { items: [item(bl[0], 0), bad, bad, { ...bad, evidenceIds: ['B0002'] }, { ...bad, evidenceIds: ['B0003'] }] };
+ const repair = { items: [item(bl[1], 1), item(bl[2], 2)] }; // only two points: previously aborted with grounded_item_count
+ const findings = n => ({ findings: Array.from({ length: n }, (_, index) => ({ index, status: 'clear', sourceIds: [], reason: '추가 단서 없음' })) });
+ const checks = n => ({ checks: Array.from({ length: n }, (_, index) => ({ index, supported: true, classificationCorrect: true, recommendedKind: 'outlook', reason: '근거 일치' })) });
+ const responses = [first, repair, findings(3), checks(3)]; let calls = 0;
+ const client = { countTokens: async () => ({ totalTokens: 100 }), generate: async () => ({ text: JSON.stringify(responses[calls++]) }) };
+ const s = groundedSummarizer({ client, model: 'gemini-3.5-flash-lite', inputMicrosPerToken: .3, outputMicrosPerToken: 2.5, approved: true, allowSourceRepair: true, minimumSummaryItems: 5, acceptMinimumItems: 3, counterEvidenceRequired: true });
+ const result = await s.summarize({ segments: seg, maxCostMicros: 30000 });
+ assert.equal(result.items.length, 3); assert.equal(result.items[0].text, first.items[0].text); assert.equal(calls, 4);
 });

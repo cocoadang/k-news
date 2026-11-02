@@ -22,13 +22,27 @@ export function relatedContext(ids,blocks){
  if(to-from>960)throw Error('evidence_topic_span');
  return blocks.filter(b=>b.start>=from&&b.start<=to);
 }
+export function normalizeEvidenceIds(raw,blocks){
+ const index=new Map(blocks.map((b,i)=>[b.id,i]));
+ const out=new Set();
+ for(const id of raw.slice(0,32)){
+  const m=typeof id==='string'&&id.trim().match(/^b?0*(\d{1,5})$/i);
+  if(!m)continue;
+  const i=index.get('B'+m[1].padStart(4,'0'));
+  if(i!==undefined)out.add(i);
+ }
+ return [...out].sort((a,b)=>a-b);
+}
 export function groundCandidate(candidate,blocks,{minimum=3,contextRadius=0,topicContext=false}={}){
  if(!Array.isArray(candidate?.items)||candidate.items.length<minimum||candidate.items.length>8)throw Error('grounded_item_count');
  const used=new Set();
  return candidate.items.map(x=>{
-  if(typeof x.text!=='string'||!x.text.trim()||x.text.length>700||!['reported','outlook'].includes(x.kind)||!Array.isArray(x.evidenceIds)||x.evidenceIds.length<1||x.evidenceIds.length>16)throw Error('grounded_shape');
-  const ids=x.evidenceIds.map(id=>blocks.findIndex(b=>b.id===id));
-  if(ids.some((id,i)=>id<0||(i>0&&id<=ids[i-1])))throw Error('grounded_ids');
+  if(typeof x.text!=='string'||!x.text.trim()||x.text.length>700||!['reported','outlook'].includes(x.kind)||!Array.isArray(x.evidenceIds))throw Error('grounded_shape');
+  // Evidence ID order/format is bookkeeping, not meaning: accept B12 / b0012 / unsorted / repeated IDs and normalize them.
+  // IDs that match no block are dropped; the claim must still pass number, name and audit checks on the remaining blocks.
+  const ids=normalizeEvidenceIds(x.evidenceIds,blocks);
+  if(ids.length<1||ids.length>16)throw Error('grounded_ids');
+  x={...x,evidenceIds:ids.map(i=>blocks[i].id)};
   const context=evidenceContext(ids,blocks,contextRadius);
   const related=topicContext?relatedContext(ids,blocks):[];
   const evidence=context.map(i=>'['+blocks[i].id+'] '+blocks[i].text).join('\n');
@@ -41,8 +55,8 @@ export function groundCandidate(candidate,blocks,{minimum=3,contextRadius=0,topi
   return {...(title?{title}:{}),text:x.text.trim(),kind:/가능|전망|예상|분석|해석|경우|수 있|조건|시각/u.test(x.text)?'outlook':x.kind,evidenceIds:[...x.evidenceIds],contextIds:context.map(i=>blocks[i].id),relatedBlocks:related,quote:evidence,start:blocks[context[0]].start,starts:context.filter((id,i)=>i===0||id!==context[i-1]+1).map(id=>blocks[id].start)};
  });
 }
-export function filterGroundedCandidates(candidate,blocks,{contextRadius=0,topicContext=false}={}){
- if(!Array.isArray(candidate?.items)||candidate.items.length<3||candidate.items.length>8)throw Error('grounded_item_count');
+export function filterGroundedCandidates(candidate,blocks,{contextRadius=0,topicContext=false,minimum=3}={}){
+ if(!Array.isArray(candidate?.items)||candidate.items.length<minimum||candidate.items.length>8)throw Error('grounded_item_count');
  const items=[],rejected=[],seen=new Set();
  candidate.items.forEach((item,index)=>{try{
   const value=groundCandidate({items:[item]},blocks,{minimum:1,contextRadius,topicContext})[0];
@@ -143,9 +157,11 @@ export function groundedSummarizer({client,model,inputMicrosPerToken,outputMicro
    journal.candidate=candidate;let screened=filterGroundedCandidates(candidate,blocks,{contextRadius:1,topicContext:true});journal.sourceScreen=screened;
    if(screened.items.length<3&&allowSourceRepair){
     const repair=await call(sourceRepairPrompt(candidate,screened,blocks),1000,3000);journal.sourceRepair=repair;
-    const next=filterGroundedCandidates(repair,blocks,{contextRadius:1,topicContext:true});
-    for(const accepted of screened.items)if(!next.items.some(x=>x.text===accepted.text&&x.kind===accepted.kind&&JSON.stringify(x.evidenceIds)===JSON.stringify(accepted.evidenceIds)))throw Error('accepted_claim_changed');
-    screened=next;journal.repairedSourceScreen=next;
+    // A short or empty repair must not discard claims that already passed: keep them as they were and add only newly grounded points.
+    const next=Array.isArray(repair?.items)&&repair.items.length>=1&&repair.items.length<=8?filterGroundedCandidates(repair,blocks,{contextRadius:1,topicContext:true,minimum:1}):{items:[],rejected:[]};
+    const merged=[...screened.items];
+    for(const x of next.items)if(!merged.some(m=>m.text===x.text))merged.push(x);
+    screened={items:merged.sort((a,b)=>a.start-b.start).slice(0,8),rejected:next.rejected};journal.repairedSourceScreen=screened;
    }
    if(screened.items.length<floor)throw Error('insufficient_source_grounded_items');let items=screened.items;
    if(counterEvidenceRequired){

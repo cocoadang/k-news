@@ -3,8 +3,8 @@ import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
-import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
+import { jsonCompression, serveBuiltApp } from './server/httpDelivery';
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
 import { sendEventToTelegram, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
@@ -77,6 +77,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
 
   app.use(express.json({ limit: '512kb' }));
   app.use(cookieParser());
+  app.use(jsonCompression());
 
   // Background Firestore connection check (non-blocking for fast server boot)
   if (!options?.isTest) {
@@ -810,17 +811,14 @@ async function startServer() {
   // Vite Integration (Dev vs Prod)
   // ==========================================
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite'); // 개발 전용(운영 이미지에는 vite 없음)
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    serveBuiltApp(app, path.join(process.cwd(), 'dist'));
   }
 
   // Start background monitoring scheduler (fallback interval)

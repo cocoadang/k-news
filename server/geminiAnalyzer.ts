@@ -289,7 +289,7 @@ ${articleBody}
 
 [사실 vs 의견 구분 & Source Tier 독립성 (의견 최대 2점 제한)]
 - 기사의 본질적 성격(contentType)을 엄격히 분류하십시오. analyst_opinion, market_commentary, recap, rumor 유형은 1차 공식 사실이 없는 한 Importance 최대 2점 이하로 제한하십시오.
-- Source Tier(신뢰성)와 Importance(기업가치 영향)는 독립적입니다. Reuters(Tier 1)의 단순 주가등락 해설 기사는 Tier 1이지만 Importance 1~2점입니다. Tier 3 미확인 루머는 Importance 최대 2점입니다.
+- Source Tier(신뢰성)와 Importance(기업가치 영향)는 독립적입니다. Reuters(Tier 1)의 단순 주가등락 해설 기사는 Tier 1이지만 Importance 1~2점입니다. Tier 3 미확인 루머는 Importance 최대 2점, Tier 3 매체의 확인된 사실(실적·공시·계약 등)은 내용대로 평가하십시오(시스템이 최대 4점으로 제한).
 - factualPoints: 본문에서 직접 확인된 100% 객관적 사실(수치, 일자, 주체)만 2~4개 작성하십시오. 지어내기(Hallucination)는 절대 금지됩니다.`;
 
   try {
@@ -351,9 +351,13 @@ ${articleBody}
       }
     }
 
-    // Guardrail 2: Tier 3 uncorroborated single source rumors/opinions capped at 2
-    if (evaluation.tier === 'tier3' && !evaluation.detectedOriginalSource && (contentType === 'rumor' || importance > 2)) {
-      importance = Math.min(2, importance);
+    // Guardrail 2: Tier 3 source without a detected original source
+    // - rumors capped at 2
+    // - factual items (earnings, official announcements, contracts, regulation, new facts) capped at 4,
+    //   so the record reflects their weight but 5 (auto Telegram) never comes from an unverified tier-3 outlet
+    //   (사용자 결정 2026-11-03: 기록 정확도 개선, 알림은 늘리지 않음)
+    if (evaluation.tier === 'tier3' && !evaluation.detectedOriginalSource) {
+      importance = Math.min(contentType === 'rumor' ? 2 : 4, importance);
     }
 
     const rawImpact = typeof result.impact === 'string' ? result.impact.toLowerCase() : '';

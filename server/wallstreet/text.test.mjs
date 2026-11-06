@@ -160,3 +160,14 @@ test('context-review shortfall gets exactly one more attempt at a later run with
  await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA.summaryFailedAt=now-2*3600000;await save();});
  await r.run();assert.equal(calls,1);
 });
+
+test('vidIQ caption failure retries once at a later run; uncharged call is refunded',async()=>{
+ const x=setup({vidiqApproved:true,summaryApproved:false});let calls=0,credits=145;
+ x.deps.captions={balance:async()=>({type:'limited',renewableCredits:credits,maxRenewableCredits:150,renewableResetsAt:'2026-11-28T00:00Z'}),get:async()=>{calls++;return {status:'processing'};}};
+ await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA={video:video(),programmes:['wallstreet'],recipient:'123',stage:'text_waiting',firstSeen:now};await save();});
+ await x.run().run();let r=x.store.state.videos.Idn_d5ArZvA;
+ assert.equal(r.stage,'text_waiting');assert.equal(r.hold,'vidiq_failed_retry_next_run');assert.equal(r.captionFailure,'vidiq_processing');assert.equal(x.store.state.vidiq.used,0);
+ await x.run().run();r=x.store.state.videos.Idn_d5ArZvA;assert.equal(calls,2);
+ assert.equal(r.stage,'text_review_required');assert.equal(r.hold,'caption_failed_or_uncertain_no_retry');
+ await x.run().run();assert.equal(calls,2);
+});

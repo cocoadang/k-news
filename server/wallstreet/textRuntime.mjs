@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
-import {reserveVidiq} from './vidiqBudget.mjs';
+import {reserveVidiq,refundVidiq} from './vidiqBudget.mjs';
 import {reserveSupadata,refundSupadata} from './supadata.mjs';
 import {runCeoVideoStep} from './ceoVideo.mjs';
 import {twiceDailySlot} from './schedule.mjs';
@@ -129,12 +129,21 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             }await save();
           }
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&r.programmes[0]==='wallstreet'&&c.vidiqApproved===true&&captions){
-            try{if(!reserveVidiq(s,await captions.balance(),now)){r.hold='vidiq_free_cycle_or_day_limit';continue;}}
+            let before;
+            try{before=await captions.balance();if(!reserveVidiq(s,before,now)){r.hold='vidiq_free_cycle_or_day_limit';continue;}}
             catch{r.hold='vidiq_free_account_balance_unverified';continue;}
             r.stage='vidiq_inflight';await save();
-            try{const result=await captions.get(r.video.id);if(result.status!=='ok')throw Error('caption_unavailable');acceptNativeCaption(result.segments,r.video);
-              r.transcript=result.segments;r.source={method:'vidiq',videoId:r.video.id,sha256:hash(JSON.stringify(result.segments))};r.stage='text_summary';delete r.hold;
-            }catch{r.stage='text_review_required';r.hold='caption_failed_or_uncertain_no_retry';}await save();
+            try{const result=await captions.get(r.video.id);if(result.status!=='ok')throw Error('vidiq_'+(/^[a-z_]{1,30}$/.test(result.status)?result.status:'unavailable'));acceptNativeCaption(result.segments,r.video);
+              r.transcript=result.segments;r.source={method:'vidiq',videoId:r.video.id,sha256:hash(JSON.stringify(result.segments))};r.stage='text_summary';delete r.hold;delete r.captionFailure;
+            }catch(e){
+              // Free credits only. One retry at a later run (inside the 48h caption window); a call the live balance shows
+              // was not charged is refunded locally so the daily cap allows that retry. Failure code only, no provider text.
+              r.vidiqAttempts=(r.vidiqAttempts||0)+1;r.captionFailure=/^[a-z_]{3,60}$/.test(e?.message)?e.message:'caption_error';
+              let after=null;try{after=await captions.balance();}catch{}
+              if(Number.isSafeInteger(after?.renewableCredits)&&after.renewableCredits>=before.renewableCredits)refundVidiq(s,now);
+              if(r.vidiqAttempts<2){r.stage='text_waiting';r.hold='vidiq_failed_retry_next_run';}
+              else{r.stage='text_review_required';r.hold='caption_failed_or_uncertain_no_retry';}
+            }await save();
           }
           // A failed summary (validation rejection or timeout) is retried once
           // right away in the same run. Records held before this change (no summaryFailedAt) get their one retry at the next run.

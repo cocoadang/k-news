@@ -12,3 +12,8 @@ export function reserveVidiq(state,balance,now){
  if(current.used+5>110||(current.days[day]||0)+5>5||current.shadowRemaining<5)return false;
  current.used+=5;current.days[day]=(current.days[day]||0)+5;current.shadowRemaining-=5;return true;
 }
+// Undo one local reservation when the live balance shows the failed call was not charged.
+export function refundVidiq(state,now){
+ const b=state.vidiq;if(!b)return;const day=new Date(now+9*3600000).toISOString().slice(0,10);
+ b.used=Math.max(0,b.used-5);if(b.days?.[day])b.days[day]=Math.max(0,b.days[day]-5);b.shadowRemaining+=5;
+}

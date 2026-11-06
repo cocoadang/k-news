@@ -20,7 +20,7 @@ export function buildStatusReport({ date, now = Date.now(), poll = {}, analysis 
     const waiting = recent.filter(r => ['text_waiting', 'text_summary', 'supadata_inflight', 'vidiq_inflight', 'text_summary_inflight'].includes(r.stage));
     const failed = recent.filter(r => r.stage === 'text_review_required' || /expired|failed/.test(r.stage || ''));
     lines.push(`<b>유튜브</b> 요약 완료 ${sent.length} · 대기 ${waiting.length} · 실패/보류 ${failed.length}`);
-    for (const r of failed.slice(0, 3)) lines.push(`   · ${esc(String(r.video?.title || r.video?.id).slice(0, 40))} — ${esc(r.summaryFailure || r.hold || r.stage)}`);
+    for (const r of failed.slice(0, 3)) lines.push(`   · ${esc(String(r.video?.title || r.video?.id).slice(0, 40))} — ${esc(r.summaryFailure || r.captionFailure || r.hold || r.stage)}`);
     if (failed.length) warn.push(`유튜브 요약 실패/보류 ${failed.length}건`);
     const day = new Date(now).toISOString().slice(0, 10);
     const cv = youtube.ceoVideoBudget?.days?.[new Date(now + 9 * 3600_000).toISOString().slice(0, 10)] ?? 0;

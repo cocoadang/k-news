@@ -77,7 +77,7 @@ export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [
     const recent = Object.values(youtube.videos || {})
       .filter(r => (r.firstSeen || 0) >= now - 72 * H && !(r.programmes || []).some(p => (config.disabledProgrammes || []).includes(p)))
       .sort((a, b) => (b.firstSeen || 0) - (a.firstSeen || 0))
-      .map(r => ({ id: r.video?.id || null, programmes: r.programmes || [], publishedAt: r.video?.publishedAt || null, firstSeen: r.firstSeen || null, stage: r.stage || null, hold: r.hold || null, summaryFailure: r.summaryFailure || null, ...(r.stage === 'text_review_required' ? { summaryDiag: summaryDiag(r) } : {}) }));
+      .map(r => ({ id: r.video?.id || null, programmes: r.programmes || [], publishedAt: r.video?.publishedAt || null, firstSeen: r.firstSeen || null, stage: r.stage || null, hold: r.hold || null, summaryFailure: r.summaryFailure || null, ...(r.captionFailure ? { captionFailure: r.captionFailure } : {}), ...(r.stage === 'text_review_required' ? { summaryDiag: summaryDiag(r) } : {}) }));
     const failed = recent.filter(r => r.stage === 'text_review_required' || /expired|failed/.test(r.stage || ''));
     if (failed.length) issues.push(`유튜브 요약 실패/보류 ${failed.length}건`);
     const iso = new Date(now).toISOString();

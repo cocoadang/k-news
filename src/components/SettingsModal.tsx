@@ -1,3 +1,4 @@
+import { XConnectPanel } from './XConnectPanel';
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -1257,6 +1258,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* TAB 2: IMPORTANCE & CATEGORIES */}
           {activeTab === 'filters' && (
             <div className="space-y-5">
+              <XConnectPanel />
               {/* Monitoring Frequency Display */}
               <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
                 <div className="flex items-center justify-between mb-1.5">

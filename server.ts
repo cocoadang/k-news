@@ -11,7 +11,7 @@ import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/gemin
 import { rollbackCompanyKeywords } from './server/companyRenewal';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
 import { createCeoRouter, createCeoRuntime, translatePendingHeadlines, translatePendingXPosts } from './server/ceo/routes';
-import { collectXPosts, firestoreXStore, xPostStatements, X_DEFAULT_CAP_USD } from './server/ceo/xPosts';
+import { collectXPosts, firestoreXStore, xPostStatements, xTokenStore, validXToken, X_DEFAULT_CAP_USD } from './server/ceo/xPosts';
 import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
@@ -595,6 +595,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   pollHeadlineHook = (deadline: number) => translatePendingHeadlines(getSchedulerCeoRuntime() || ceoRuntime, cachedEventHeadlines, deadline);
   // 본인 X 게시물 (X_BEARER_TOKEN 있을 때만, 월 상한 X_MONTHLY_CAP_USD 기본 5달러)
   const xStore = firestoreXStore(() => (getIsFirestoreAvailable() ? initFirestore() : null));
+  const xToken = xTokenStore(() => (getIsFirestoreAvailable() ? initFirestore() : null));
   let xCache: { at: number; items: any[] } | null = null;
   const cachedXStatements = async () => {
     if (xCache && Date.now() - xCache.at < 10 * 60_000) return xCache.items;
@@ -603,7 +604,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     return items;
   };
   xPostsHook = async (deadline: number) => {
-    const r: any = await collectXPosts({ token: process.env.X_BEARER_TOKEN, store: xStore, now: Date.now, deadline: deadline - 20_000, capUsd: Number(process.env.X_MONTHLY_CAP_USD) || X_DEFAULT_CAP_USD });
+    const r: any = await collectXPosts({ token: await xToken.get(), store: xStore, now: Date.now, deadline: deadline - 20_000, capUsd: Number(process.env.X_MONTHLY_CAP_USD) || X_DEFAULT_CAP_USD });
     if (r.status === 'x_not_configured') return r;
     xCache = null;
     const statements = await cachedXStatements();
@@ -665,6 +666,27 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     getVideoStatements: cachedCeoVideoStatements,
     getXStatements: cachedXStatements,
   }));
+
+  // X 연동 관리(관리자): 토큰은 넣기·지우기만, 값은 절대 돌려주지 않음
+  app.get('/api/admin/x', verifyAdminAuth, async (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const st = await xStore.read();
+      const month = new Date().toISOString().slice(0, 7);
+      res.json({ configured: !!(await xToken.get()), fromEnv: !!process.env.X_BEARER_TOKEN, monthUsd: st.months[month]?.usd || 0,
+        capUsd: Number(process.env.X_MONTHLY_CAP_USD) || X_DEFAULT_CAP_USD, posts: Object.keys(st.posts).length, lastRun: st.lastRun || null });
+    } catch { res.status(500).json({ error: 'x_status_failed' }); }
+  });
+  app.post('/api/admin/x/token', verifyAdminAuth, async (req, res) => {
+    const t = req.body?.token;
+    if (t !== null && !validXToken(t)) return res.status(400).json({ error: '토큰 형식이 올바르지 않습니다 (X 개발자 화면의 Bearer Token 전체를 넣어주세요)' });
+    try { await xToken.set(t === null ? null : String(t).trim()); db.addLog('System', 'info', t === null ? 'X token removed by admin' : 'X token updated by admin'); res.json({ ok: true, configured: t !== null }); }
+    catch { res.status(500).json({ error: '저장 실패' }); }
+  });
+  app.post('/api/admin/x/run', verifyAdminAuth, async (_req, res) => {
+    try { const r = xPostsHook ? await xPostsHook(Date.now() + 60_000) : { status: 'no_hook' }; res.json(r); }
+    catch { res.status(500).json({ error: 'x_run_failed' }); }
+  });
 
   // 5. Single Event Detail (Public read)
   app.get('/api/events/:id', (req, res) => {

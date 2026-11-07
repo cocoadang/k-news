@@ -107,6 +107,9 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
   // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
   { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true },
+  // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
+  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true },
+  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://www.darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'www.darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true },
   { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
@@ -233,12 +236,22 @@ export function discoveryTopic(text: string): string {
   return '기타';
 }
 
+/** 본인 채널 글에 게시 메타데이터가 없을 때: <time datetime> 또는 제목 바로 아래(800자 안) 날짜가 정확히 1개일 때만 */
+export function authoredDate(html: string): string | null {
+  const t = /<time\b[^>]*datetime=["'](\d{4}-\d\d-\d\d)/i.exec(html);
+  if (t && partialToInterval(t[1])) return `${t[1]}T00:00:00.000Z`;
+  const h = html.search(/<h1\b/i); if (h < 0) return null;
+  const near = htmlToText(html.slice(h, h + 4000)).slice(0, 800);
+  const ds = [...new Set(extractAbsoluteDates(near).filter(d => d.precision === 'day').map(d => d.value))];
+  return ds.length === 1 ? `${ds[0]}T00:00:00.000Z` : null;
+}
+
 export function discoveredArticle(p: DiscoveryProvider, url: string, html: string, now: number, filedAt?: string): SourceArticle | null {
   if (!discoveryArticleAllowed(p, url)) return null;
   // 이미지 전사 속 흰색 OCR 텍스트는 범용 추출에서 제외하고 기존 SEC 전용 검증기에만 맡깁니다.
   if (p.id === 'tesla-sec' && /font-size\s*:\s*1pt|color\s*:\s*(?:white|#fff(?:fff)?)\b/i.test(html) && /<img\b/i.test(html)) return null;
   const title = htmlToText(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
-  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : discoveryPublishedAt(html);
+  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored ? authoredDate(html) : null));
   if (!title || !publishedAt || Date.parse(publishedAt) > now + 86400000) return null;
   const articleBlocks = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)].map(m => m[1]);
   const mainBlocks = [...html.matchAll(/<main\b[^>]*>([\s\S]*?)<\/main>/gi)].map(m => m[1]);

@@ -35,6 +35,22 @@ export const COMPANY_QUESTIONS = {
     { id: 'merger', label: 'SpaceX 합병에 대한 입장은?', hint: '합병·결합', re: /\b(merg\w*|tie-up|combin\w*)\b/gi },
     { id: 'value', label: '테슬라 가치의 원천을 어떻게 봤나?', hint: '기업가치', re: /\b(value|valuation)\b/gi },
   ],
+  openai: [
+    { id: 'agi', label: 'AGI·초지능은 언제 온다고 봤나?', hint: 'AGI·초지능·시점', re: /\b(AGI|superintelligence|singularity|artificial general intelligence)\b/gi },
+    { id: 'compute', label: '컴퓨팅·데이터센터 투자 규모는?', hint: 'GPU·데이터센터·전력', re: /\b(compute|GPUs?|data ?cent(?:er|re)s?|Stargate|gigawatts?|chips?|energy)\b/gi },
+    { id: 'products', label: '제품·모델 출시 계획은?', hint: 'ChatGPT·GPT·출시', re: /\b(ChatGPT|GPT-?\d[\w.]*|o\d|Sora|launch\w*|release\w*|model)\b/g },
+    { id: 'business', label: '매출·사용자·사업 구조는?', hint: '매출·사용자·구조', re: /\b(revenue|users?|subscri\w*|nonprofit|for-profit|PBC|IPO|valuation)\b/gi },
+    { id: 'jobs', label: 'AI가 일자리·경제에 미칠 영향은?', hint: '일자리·경제', re: /\b(jobs?|work(?:ers|force)?|economy|economic|productivity|abundance)\b/gi },
+    { id: 'safety', label: '안전·규제를 어떻게 말했나?', hint: '안전·규제·정렬', re: /\b(safety|safe|regulat\w*|alignment|risks?|government)\b/gi },
+  ],
+  anthropic: [
+    { id: 'timeline', label: '강력한 AI는 언제 온다고 봤나?', hint: '강력한 AI·시점', re: /\b(powerful AI|AGI|country of geniuses|20\d\d|timelines?)\b/gi },
+    { id: 'safety', label: '안전·해석 가능성 연구를 어떻게 말했나?', hint: '안전·해석·정렬', re: /\b(safety|interpretability|alignment|risks?|misuse|responsible scaling)\b/gi },
+    { id: 'policy', label: '수출 통제·중국·정책 입장은?', hint: '수출통제·중국·규제', re: /\b(export controls?|China|Chinese|DeepSeek|regulat\w*|policy|legislation|government)\b/gi },
+    { id: 'economy', label: 'AI가 일자리·경제에 미칠 영향은?', hint: '일자리·경제', re: /\b(jobs?|unemployment|white-collar|economy|economic|GDP|labor)\b/gi },
+    { id: 'benefits', label: '의학·과학 등 AI의 혜택 전망은?', hint: '의학·과학·생물학', re: /\b(biology|medicine|disease|cancer|science|scientific|health)\b/gi },
+    { id: 'business', label: '사업·컴퓨팅 투자 판단은?', hint: '매출·컴퓨팅·고객', re: /\b(revenue|customers?|enterprise|compute|data ?cent(?:er|re)s?|Claude)\b/gi },
+  ],
   bridgewater: [
     { id: 'debt', label: '부채 사이클·국가부채를 어떻게 봤나?', hint: '부채·적자·채권', re: /\b(debts?|deficits?|debt cycle|borrow\w*|bonds?)\b/gi },
     { id: 'order', label: '세계 질서·미중 관계 판단은?', hint: '중국·지정학·전쟁', re: /\b(China|Chinese|world order|geopolit\w*|wars?|conflicts?)\b/gi },
@@ -113,7 +129,7 @@ export function displayText(s) {
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }
 
-export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX', bridgewater: 'Bridgewater', pershing: 'Pershing Square' };
+export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX', bridgewater: 'Bridgewater', pershing: 'Pershing Square', openai: 'OpenAI', anthropic: 'Anthropic' };
 
 /**
  * Questions for one person across one or more companies (e.g. Musk: Tesla + SpaceX).

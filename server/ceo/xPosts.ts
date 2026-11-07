@@ -146,3 +146,26 @@ export function firestoreXStore(getDb: () => any, cacheMs = 600_000): XStore {
     },
   };
 }
+
+/** X 토큰: 환경변수(X_BEARER_TOKEN) 우선, 없으면 관리자가 화면에서 넣은 값(Firestore ceo_x_secret/token, 서버만 읽음·응답에 노출 안 함) */
+export function xTokenStore(getDb: () => any) {
+  let cache: { at: number; token: string | null } | null = null;
+  const ref = () => getDb()?.collection('ceo_x_secret').doc('token');
+  return {
+    async get(): Promise<string | undefined> {
+      if (process.env.X_BEARER_TOKEN) return process.env.X_BEARER_TOKEN;
+      if (cache && Date.now() - cache.at < 300_000) return cache.token || undefined;
+      const r = ref(); if (!r) return undefined;
+      const snap = await r.get(); const t = snap.exists ? String(snap.data()?.token || '') : '';
+      cache = { at: Date.now(), token: t || null };
+      return t || undefined;
+    },
+    async set(token: string | null) {
+      const r = ref(); if (!r) throw new Error('firestore_unavailable');
+      if (token) await r.set({ token, updatedAt: new Date().toISOString() }); else await r.delete();
+      cache = null;
+    },
+  };
+}
+/** 화면에 넣은 토큰 형식 확인(값은 저장 전후 어디에도 출력하지 않음) */
+export const validXToken = (t: unknown): t is string => typeof t === 'string' && /^[A-Za-z0-9%_\-.~+/=]{40,300}$/.test(t.trim());

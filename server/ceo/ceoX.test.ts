@@ -71,3 +71,11 @@ test('post translation prompt and longer outputs allowed', () => {
   assert.equal(parseHeadlineOutput(JSON.stringify({ items: [{ i: 0, ko: long }] }), [{ i: 0, text: 'x' }], 1500).get(0), long);
   assert.equal(parseHeadlineOutput(JSON.stringify({ items: [{ i: 0, ko: long }] }), [{ i: 0, text: 'x' }]).size, 0);
 });
+
+test('admin token format check (value never echoed)', async () => {
+  const { validXToken } = await import('./xPosts');
+  assert.ok(validXToken('A'.repeat(50) + '%2F' + 'b'.repeat(40)));
+  assert.ok(!validXToken('short'));
+  assert.ok(!validXToken('has space ' + 'a'.repeat(60)));
+  assert.ok(!validXToken(123));
+});

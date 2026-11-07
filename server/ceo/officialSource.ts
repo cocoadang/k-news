@@ -110,11 +110,10 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
   // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
-  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
+  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/wp-json/wp/v2/media?search=Pershing%20Square%20Holdings&mime_type=application%2Fpdf&per_page=100&orderby=date&order=desc', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
   // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
   { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
   { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
-  { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
 export const discoveryPdfHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.assetHost ? [p.assetHost] : []))];
@@ -142,12 +141,27 @@ function indexAllowed(p: DiscoveryProvider, value: string): boolean {
 }
 
 /** 주주서한으로 볼 자료 제목 (팩트시트·공지·발표 슬라이드 제외) */
-export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report)\b/i;
+export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report|Interim(?: Report)?)\b/i;
 const NOT_LETTER = /\b(?:Fact Sheet|Articles of|Notice|Slides|Presentation|Portfolio Review|Proxy|Circular|Prospectus)\b/i;
 
 /** 자료실 목록: PDF 링크마다 링크 글자(제목)와 바로 앞 날짜를 읽음 */
 function parsePdfList(p: DiscoveryProvider, html: string, base: string): DiscoveryCandidate[] {
   const out = new Map<string, DiscoveryCandidate>();
+  // 공식 사이트 미디어 목록(WordPress REST JSON): 파일 제목·업로드일. 같은 보고서의 재업로드(-1 등)는 최신 1개만
+  if (/^\s*\[/.test(html)) {
+    let items: any[] = []; try { items = JSON.parse(html); } catch { return []; }
+    const byName = new Map<string, DiscoveryCandidate>();
+    for (const it of Array.isArray(items) ? items : []) {
+      const u = normalizedUrl(String(it?.source_url || ''), base); if (!u || !discoveryArticleAllowed(p, u)) continue;
+      const title = htmlToText(String(it?.title?.rendered || '')).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!LETTER_TITLE.test(title) || NOT_LETTER.test(title) || /Fact-?Sheet|Presentation|Slides/i.test(u)) continue;
+      const day = /^\d{4}-\d\d-\d\d/.exec(String(it?.date || ''))?.[0]; if (!day) continue;
+      const key = title.replace(/\s+\d+$/, '').toLowerCase();
+      const prev = byName.get(key);
+      if (!prev || day > (prev.filedAt || '')) byName.set(key, { url: u, title, filedAt: day, modified: day });
+    }
+    return [...byName.values()];
+  }
   for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+\.pdf(?:#[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     const u = normalizedUrl(m[1], base); if (!u || !discoveryArticleAllowed(p, u)) continue;
     const before = htmlToText(html.slice(Math.max(0, (m.index || 0) - 1500), m.index || 0));

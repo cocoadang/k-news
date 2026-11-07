@@ -35,6 +35,21 @@ export const COMPANY_QUESTIONS = {
     { id: 'merger', label: 'SpaceX 합병에 대한 입장은?', hint: '합병·결합', re: /\b(merg\w*|tie-up|combin\w*)\b/gi },
     { id: 'value', label: '테슬라 가치의 원천을 어떻게 봤나?', hint: '기업가치', re: /\b(value|valuation)\b/gi },
   ],
+  bridgewater: [
+    { id: 'debt', label: '부채 사이클·국가부채를 어떻게 봤나?', hint: '부채·적자·채권', re: /\b(debts?|deficits?|debt cycle|borrow\w*|bonds?)\b/gi },
+    { id: 'order', label: '세계 질서·미중 관계 판단은?', hint: '중국·지정학·전쟁', re: /\b(China|Chinese|world order|geopolit\w*|wars?|conflicts?)\b/gi },
+    { id: 'money', label: '화폐·금·인플레이션 전망은?', hint: '금·달러·화폐 가치', re: /\b(gold|currenc\w*|dollars?|money printing|inflation|bitcoin)\b/gi },
+    { id: 'markets', label: '시장·자산배분을 어떻게 조언했나?', hint: '분산·주식·버블', re: /\b(portfolios?|diversif\w*|stocks?|equit\w*|asset allocation|bubbles?)\b/gi },
+    { id: 'politics', label: '미국 정치·사회 분열을 어떻게 진단했나?', hint: '양극화·포퓰리즘·민주주의', re: /\b(polariz\w*|populis\w*|democra\w*|civil war|political)\b/gi },
+    { id: 'ai', label: 'AI·기술이 경제에 미칠 영향은?', hint: 'AI·기술·생산성', re: /\b(AI|artificial intelligence|technolog\w*|productivity)\b/g },
+  ],
+  pershing: [
+    { id: 'positions', label: '주요 투자 종목을 어떻게 판단했나?', hint: '보유 종목', re: /\b(Howard Hughes|Chipotle|Hilton|Alphabet|Google|Uber|Brookfield|Nike|Fannie Mae|Freddie Mac|Universal Music|Restaurant Brands|Canadian Pacific|Lowe['’]?s|Hertz|Amazon|Meta)\b/g },
+    { id: 'rates', label: '금리·인플레이션 전망은?', hint: '금리·연준·국채', re: /\b(interest rates?|inflation|the Fed\b|Federal Reserve|Treasur\w*|bond markets?)\b/gi },
+    { id: 'strategy', label: '투자 철학·전략은?', hint: '현금흐름·장기·집중투자', re: /\b(durable|predictable|free cash flow|moats?|long[- ]term|concentrated|activis\w*)\b/gi },
+    { id: 'performance', label: '성과를 어떻게 설명했나?', hint: 'NAV·수익률', re: /\b(NAV|net asset value|returns?|performance|outperform\w*|S&P 500)\b/gi },
+    { id: 'listing', label: '신규 펀드·상장 계획은?', hint: 'IPO·상장·PSUS', re: /\b(IPO|listing|Pershing Square USA|PSUS|closed-end fund)\b/gi },
+  ],
   spacex: [
     { id: 'space-ai', label: '우주 AI 인프라(AI 위성) 구상은?', hint: 'AI 위성·우주 데이터센터', re: /\b(AI satellites?|satellites?|data cent(?:er|re)s?)\b/gi },
     { id: 'missions', label: '유인 우주비행·NASA 협력은?', hint: 'NASA·JAXA·ESA', re: /\b(NASA|JAXA|ESA|astronauts?|crew|dream come true)\b/gi },
@@ -98,7 +113,7 @@ export function displayText(s) {
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }
 
-export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX' };
+export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX', bridgewater: 'Bridgewater', pershing: 'Pershing Square' };
 
 /**
  * Questions for one person across one or more companies (e.g. Musk: Tesla + SpaceX).

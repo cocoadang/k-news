@@ -24,6 +24,9 @@ export const CEO_PERSONS: CeoPerson[] = [
   { personId: 'satya-nadella', displayName: '사티아 나델라', nameVariants: ['Satya Nadella'], isExample: false },
   { personId: 'sundar-pichai', displayName: '순다르 피차이', nameVariants: ['Sundar Pichai'], isExample: false },
   { personId: 'elon-musk', displayName: '일론 머스크', nameVariants: ['Elon Musk'], isExample: false },
+  // 투자자(사용자 요청 2026-11-07). 본인 공식 채널(달리오 Substack, 애크먼 주주서한·X)에서만 수집
+  { personId: 'ray-dalio', displayName: '레이 달리오', nameVariants: ['Ray Dalio'], isExample: false },
+  { personId: 'bill-ackman', displayName: '빌 애크먼', nameVariants: ['Bill Ackman', 'William A. Ackman', 'William Ackman'], isExample: false },
 ];
 
 /** 공식 피드 인용 추출기(이름 매칭) 대상 — 기존 3인 그대로 (Musk 제외: 피드에서 새 인용이 늘지 않게) */
@@ -43,6 +46,10 @@ export const CEO_ROLES: CeoRole[] = [
   { personId: 'elon-musk', companyId: 'tsla', companyName: 'Tesla', title: '이사회 멤버', roleType: 'other', start: '2004-04', end: null },
   { personId: 'elon-musk', companyId: 'tsla', companyName: 'Tesla', title: 'CEO', roleType: 'ceo', start: '2008-10', end: null },
   { personId: 'elon-musk', companyId: 'spacex', companyName: 'SpaceX', title: 'SpaceX CEO·최고기술책임자(CTO)·이사회 의장', roleType: 'ceo', start: '2002-05', end: null },
+  // 달리오: 1975년 Bridgewater 창업(공식 사이트 'Our Founder'), 2022년 CIO 등 경영 역할에서 물러나 창업자로 남음 → 6년 범위에서는 '창업자'로만 표시
+  { personId: 'ray-dalio', companyId: 'bridgewater', companyName: 'Bridgewater', title: '창업자', roleType: 'other', start: '1975', end: null },
+  // 애크먼: Pershing Square 창업자·CEO (펀드 운용 개시 2004년)
+  { personId: 'bill-ackman', companyId: 'pershing', companyName: 'Pershing Square', title: '창업자·CEO', roleType: 'ceo', start: '2004', end: null },
 ];
 
 /** 주제 = 기존 기사 분류(이벤트 category). 의미 판정이 아니라 기존 분류를 그대로 묶음 기준으로 씀 */

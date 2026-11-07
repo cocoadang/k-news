@@ -538,13 +538,13 @@ async function main() {
     assert.strictEqual((await D.extractDiscoveredQuotes({...darticle(),body:darticle().body.replaceAll('Elon Musk','Jane Example')})).length,0);
     assert.strictEqual((await D.extractDiscoveredQuotes({...darticle(),body:darticle().body.replaceAll('Battery storage','SpaceX battery storage').replaceAll('Solar power','SpaceX solar power')})).length,0);
   });
-  await test('DISC5 3년 기본·비교 부족 주제만 5년 확장, 같은 날 두 인용은 비교 자료 두 개로 세지 않음',async()=>{
+  await test('DISC5 최근 6년 범위: 6년 안 원문은 수집(비교 자료 여부와 무관), 6년 밖은 제외',async()=>{
     const make=(date:string)=>({fetchText:async(u:string)=>u===dp.index?`<a href="${durl}">doc</a>`:synthetic('Elon Musk',date),parseFeed:async()=>[],now:()=>dnow,deadline:dnow+120000,existing:[] as CeoStatement[],providers:[dp]});
     assert.strictEqual((await D.loadDiscoveredArticles(make('2022-01-10'))).articles.length,1);
+    assert.strictEqual((await D.loadDiscoveredArticles(make('2021-01-10'))).articles.length,1);
     assert.strictEqual((await D.loadDiscoveredArticles(make('2020-01-10'))).articles.length,0);
     const evidence=(date:string)=>({...stmt(),companyId:'tsla',topicId:'에너지 / 배터리',spokenAt:unknown,evidence:[{...ev('x1','a'),articlePublishedAt:date+'T00:00:00Z'}]});
-    const one=make('2022-01-10');one.existing=[evidence('2025-01-01'),evidence('2025-01-01')];assert.strictEqual((await D.loadDiscoveredArticles(one)).articles.length,1);
-    const two=make('2022-01-10');two.existing=[evidence('2025-01-01'),evidence('2025-02-01')];assert.strictEqual((await D.loadDiscoveredArticles(two)).articles.length,0);
+    const two=make('2022-01-10');two.existing=[evidence('2025-01-01'),evidence('2025-02-01')];assert.strictEqual((await D.loadDiscoveredArticles(two)).articles.length,1);
   });
   await test('DISC6 처리 위치를 저장하여 다음 갱신에서 나머지를 읽고, 성공 원문을 다시 요청하지 않음',async()=>{
     const urls=Array.from({length:4},(_,i)=>durl+i),calls:string[]=[];

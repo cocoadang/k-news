@@ -784,8 +784,8 @@ async function main() {
   });
 
   // ---------------------------------------------------------------- 운영 등록부
-  await test('G1 (ceo7) 운영 등록부: 공식 출처로 확인한 4인·재임 시작(Musk: Tesla 이사회 2004-04, Tesla CEO 2008-10, SpaceX CEO·CTO·의장 2002-05), 이름 변형은 전체 이름만', () => {
-    assert.deepStrictEqual(CEO_PERSONS.map(p => p.personId), ['jensen-huang', 'satya-nadella', 'sundar-pichai', 'elon-musk']);
+  await test('G1 (ceo7) 운영 등록부: 공식 출처로 확인한 CEO 4인 + 투자자 2인(달리오·애크먼)·재임 시작(Musk: Tesla 이사회 2004-04, Tesla CEO 2008-10, SpaceX CEO·CTO·의장 2002-05), 이름 변형은 전체 이름만', () => {
+    assert.deepStrictEqual(CEO_PERSONS.map(p => p.personId), ['jensen-huang', 'satya-nadella', 'sundar-pichai', 'elon-musk', 'ray-dalio', 'bill-ackman']);
     assert.ok(CEO_PERSONS.every(p => !p.isExample && p.nameVariants.every(n => n.includes(' '))));
     assert.strictEqual(CEO_ROLES.find(r => r.personId === 'satya-nadella')!.start, '2014-02');
     const musk = CEO_ROLES.filter(r => r.personId === 'elon-musk');

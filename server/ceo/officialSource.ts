@@ -5,6 +5,7 @@
  * - 본문: 피드가 제공하는 전체 본문(content:encoded)만 사용. 기사 페이지를 따로 내려받지 않음
  * - 저장소 쓰기·모델 호출·알림 없음. 피드별 1회 읽기, 크기·건수 상한
  */
+import { COMPANY_QUESTIONS } from '../../src/components/ceo/timeline/companyQuestions.mjs';
 import { OFFICIAL_AND_REGULATORY_FEEDS } from '../sources';
 import { ceoUrlHash as computeUrlHash } from './urlHash';
 import { SourceArticle } from './pipeline';
@@ -88,9 +89,13 @@ export interface DiscoveryCandidate { url: string; modified?: string; title?: st
 export interface DiscoveryStream { pending: DiscoveryCandidate[]; indexes: string[]; indexChecked?: Record<string, number>; checked: Record<string, { at: number; modified: string; ok: boolean }>; updatedAt: number }
 export interface DiscoveryState { version: 1; streams: Record<string, DiscoveryStream>; nextProvider?: number }
 export const DISCOVERY_VERSION = '1';
-export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pendingPerStream: 180, checkedPerStream: 700, quotesPerArticle: 6, seconds: 45 };
+export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pendingPerStream: 180, checkedPerStream: 2000, quotesPerArticle: 6, seconds: 45 };
+/** 수집 범위: 최근 6년 (사용자 요청 2026-11-07, 이전: 3년/비교 부족 시 5년) */
+export const DISCOVERY_YEARS = 6;
 
-export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive'; host: string; articlePath: RegExp }
+export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive'; host: string; articlePath: RegExp;
+  /** 본인 공식 채널(사이트 전체가 본인 글): 작성자 = 이 인물. 문단을 본인 작성 발언으로 씀 */
+  authored?: boolean }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'google', companyId: 'googl', personId: 'sundar-pichai', name: 'Google 공식 블로그', index: 'https://blog.google/en-us/sitemap.xml', mode: 'sitemap', host: 'blog.google', articlePath: /\/(?:company-news|inside-google|technology|products)\// },
   { id: 'microsoft', companyId: 'msft', personId: 'satya-nadella', name: 'Microsoft 공식 블로그', index: 'https://blogs.microsoft.com/sitemap_index.xml', mode: 'sitemap', host: 'blogs.microsoft.com', articlePath: /\/blog\/\d{4}\/\d{2}\/\d{2}\// },
@@ -98,6 +103,7 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 IR', index: 'https://ir.tesla.com/press', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/press-release\// },
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
+  { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.map(p => p.host))];
 
@@ -115,7 +121,7 @@ function indexAllowed(p: DiscoveryProvider, value: string): boolean {
   try {
     const u = new URL(value);
     if (u.protocol !== 'https:' || u.hostname !== p.host || u.username || u.password || u.port) return false;
-    if (p.mode === 'sitemap') return /sitemap[^/]*\.xml$/.test(u.pathname) && (p.id !== 'google' || u.pathname.startsWith('/en-us/')) && !/(?:author|page)-sitemap/.test(u.pathname);
+    if (p.mode === 'sitemap') return (/sitemap[^/]*\.xml$/.test(u.pathname) || (p.authored === true && /^\/sitemap\/\d{4}(?:\/\d{1,2})?$/.test(u.pathname))) && (p.id !== 'google' || u.pathname.startsWith('/en-us/')) && !/(?:author|page)-sitemap/.test(u.pathname);
     if (p.mode === 'archive') return u.pathname === new URL(p.index).pathname && [...u.searchParams.keys()].every(k => ['page', 'items_per_page'].includes(k));
     return u.pathname === '/feed/' && [...u.searchParams.keys()].every(k => k === 'paged');
   } catch { return false; }
@@ -207,12 +213,15 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   const authorMeta = metaValue(html, ['author']);
   const otherNames = CEO_PERSONS.filter(x => x.personId !== p.personId).flatMap(x => x.nameVariants).filter(n => /[A-Za-z]/.test(n));
   let author = lines.find(l => communication.test(l));
+  // 본인 공식 채널: 사이트 자체가 본인 글이므로 작성자 확인 = 공식 채널 주소
+  if (!author && p.authored) author = `${p.name} (${p.host})`;
   if (!author && authorMeta === english && !otherNames.some(n => header.includes(n))) author = lines.find(l => l.trim() === english);
   // Google 단일 CEO 발언문: 이름·직함 단독 줄과 발언 기록 편집자 주를 모두 확인합니다.
   if (!author && lines.some(l => l.trim() === english) && /CEO of Google and Alphabet/.test(header) && /(?:transcript of (?:his|the) remarks|remarks from today)/i.test(header) && !otherNames.some(n => header.includes(n))) author = lines.find(l => l.trim() === english);
   const dateLine = body.slice(0, 1000).split('\n').find(line => { const ds = extractAbsoluteDates(line); return ds.length === 1 && ds[0].precision === 'day' && ds[0].value === publishedAt.slice(0, 10); });
   return { articleId: computeUrlHash(url), title, body, sourceName: p.name, url, publishedAt, sourceKind: 'discovered', discoveryCompanyId: p.companyId, discoveryPersonId: p.personId,
-    ...(dateLine && p.id !== 'tesla-sec' ? { publishedAtBasis: { kind: author ? 'written' as const : 'released' as const, excerpt: dateLine, basis: '공식 원문의 게시 날짜 요소와 날짜 값을 대조' } } : {}),
+    ...(p.authored ? { publishedAtBasis: { kind: 'written' as const, excerpt: dateLine || publishedAt.slice(0, 10), basis: '본인 공식 채널 글의 게시일(게시 메타데이터)' } } :
+      dateLine && p.id !== 'tesla-sec' ? { publishedAtBasis: { kind: author ? 'written' as const : 'released' as const, excerpt: dateLine, basis: '공식 원문의 게시 날짜 요소와 날짜 값을 대조' } } : {}),
     ...(author ? { discoveryAuthor: { name: english, excerpt: author } } : {}) };
 }
 
@@ -223,12 +232,18 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
   let rows = await createQuoteExtractor([person]).extract(a);
   if (a.discoveryAuthor) {
     const marker = a.body.indexOf(a.discoveryAuthor.excerpt);
-    const after = a.body.slice(marker + a.discoveryAuthor.excerpt.length).replace(/^[\s\S]*?(?:Below is (?:an edited |a )?transcript of his remarks\.)/i, '');
+    // 본인 공식 채널 글은 작성자 표지가 본문에 없음(채널 주소로 확인) → 제목 이후 본문 전체가 본인 글
+    const authored = marker < 0;
+    const after = (authored ? a.body.slice(a.title.length) : a.body.slice(marker + a.discoveryAuthor.excerpt.length)).replace(/^[\s\S]*?(?:Below is (?:an edited |a )?transcript of his remarks\.)/i, '');
     const paragraphs = after.split('\n').map(x => x.trim()).filter(x => x.length >= 90 && x.length <= 650 && !/[“”"]|\b(?:said|says|told|wrote|according to)\b/i.test(x) && !/^(?:[A-Z ]{3,}:|Related|Share|Read more|Listen|Watch|Image|Photo)/.test(x));
     const englishNames = CEO_PERSONS.filter(p => p.personId !== person.personId).flatMap(p => p.nameVariants).filter(n => /[A-Za-z]/.test(n));
-    if (!englishNames.some(n => after.includes(n)) && !/\n[A-Z][A-Z ]{3,}(?: MESSAGE|:)/.test(after)) {
+    if (authored || (!englishNames.some(n => after.includes(n)) && !/\n[A-Z][A-Z ]{3,}(?: MESSAGE|:)/.test(after))) {
       const name = a.discoveryAuthor.name;
-      rows = [...rows, ...paragraphs.slice(0, 4).map(text => ({ speaker: { name }, topicId: discoveryTopic(text), spokenAt: { value: null, precision: 'unknown' as const, basisType: 'none' as const, basis: '본인 작성·발표문, 실제 구두 발언일은 별도 확인되지 않음' }, kind: 'direct_quote' as const, quoteText: text, quoteLanguage: 'en', summaryKo: '', excerpts: [text], sourceType: 'authored_post' as const, provenance: [{ label: '공식 원문 작성·발표자', excerpt: a.discoveryAuthor!.excerpt }] }))];
+      // 본인 채널 글: 질문 목록 단어가 들어간 문단을 먼저(많이 맞는 순), 나머지는 원문 순서
+      const defs: any[] = (COMPANY_QUESTIONS as any)[a.discoveryCompanyId] || [];
+      const score = (t: string) => defs.reduce((n, d) => n + ((t.match(d.re) || []).length ? 1 : 0), 0);
+      const picked = authored ? paragraphs.map((t, i) => ({ t, i, s: score(t) })).sort((x, y) => y.s - x.s || x.i - y.i).slice(0, DISCOVERY_LIMITS.quotesPerArticle).sort((x, y) => x.i - y.i).map(x => x.t) : paragraphs.slice(0, 4);
+      rows = [...rows, ...picked.map(text => ({ speaker: { name }, topicId: discoveryTopic(text), spokenAt: { value: null, precision: 'unknown' as const, basisType: 'none' as const, basis: '본인 작성·발표문, 실제 구두 발언일은 별도 확인되지 않음' }, kind: 'direct_quote' as const, quoteText: text, quoteLanguage: 'en', summaryKo: '', excerpts: [text], sourceType: 'authored_post' as const, provenance: [{ label: '공식 원문 작성·발표자', excerpt: a.discoveryAuthor!.excerpt }] }))];
     }
   }
   const seen = new Set<string>();
@@ -248,7 +263,7 @@ export async function loadDiscoveredArticles(o: {
   parseFeed: OfficialSourceDeps['parseFeed']; now: () => number; deadline: number;
   previous?: DiscoveryState; existing: CeoStatement[]; knownUrls?: Set<string>; providers?: DiscoveryProvider[];
 }): Promise<{ articles: SourceArticle[]; reports: FeedReport[]; state: DiscoveryState; removed: string[] }> {
-  const now = o.now(); const three = new Date(now); three.setUTCHours(0, 0, 0, 0); three.setUTCFullYear(three.getUTCFullYear() - 3); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - 5);
+  const now = o.now(); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - DISCOVERY_YEARS); const three = five; // 6년 범위 안이면 모두 대상(이전 3년/5년 구분 없음)
   const deadline = Math.min(o.deadline - 12000, now + DISCOVERY_LIMITS.seconds * 1000);
   const state: DiscoveryState = o.previous?.version === 1 && o.previous.streams && typeof o.previous.streams === 'object' ? JSON.parse(JSON.stringify(o.previous)) : { version: 1, streams: {} };
   const articles: SourceArticle[] = [], reports: FeedReport[] = [], removed: string[] = [];
@@ -268,7 +283,7 @@ export async function loadDiscoveredArticles(o: {
     stream.indexChecked = stream.indexChecked && typeof stream.indexChecked === 'object' ? Object.fromEntries(Object.entries(stream.indexChecked).filter(([, v]) => Number.isFinite(v))) : {};
     if (!Number.isFinite(stream.updatedAt)) stream.updatedAt = 0;
     stream.pending = stream.pending.filter(x => x && discoveryArticleAllowed(p, x.url)); stream.indexes = stream.indexes.filter(u => indexAllowed(p, u));
-    const report: FeedReport = { feedName: `${p.name} · 최근 3년 / 비교 부족 시 5년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
+    const report: FeedReport = { feedName: `${p.name} · 최근 ${DISCOVERY_YEARS}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
     const request = (url: string) => o.fetchText(url, { deadline: Math.min(deadline, o.now() + 6000) });
     const indexes = stream.updatedAt < now - 20 * 3600000 ? [p.index, ...stream.indexes] : [...stream.indexes];
     let indexFailed = false;

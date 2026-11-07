@@ -9,7 +9,7 @@ import { headlineKey } from './koHeadlines';
 import express from 'express';
 import Parser from 'rss-parser';
 import { CeoRuntime, ceoAllowedHosts, feedCompanyIds } from './runtime';
-import { EventLike, FeedItem, discoveryAllowedHosts } from './officialSource';
+import { EventLike, FeedItem, discoveryAllowedHosts, discoveryPdfHosts } from './officialSource';
 import { createFetchBytes, createFetchText } from './fetchText';
 import { FirestoreCeoStateStore } from './firestoreStateStore';
 import { CEO_PERSONS, CEO_ROLES } from './registry';
@@ -50,6 +50,8 @@ export function createCeoRuntime(getEvents: () => EventLike[], getFirestore: () 
     // SEC 제출 문서: www.sec.gov만, 정직한 User-Agent(이 요청기에만), 리다이렉트 0, 재시도 0, 기존 3MB·요청 기한 그대로
     secExhibits: CURATED_SEC_EXHIBITS,
     fetchSecBytes: createFetchBytes({ allowHosts: [SEC_HOST], maxRedirects: 0, headers: { 'User-Agent': SEC_USER_AGENT } }),
+    // 주주서한 PDF: 공식 자료실 호스트만, 최대 20MB·25초
+    fetchPdfBytes: createFetchBytes({ allowHosts: discoveryPdfHosts(), maxBytes: 20_000_000, timeoutMs: 25_000 }),
     // CEO 한국어 요약 원장(Firestore, 기본 꺼짐)·Gemini 어댑터(기존 GEMINI_API_KEY). 원장이 없으면 요약 기능 없음
     koLedger: () => {
       const db = getFirestore();

@@ -36,6 +36,8 @@ export interface SourceArticle {
   discoveryTopics?: string[];
   /** 본문과 분리된 공식 바이라인 또는 단일 화자 발언문 확인 근거 */
   discoveryAuthor?: { name: string; excerpt: string };
+  /** 본인 채널 글(사이트 전체가 본인 글) */
+  discoveryAuthored?: boolean;
   transcriptId?: string;
   pageId?: string;
   /** sec: SEC 제출 문서 검증 항목 ID (secExhibits.ts) */

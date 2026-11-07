@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DISCOVERY_PROVIDERS, discoveryArticleAllowed, extractDiscoveredQuotes, parseDiscoveryIndex, pershingLetterArticle } from './officialSource';
 import { itemsToParagraphs, pdfToText } from './pdfText';
 
-const p = DISCOVERY_PROVIDERS.find(x => x.id === 'pershing-letters')!;
+const p = DISCOVERY_PROVIDERS.find(x => x.id === 'pershing-letters-v2')!;
 const NOW = Date.parse('2026-11-07T00:00:00Z');
 const A = 'https://assets.pershingsquareholdings.com/wp-content/uploads/2026/02/18175039/Pershing-Square-Holdings-Ltd.-2025-Annual-Report.pdf';
 

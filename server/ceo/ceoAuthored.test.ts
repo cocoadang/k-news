@@ -56,3 +56,22 @@ test('Korean summary: monthly cap stays USD 1; question-matched and newer statem
   const order = koPriority([st('a', 'I like cooking dinner with my family on weekends.', '2026-10-01'), st('b', 'Gold is a good diversifier.', '2021-01-01'), st('c', 'The debt cycle is late.', '2025-05-01'), st('d', 'Nothing classified here at all.', null)]).map(x => x.statementId);
   assert.deepEqual(order, ['c', 'b', 'a', 'd']);
 });
+
+test('AI CEOs: providers registered; authored date fallback from <time> or one date under the title', async () => {
+  for (const [id, person] of [['altman-blog', 'sam-altman'], ['amodei-essays', 'dario-amodei']]) {
+    const p = DISCOVERY_PROVIDERS.find(x => x.id === id)!;
+    assert.ok(p && p.authored && p.personId === person);
+    assert.ok(CEO_PERSONS.some(x => x.personId === person) && CEO_ROLES.some(r => r.personId === person));
+  }
+  const alt = DISCOVERY_PROVIDERS.find(x => x.id === 'altman-blog')!;
+  const page = `<html><body><article><h1>The Gentle Singularity</h1><div>June 10, 2025</div>
+  <p>We are past the event horizon; the takeoff has started. Humanity is close to building digital superintelligence, and at least so far it is much less weird than it seems like it should be.</p>
+  <p>Data center production will get automated and the cost of compute will converge to near the cost of electricity, which makes abundant intelligence possible for everyone in the world.</p></article></body></html>`;
+  const a = discoveredArticle(alt, 'https://blog.samaltman.com/the-gentle-singularity', page, NOW)!;
+  assert.ok(a, 'parsed without meta date');
+  assert.equal(a.publishedAt, '2025-06-10T00:00:00.000Z');
+  const rows = await extractDiscoveredQuotes(a);
+  assert.ok(rows.length >= 2 && rows.every(r => r.speaker.name === 'Sam Altman' && r.speaker.companyId === 'openai'));
+  assert.equal(discoveredArticle(alt, 'https://blog.samaltman.com/x', page.replace('June 10, 2025', 'June 10, 2025 and May 1, 2024'), NOW), null, 'two dates → no guess');
+  assert.ok(parseDiscoveryIndex(alt, '<a href="/?page=2">Older</a><a href="/the-gentle-singularity">x</a><a href="/tagged/ai">t</a>', alt.index).indexes.includes('https://blog.samaltman.com/?page=2'));
+});

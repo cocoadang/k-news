@@ -27,6 +27,9 @@ export const CEO_PERSONS: CeoPerson[] = [
   // 투자자(사용자 요청 2026-11-07). 본인 공식 채널(달리오 Substack, 애크먼 주주서한·X)에서만 수집
   { personId: 'ray-dalio', displayName: '레이 달리오', nameVariants: ['Ray Dalio'], isExample: false },
   { personId: 'bill-ackman', displayName: '빌 애크먼', nameVariants: ['Bill Ackman', 'William A. Ackman', 'William Ackman'], isExample: false },
+  // AI 기업 CEO(사용자 요청 2026-11-08). 본인 블로그·에세이와 X에서만 수집
+  { personId: 'sam-altman', displayName: '샘 올트먼', nameVariants: ['Sam Altman'], isExample: false },
+  { personId: 'dario-amodei', displayName: '다리오 아모데이', nameVariants: ['Dario Amodei'], isExample: false },
 ];
 
 /** 공식 피드 인용 추출기(이름 매칭) 대상 — 기존 3인 그대로 (Musk 제외: 피드에서 새 인용이 늘지 않게) */
@@ -50,6 +53,10 @@ export const CEO_ROLES: CeoRole[] = [
   { personId: 'ray-dalio', companyId: 'bridgewater', companyName: 'Bridgewater', title: '창업자', roleType: 'other', start: '1975', end: null },
   // 애크먼: Pershing Square 창업자·CEO (펀드 운용 개시 2004년)
   { personId: 'bill-ackman', companyId: 'pershing', companyName: 'Pershing Square', title: '창업자·CEO', roleType: 'ceo', start: '2004', end: null },
+  // 올트먼: 2019년 OpenAI CEO 취임(2023년 11월 며칠간 해임 후 복귀 — 6년 범위 표시에는 재임으로 둠)
+  { personId: 'sam-altman', companyId: 'openai', companyName: 'OpenAI', title: 'OpenAI CEO', roleType: 'ceo', start: '2019', end: null },
+  // 아모데이: 2021년 Anthropic 공동 창업·CEO
+  { personId: 'dario-amodei', companyId: 'anthropic', companyName: 'Anthropic', title: 'Anthropic 공동창업자·CEO', roleType: 'ceo', start: '2021', end: null },
 ];
 
 /** 주제 = 기존 기사 분류(이벤트 category). 의미 판정이 아니라 기존 분류를 그대로 묶음 기준으로 씀 */

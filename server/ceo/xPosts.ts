@@ -22,6 +22,8 @@ export const X_ACCOUNTS: XAccount[] = [
   { personId: 'ray-dalio', username: 'RayDalio', company: () => 'bridgewater' },
   { personId: 'satya-nadella', username: 'satyanadella', company: () => 'msft' },
   { personId: 'sundar-pichai', username: 'sundarpichai', company: () => 'googl' },
+  { personId: 'sam-altman', username: 'sama', company: () => 'openai' },
+  { personId: 'dario-amodei', username: 'DarioAmodei', company: () => 'anthropic' },
 ];
 
 export interface XPost { id: string; username: string; personId: string; companyId: string; text: string; createdAt: string }

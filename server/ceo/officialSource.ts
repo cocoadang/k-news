@@ -92,12 +92,16 @@ export const DISCOVERY_VERSION = '1';
 export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pendingPerStream: 180, checkedPerStream: 2000, quotesPerArticle: 6, seconds: 45 };
 /** 수집 범위: 최근 6년 (사용자 요청 2026-11-07, 이전: 3년/비교 부족 시 5년) */
 export const DISCOVERY_YEARS = 6;
+/** 본인 블로그·에세이·주주서한 수집 범위 */
+export const AUTHORED_YEARS = 10;
 
 export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive' | 'pdf-list'; host: string; articlePath: RegExp;
   /** pdf-list: 자료실 목록(index)의 PDF가 올라가는 호스트 */
   assetHost?: string;
   /** 본인 공식 채널(사이트 전체가 본인 글): 작성자 = 이 인물. 문단을 본인 작성 발언으로 씀 */
-  authored?: boolean }
+  authored?: boolean;
+  /** 수집 범위(년). 없으면 DISCOVERY_YEARS(6). 본인 블로그·에세이·서한은 10년(사용자 요청 2026-11-08) */
+  years?: number }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'google', companyId: 'googl', personId: 'sundar-pichai', name: 'Google 공식 블로그', index: 'https://blog.google/en-us/sitemap.xml', mode: 'sitemap', host: 'blog.google', articlePath: /\/(?:company-news|inside-google|technology|products)\// },
   { id: 'microsoft', companyId: 'msft', personId: 'satya-nadella', name: 'Microsoft 공식 블로그', index: 'https://blogs.microsoft.com/sitemap_index.xml', mode: 'sitemap', host: 'blogs.microsoft.com', articlePath: /\/blog\/\d{4}\/\d{2}\/\d{2}\// },
@@ -106,11 +110,11 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
   // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
-  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true },
+  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
   // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
-  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true },
-  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://www.darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'www.darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true },
-  { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true },
+  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://www.darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'www.darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
 export const discoveryPdfHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.assetHost ? [p.assetHost] : []))];
@@ -327,7 +331,7 @@ export async function loadDiscoveredArticles(o: {
   parseFeed: OfficialSourceDeps['parseFeed']; now: () => number; deadline: number;
   previous?: DiscoveryState; existing: CeoStatement[]; knownUrls?: Set<string>; providers?: DiscoveryProvider[];
 }): Promise<{ articles: SourceArticle[]; reports: FeedReport[]; state: DiscoveryState; removed: string[] }> {
-  const now = o.now(); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - DISCOVERY_YEARS); const three = five; // 6년 범위 안이면 모두 대상(이전 3년/5년 구분 없음)
+  const now = o.now(); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - DISCOVERY_YEARS); // 출처별 범위(p.years)는 아래 반복문에서
   const deadline = Math.min(o.deadline - 12000, now + DISCOVERY_LIMITS.seconds * 1000);
   const state: DiscoveryState = o.previous?.version === 1 && o.previous.streams && typeof o.previous.streams === 'object' ? JSON.parse(JSON.stringify(o.previous)) : { version: 1, streams: {} };
   const articles: SourceArticle[] = [], reports: FeedReport[] = [], removed: string[] = [];
@@ -347,7 +351,9 @@ export async function loadDiscoveredArticles(o: {
     stream.indexChecked = stream.indexChecked && typeof stream.indexChecked === 'object' ? Object.fromEntries(Object.entries(stream.indexChecked).filter(([, v]) => Number.isFinite(v))) : {};
     if (!Number.isFinite(stream.updatedAt)) stream.updatedAt = 0;
     stream.pending = stream.pending.filter(x => x && discoveryArticleAllowed(p, x.url)); stream.indexes = stream.indexes.filter(u => indexAllowed(p, u));
-    const report: FeedReport = { feedName: `${p.name} · 최근 ${DISCOVERY_YEARS}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
+    const years = p.years ?? DISCOVERY_YEARS;
+    const cutoff = new Date(now); cutoff.setUTCHours(0, 0, 0, 0); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - years);
+    const report: FeedReport = { feedName: `${p.name} · 최근 ${years}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
     const request = (url: string) => o.fetchText(url, { deadline: Math.min(deadline, o.now() + 6000) });
     const indexes = stream.updatedAt < now - 20 * 3600000 ? [p.index, ...stream.indexes] : [...stream.indexes];
     let indexFailed = false;
@@ -360,7 +366,7 @@ export async function loadDiscoveredArticles(o: {
           const feed = await o.parseFeed(html);
           parsed.articles = feed.filter(it => /SpaceX|Elon Musk/i.test(it.title)).filter(it => discoveryArticleAllowed(p, it.link)).map(it => ({ url: it.link, title: it.title, modified: it.pubDate || undefined }));
           const dates = feed.map(it => Date.parse(it.pubDate || '')).filter(Number.isFinite);
-          if (feed.length && dates.length && Math.min(...dates) >= five.getTime()) {
+          if (feed.length && dates.length && Math.min(...dates) >= cutoff.getTime()) {
             const next = new URL(url); next.searchParams.set('paged', String(Number(next.searchParams.get('paged') || 1) + 1));
             parsed.indexes.push(next.href);
           }
@@ -388,7 +394,7 @@ export async function loadDiscoveredArticles(o: {
           if (!o.fetchPdfText) throw new Error('PDF 요청기 없음');
           const text = await o.fetchPdfText(c.url, Math.min(deadline, o.now() + 25000));
           const a = pershingLetterArticle(p, c, text, now);
-          if (!a || Date.parse(a.publishedAt!) < five.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
+          if (!a || Date.parse(a.publishedAt!) < cutoff.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
           const rows = await extractDiscoveredQuotes(a);
           if (rows.length) { a.discoveryTopics = [...new Set(rows.map(r => r.topicId))]; articles.push(a); report.withBody++; }
           stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true };
@@ -399,9 +405,9 @@ export async function loadDiscoveredArticles(o: {
         else html = await request(c.url);
         const a = discoveredArticle(p, c.url, html, now, c.filedAt);
         if (!a) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
-        const date = Date.parse(a.publishedAt!); if (date < five.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
+        const date = Date.parse(a.publishedAt!); if (date < cutoff.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
         const rows = await extractDiscoveredQuotes(a);
-        const eligibleTopics = new Set(rows.filter(r => date >= three.getTime() || (coverage.get(p.companyId + '|' + r.topicId)?.size || 0) < 2).map(r => r.topicId));
+        const eligibleTopics = new Set(rows.filter(r => date >= cutoff.getTime() || (coverage.get(p.companyId + '|' + r.topicId)?.size || 0) < 2).map(r => r.topicId));
         const wanted = rows.filter(r => eligibleTopics.has(r.topicId));
         if (wanted.length) {
           // 재추출 시에도 5년 확장 조건을 유지하도록 채택한 주제를 필터로 전달합니다.

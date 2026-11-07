@@ -59,12 +59,12 @@ test('Korean summary: monthly cap stays USD 1; question-matched and newer statem
 });
 
 test('AI CEOs: providers registered; authored date fallback from <time> or one date under the title', async () => {
-  for (const [id, person] of [['altman-blog', 'sam-altman'], ['amodei-essays', 'dario-amodei']]) {
+  for (const [id, person] of [['altman-blog-v2', 'sam-altman'], ['amodei-essays-v2', 'dario-amodei']]) {
     const p = DISCOVERY_PROVIDERS.find(x => x.id === id)!;
     assert.ok(p && p.authored && p.personId === person);
     assert.ok(CEO_PERSONS.some(x => x.personId === person) && CEO_ROLES.some(r => r.personId === person));
   }
-  const alt = DISCOVERY_PROVIDERS.find(x => x.id === 'altman-blog')!;
+  const alt = DISCOVERY_PROVIDERS.find(x => x.id === 'altman-blog-v2')!;
   const page = `<html><body><article><h1>The Gentle Singularity</h1><div>June 10, 2025</div>
   <p>We are past the event horizon; the takeoff has started. Humanity is close to building digital superintelligence, and at least so far it is much less weird than it seems like it should be.</p>
   <p>Data center production will get automated and the cost of compute will converge to near the cost of electricity, which makes abundant intelligence possible for everyone in the world.</p></article></body></html>`;
@@ -75,4 +75,25 @@ test('AI CEOs: providers registered; authored date fallback from <time> or one d
   assert.ok(rows.length >= 2 && rows.every(r => r.speaker.name === 'Sam Altman' && r.speaker.companyId === 'openai'));
   assert.equal(discoveredArticle(alt, 'https://blog.samaltman.com/x', page.replace('June 10, 2025', 'June 10, 2025 and May 1, 2024'), NOW), null, 'two dates → no guess');
   assert.ok(parseDiscoveryIndex(alt, '<a href="/?page=2">Older</a><a href="/the-gentle-singularity">x</a><a href="/tagged/ai">t</a>', alt.index).indexes.includes('https://blog.samaltman.com/?page=2'));
+});
+
+test('authored blog post passes the full pipeline (date and channel provenance verifiable in text)', async () => {
+  const { createCompositeExtractor } = await import('./runtime');
+  const { CURATED_TRANSCRIPTS } = await import('./transcripts');
+  const { CURATED_PAGES } = await import('./officialPages');
+  const { CEO_TOPICS } = await import('./registry');
+  const { buildCeoDataset, emptyCeoCache, refreshCeoCache } = await import('./pipeline');
+  const { ceoUrlHash } = await import('./urlHash');
+  const alt = DISCOVERY_PROVIDERS.find(x => x.id === 'altman-blog-v2')!;
+  const page = `<html><head><meta property="og:title" content="The Gentle Singularity"></head><body><article><h2>The Gentle Singularity</h2><span class="posthaven-formatted-date" data-unix-time="1749571200"></span>
+  <p>We are past the event horizon; the takeoff has started. Humanity is close to building digital superintelligence, and at least so far it is much less weird than it seems like it should be.</p>
+  <p>Data center production will get automated and the cost of compute will converge to near the cost of electricity, which makes abundant intelligence possible for everyone in the world.</p></article></body></html>`;
+  const a0 = discoveredArticle(alt, 'https://blog.samaltman.com/the-gentle-singularity', page, NOW)!;
+  const a = { ...a0, articleId: ceoUrlHash(a0.url) };
+  const ex = createCompositeExtractor(CEO_PERSONS, CURATED_TRANSCRIPTS, CURATED_PAGES);
+  const { cache } = await refreshCeoCache([a], emptyCeoCache(), ex);
+  const built: any = await buildCeoDataset([a], cache, { persons: CEO_PERSONS, roles: CEO_ROLES, topics: CEO_TOPICS }, { extractor: ex });
+  assert.equal(built.dataset.heldBackCount, 0, JSON.stringify(built.report?.issues));
+  assert.equal(built.dataset.statements.length, 2);
+  assert.ok(built.dataset.statements.every((s: any) => s.personId === 'sam-altman' && s.companyId === 'openai' && s.evidence[0].articlePublishedAt?.startsWith('2025-06-10')));
 });

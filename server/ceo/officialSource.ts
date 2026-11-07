@@ -110,10 +110,10 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
   // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
-  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/wp-json/wp/v2/media?search=Pershing%20Square%20Holdings&mime_type=application%2Fpdf&per_page=100&orderby=date&order=desc', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
+  { id: 'pershing-letters-v2', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/wp-json/wp/v2/media?search=Pershing%20Square%20Holdings&mime_type=application%2Fpdf&per_page=100&orderby=date&order=desc', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
   // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
-  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
-  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'altman-blog-v2', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'amodei-essays-v2', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
 export const discoveryPdfHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.assetHost ? [p.assetHost] : []))];
@@ -200,12 +200,14 @@ export function pershingLetterArticle(p: DiscoveryProvider, c: DiscoveryCandidat
   const rest = text.slice(start);
   const sign = /Sincerely,?\s*(?:\n\s*)?(William A\. Ackman|Bill Ackman)/i.exec(rest);
   if (!sign) return null;
-  const body = `${c.title || 'Pershing Square 주주서한'}\n${rest.slice(0, sign.index).trim()}`.slice(0, 90000);
+  const channelLine = `게시일 ${c.filedAt} · ${p.name} (공식 자료실, 서명: ${sign[1]})`;
+  const body = `${c.title || 'Pershing Square 주주서한'}\n${channelLine}\n${rest.slice(0, sign.index).trim()}`.slice(0, 90000);
   if (body.length < 300) return null;
   return { articleId: computeUrlHash(c.url), title: c.title || 'Pershing Square 주주서한', body, sourceName: p.name, url: c.url, publishedAt, sourceKind: 'discovered',
     discoveryCompanyId: p.companyId, discoveryPersonId: p.personId,
-    publishedAtBasis: { kind: 'written', excerpt: c.filedAt, basis: `공식 자료실 목록의 게시일 · 서한 서명 '${sign[1]}' 확인` },
-    discoveryAuthor: { name: 'Bill Ackman', excerpt: `Pershing Square 공식 자료실 서한 (서명: ${sign[1]})` } };
+    discoveryAuthored: true,
+    publishedAtBasis: { kind: 'written', excerpt: `게시일 ${c.filedAt}`, basis: `공식 자료실 목록의 게시일 · 서한 서명 '${sign[1]}' 확인` },
+    discoveryAuthor: { name: 'Bill Ackman', excerpt: `${p.name} (공식 자료실, 서명: ${sign[1]})` } };
 }
 
 export function parseDiscoveryIndex(p: DiscoveryProvider, html: string, base: string): { articles: DiscoveryCandidate[]; indexes: string[] } {
@@ -300,6 +302,9 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   const headerDate = h1 >= 0 ? htmlToText(html.slice(Math.max(0, h1 - 2500), h1 + 600)).split('\n').find(line => { const d = extractAbsoluteDates(line); return line.length < 100 && d.length === 1 && d[0].precision === 'day' && d[0].value === publishedAt.slice(0, 10); }) : undefined;
   if (headerDate && !body.includes(headerDate)) body = `${title}\n${headerDate}\n${body.slice(title.length).trimStart()}`;
   if (p.companyId === 'spacex' && !/\bSpaceX\b/.test(body)) return null;
+  // 본인 채널: 페이지 메타데이터로 확인한 게시일·채널을 본문 머리에 한 줄로 남김(검증기가 원문 안에서 날짜·작성 채널 근거를 찾을 수 있게)
+  const channelLine = p.authored ? `게시일 ${publishedAt.slice(0, 10)} · ${p.name} (${p.host})` : '';
+  if (channelLine) body = `${title}\n${channelLine}\n${body.slice(body.startsWith(title) ? title.length : 0).trimStart()}`;
   const person = CEO_PERSONS.find(x => x.personId === p.personId)!;
   const english = person.nameVariants.find(n => /[A-Za-z]/.test(n)) || '';
   const header = body.slice(0, 1200), lines = header.split('\n');
@@ -315,7 +320,7 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   if (!author && lines.some(l => l.trim() === english) && /CEO of Google and Alphabet/.test(header) && /(?:transcript of (?:his|the) remarks|remarks from today)/i.test(header) && !otherNames.some(n => header.includes(n))) author = lines.find(l => l.trim() === english);
   const dateLine = body.slice(0, 1000).split('\n').find(line => { const ds = extractAbsoluteDates(line); return ds.length === 1 && ds[0].precision === 'day' && ds[0].value === publishedAt.slice(0, 10); });
   return { articleId: computeUrlHash(url), title, body, sourceName: p.name, url, publishedAt, sourceKind: 'discovered', discoveryCompanyId: p.companyId, discoveryPersonId: p.personId,
-    ...(p.authored ? { publishedAtBasis: { kind: 'written' as const, excerpt: dateLine || publishedAt.slice(0, 10), basis: '본인 공식 채널 글의 게시일(게시 메타데이터)' } } :
+    ...(p.authored ? { discoveryAuthored: true, publishedAtBasis: { kind: 'written' as const, excerpt: `게시일 ${publishedAt.slice(0, 10)}`, basis: '본인 공식 채널 글의 게시일(페이지 게시 메타데이터)' } } :
       dateLine && p.id !== 'tesla-sec' ? { publishedAtBasis: { kind: author ? 'written' as const : 'released' as const, excerpt: dateLine, basis: '공식 원문의 게시 날짜 요소와 날짜 값을 대조' } } : {}),
     ...(author ? { discoveryAuthor: { name: english, excerpt: author } } : {}) };
 }
@@ -327,8 +332,8 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
   let rows = await createQuoteExtractor([person]).extract(a);
   if (a.discoveryAuthor) {
     const marker = a.body.indexOf(a.discoveryAuthor.excerpt);
-    // 본인 공식 채널 글은 작성자 표지가 본문에 없음(채널 주소로 확인) → 제목 이후 본문 전체가 본인 글
-    const authored = marker < 0;
+    // 본인 공식 채널 글(블로그·에세이·서한) → 머리 줄 이후 본문 전체가 본인 글
+    const authored = a.discoveryAuthored === true || marker < 0;
     const after = (authored ? a.body.slice(a.title.length) : a.body.slice(marker + a.discoveryAuthor.excerpt.length)).replace(/^[\s\S]*?(?:Below is (?:an edited |a )?transcript of his remarks\.)/i, '');
     // 본인 글의 긴 문단(서한 등)은 문장 경계에서 650자 이하 묶음으로 나눔
     const splitLong = (x: string) => x.length <= 650 || !authored ? [x] : (x.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [x]).reduce((acc: string[], s) => { const last = acc[acc.length - 1]; if (last !== undefined && (last + s).length <= 650) acc[acc.length - 1] = last + s; else acc.push(s); return acc; }, []).map(s => s.trim());

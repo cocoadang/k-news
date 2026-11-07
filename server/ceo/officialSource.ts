@@ -166,7 +166,7 @@ export function pershingLetterArticle(p: DiscoveryProvider, c: DiscoveryCandidat
   const sign = /Sincerely,?\s*(?:\n\s*)?(William A\. Ackman|Bill Ackman)/i.exec(rest);
   if (!sign) return null;
   const body = `${c.title || 'Pershing Square 주주서한'}\n${rest.slice(0, sign.index).trim()}`.slice(0, 90000);
-  if (body.length < 500) return null;
+  if (body.length < 300) return null;
   return { articleId: computeUrlHash(c.url), title: c.title || 'Pershing Square 주주서한', body, sourceName: p.name, url: c.url, publishedAt, sourceKind: 'discovered',
     discoveryCompanyId: p.companyId, discoveryPersonId: p.personId,
     publishedAtBasis: { kind: 'written', excerpt: c.filedAt, basis: `공식 자료실 목록의 게시일 · 서한 서명 '${sign[1]}' 확인` },

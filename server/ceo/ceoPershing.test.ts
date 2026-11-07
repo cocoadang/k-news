@@ -55,6 +55,8 @@ test('signed letter PDF → Ackman authored paragraphs; unsigned → nothing', a
     'again outperformed the S&P 500 index thanks to our concentrated portfolio of durable businesses.', '',
     'Our investment in Alphabet benefited from strong cloud growth and we believe the company remains',
     'one of the most attractive long-term investments in our portfolio given its predictable cash flow.', '',
+    'We continue to believe that interest rates will remain elevated for longer than the market expects, and',
+    'we have structured our hedges to protect the portfolio from a rise in long-term Treasury yields.', '',
     'Sincerely,', 'William A. Ackman',
   ];
   const text = await pdfToText(makePdf(letter));

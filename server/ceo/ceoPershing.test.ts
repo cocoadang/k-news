@@ -42,8 +42,16 @@ test('media JSON list: annual/interim letters kept, newest re-upload wins, fact 
     { date: '2026-07-23T10:00:00', source_url: 'https://assets.pershingsquareholdings.com/wp-content/uploads/2026/07/23144307/PSH-Fact-Sheet-June-2026-Website.pdf', title: { rendered: 'PSH-Fact-Sheet-June-2026-Website' } },
   ]);
   const r = parseDiscoveryIndex(p, j, p.index).articles;
-  assert.deepEqual(r.map(x => x.filedAt).sort(), ['2024-03-10', '2026-08-12']);
+  assert.deepEqual(r.map(x => x.filedAt).sort(), ['2024-03-10', '2026-08-12'], 'in-period upload kept, newest re-upload wins');
   assert.ok(r.some(x => /Annual-Report-1\.pdf$/.test(x.url)));
+});
+
+test('letter dates: in-period upload kept, migration upload replaced by listed date, unknown → null', async () => {
+  const { pershingLetterDate } = await import('./officialSource');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. June 2025 Interim', '2025-08-20'), '2025-08-20');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. 2022 Annual Report', '2025-02-20'), '2023-03-29');
+  assert.equal(pershingLetterDate('Pershing Square Holdings, Ltd. – 2027 (Annual Report)', '2028-02-20'), '2028-02-20');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. 2018 Annual Report', '2025-02-20'), null);
 });
 
 test('materials list: letters and reports kept with their listed date, fact sheets dropped', () => {

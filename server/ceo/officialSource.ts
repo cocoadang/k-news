@@ -144,6 +144,20 @@ function indexAllowed(p: DiscoveryProvider, value: string): boolean {
 export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report|Interim(?: Report)?)\b/i;
 const NOT_LETTER = /\b(?:Fact Sheet|Articles of|Notice|Slides|Presentation|Portfolio Review|Proxy|Circular|Prospectus)\b/i;
 
+/** 공식 자료실(materials) 목록의 실제 게시일. 2025-02 사이트 이전 때 옛 파일 업로드일이 바뀌어서, 업로드일이 보고 기간과 맞지 않으면 이 표를 씀 */
+const PERSHING_LISTED: Record<string, string> = {
+  'annual 2021': '2022-03-29', 'interim 2022': '2022-08-19', 'annual 2022': '2023-03-29', 'interim 2023': '2023-08-18',
+  'annual 2023': '2024-03-22', 'interim 2024': '2024-08-15', 'annual 2024': '2025-03-14', 'interim 2025': '2025-08-20', 'annual 2025': '2026-02-18', 'interim 2026': '2026-08-12',
+};
+/** 보고서 제목의 기간으로 게시일 확인: 연차(Y) → Y+1년 1~6월, 반기(June Y) → Y년 7~10월 업로드일만 인정, 아니면 공식 목록 표, 그래도 없으면 버림 */
+export function pershingLetterDate(title: string, uploaded?: string): string | null {
+  const a = /\b(20\d\d)\b[^]*?Annual Report|Annual Report[^]*?\b(20\d\d)\b/i.exec(title); const i = /June (20\d\d)[^]*?Interim|Interim[^]*?June (20\d\d)/i.exec(title);
+  const key = i ? `interim ${i[1] || i[2]}` : a ? `annual ${a[1] || a[2]}` : null; if (!key) return null;
+  const y = Number(key.slice(-4));
+  const ok = uploaded && (i ? uploaded >= `${y}-07-01` && uploaded <= `${y}-10-31` : uploaded >= `${y + 1}-01-01` && uploaded <= `${y + 1}-06-30`);
+  return ok ? uploaded! : PERSHING_LISTED[key] || null;
+}
+
 /** 자료실 목록: PDF 링크마다 링크 글자(제목)와 바로 앞 날짜를 읽음 */
 function parsePdfList(p: DiscoveryProvider, html: string, base: string): DiscoveryCandidate[] {
   const out = new Map<string, DiscoveryCandidate>();
@@ -155,7 +169,7 @@ function parsePdfList(p: DiscoveryProvider, html: string, base: string): Discove
       const u = normalizedUrl(String(it?.source_url || ''), base); if (!u || !discoveryArticleAllowed(p, u)) continue;
       const title = htmlToText(String(it?.title?.rendered || '')).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
       if (!LETTER_TITLE.test(title) || NOT_LETTER.test(title) || /Fact-?Sheet|Presentation|Slides/i.test(u)) continue;
-      const day = /^\d{4}-\d\d-\d\d/.exec(String(it?.date || ''))?.[0]; if (!day) continue;
+      const day = pershingLetterDate(title, /^\d{4}-\d\d-\d\d/.exec(String(it?.date || ''))?.[0]); if (!day) continue;
       const key = title.replace(/\s+\d+$/, '').toLowerCase();
       const prev = byName.get(key);
       if (!prev || day > (prev.filedAt || '')) byName.set(key, { url: u, title, filedAt: day, modified: day });

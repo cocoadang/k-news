@@ -11,4 +11,5 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with: { node-version: 22 }
       - run: npm ci --no-audit --no-fund
-      - run: npx tsx ops/probe2.ts
+      - run: PROBE=pershing-letters OLDEST=1 npx tsx ops/probe-ceo-sources.ts
+      - run: PROBE=altman-blog OLDEST=1 npx tsx ops/probe-ceo-sources.ts

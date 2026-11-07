@@ -16,7 +16,7 @@ const clean = (s: string) => s.replace(/\s+/g, ' ').slice(0, 200);
   }
   const p = DISCOVERY_PROVIDERS.find(x => x.id === id)!;
   const ft = createFetchText({ allowHosts: discoveryAllowedHosts() });
-  const fb = createFetchBytes({ allowHosts: discoveryPdfHosts(), maxBytes: 20_000_000, timeoutMs: 25_000 });
+  const fb = createFetchBytes({ allowHosts: discoveryPdfHosts(), maxBytes: 35_000_000, timeoutMs: 30_000 });
   const now = Date.now();
   const html = await ft(p.index, { deadline: Date.now() + 20000 });
   const r = parseDiscoveryIndex(p, html, p.index);

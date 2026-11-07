@@ -87,3 +87,12 @@ test('one person across companies: each statement classified by its own company,
   assert.match(r.questions.find(q => q.id === 'spacex:space-ai').label, /^SpaceX · /);
   assert.equal(companyQuestions(data, 'p', 'tsla').questions[0].id, 'autonomy', 'single company keeps plain ids');
 });
+
+test('X posts are comparable claims and show AI translation', () => {
+  const x = { statementId: 'x', personId: 'p', companyId: 'pershing', kind: 'social_post', quoteText: 'Interest rates will stay higher for longer', aiTranslationKo: '금리는 더 오래 높게 유지될 것', referenceDate: { value: '2026-11-01', basis: 'written', precision: 'day' } };
+  assert.ok(isComparableClaim(x));
+  assert.equal(displayText(x).kind, 'ai_translation');
+  const r = companyQuestions([x], 'p', 'pershing');
+  assert.equal(r.questions[0].id, 'rates');
+  assert.equal(r.questions[0].items[0].date.label, '게시일');
+});

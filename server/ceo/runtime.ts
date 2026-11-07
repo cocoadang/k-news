@@ -325,10 +325,10 @@ export class CeoRuntime {
   }
 
   /** 언론 헤드라인 AI 번역 (매일 수집 뒤·관리자 공식 원문 수집 뒤). 결과는 원장 캐시에 저장 */
-  async translateHeadlines(texts: string[], deadline: number) {
+  async translateHeadlines(texts: string[], deadline: number, posts = false) {
     const ledger = this.opts.koLedger?.();
     if (!ledger) return { pending: 0, sent: 0, translated: 0, stoppedReason: '원장 없음' };
-    return translateHeadlines(texts, { ledger, client: this.opts.koClient?.() ?? null, now: () => this.now(), deadline });
+    return translateHeadlines(texts, { ledger, client: this.opts.koClient?.() ?? null, now: () => this.now(), deadline, posts });
   }
   /** 읽기 전용: 헤드라인 번역 결과 캐시 */
   async koResults(): Promise<Record<string, { title: string }>> {

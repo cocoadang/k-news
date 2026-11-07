@@ -69,6 +69,18 @@ export function createCeoRuntime(getEvents: () => EventLike[], getFirestore: () 
   });
 }
 
+/** 아직 번역되지 않은 X 게시물을 최신순으로 번역 (호출 최대 calls회) */
+export async function translatePendingXPosts(runtime: CeoRuntime, statements: any[], deadline: number, calls = 3) {
+  const texts = [...statements].sort((a, b) => String(b.referenceDate?.value || '').localeCompare(String(a.referenceDate?.value || ''))).map(x => String(x.quoteText || ''));
+  const reports = [];
+  for (let i = 0; i < calls; i++) {
+    const r = await runtime.translateHeadlines(texts, deadline, true);
+    reports.push(r);
+    if (!r.translated || r.stoppedReason || r.pending <= r.sent) break;
+  }
+  return reports;
+}
+
 /** 아직 번역되지 않은 보도 헤드라인을 묶어 번역 (호출 최대 1회) */
 export async function translatePendingHeadlines(runtime: CeoRuntime, getReportedEvents: () => HeadlineEvent[] | Promise<HeadlineEvent[]>, deadline: number) {
   const texts = reportedCeoStatements(await getReportedEvents()).map((x: any) => String(x.quoteText || ''));
@@ -79,6 +91,8 @@ export function createCeoRouter(deps: {
   runtime?: CeoRuntime;
   getReportedEvents?: () => HeadlineEvent[] | Promise<HeadlineEvent[]>;
   getVideoStatements?: () => any[] | Promise<any[]>;
+  /** 본인 X 게시물 (xPosts 저장소) */
+  getXStatements?: () => any[] | Promise<any[]>;
   getRuntime?: () => CeoRuntime | null;
   verifyAdmin: Middleware;
 }) {
@@ -104,6 +118,15 @@ export function createCeoRouter(deps: {
           const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
           snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...extra.filter(x => !ids.has(x.statementId))] };
         } catch { /* 보조 자료 실패는 공식 자료 응답에 영향 없음 */ }
+      }
+      // 본인 X 게시물 (AI 번역이 있으면 함께)
+      if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getXStatements) {
+        try {
+          const results = await getActiveRuntime().koResults();
+          const posts = (await deps.getXStatements()).map((x: any) => { const t = results[headlineKey(x.quoteText)]; return t?.title ? { ...x, aiTranslationKo: t.title } : x; });
+          const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
+          snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...posts.filter((x: any) => !ids.has(x.statementId))] };
+        } catch { /* X 자료 실패는 공식 자료 응답에 영향 없음 */ }
       }
       // CEO 발언 영상 자막에서 확인한 인용 (유튜브 요약 런타임이 저장)
       if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getVideoStatements) {

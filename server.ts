@@ -10,7 +10,8 @@ import { sendEventToTelegram, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords } from './server/companyRenewal';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
-import { createCeoRouter, createCeoRuntime, translatePendingHeadlines } from './server/ceo/routes';
+import { createCeoRouter, createCeoRuntime, translatePendingHeadlines, translatePendingXPosts } from './server/ceo/routes';
+import { collectXPosts, firestoreXStore, xPostStatements, X_DEFAULT_CAP_USD } from './server/ceo/xPosts';
 import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
@@ -301,6 +302,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   // ADMIN_SECRET has zero influence on cron authentication.
   let pollHeadlineHook: ((deadline: number) => Promise<unknown>) | null = null;
   let pollStatusHook: ((result: any, headline: any) => Promise<void>) | null = null;
+  let xPostsHook: ((deadline: number) => Promise<unknown>) | null = null;
   app.post('/api/jobs/poll', async (req, res) => {
     const cronAuth = verifyCronAuth(req);
 
@@ -333,7 +335,9 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
 
       if (result.skipped && result.skipReason === 'already_completed') {
         // 오늘 수집은 이미 끝남 → 같은 호출로 '분석만' 진행 (Cloud Scheduler가 3시간마다 호출)
-        const analysis = await runAnalysisOnlyCycle(150_000);
+        // 먼저 본인 X 게시물 수집·번역(최대 45초, 토큰 없으면 즉시 건너뜀)
+        if (xPostsHook) { try { const xr = await xPostsHook(Date.now() + 45_000); console.log(`[POLL] x_posts: ${JSON.stringify(xr)}`); } catch (e) { console.warn('[POLL] x_posts_failed', e); } }
+        const analysis = await runAnalysisOnlyCycle(120_000);
         console.log(`[POLL] analysis_only: ${JSON.stringify({ skipped: analysis.skipped, screened: analysis.summary?.screened, detailed: analysis.summary?.detailed, telegram: analysis.telegramAlertsSentCount })}`);
         return res.json({ success: true, status: 'analysis_only', date: result.seoulDate, triggeredBy: 'Cloud Scheduler /api/jobs/poll', timestamp: new Date().toISOString(),
           screened: analysis.summary?.screened ?? 0, detailed: analysis.summary?.detailed ?? 0, telegramAlertsSentCount: analysis.telegramAlertsSentCount });
@@ -589,6 +593,23 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   };
 
   pollHeadlineHook = (deadline: number) => translatePendingHeadlines(getSchedulerCeoRuntime() || ceoRuntime, cachedEventHeadlines, deadline);
+  // 본인 X 게시물 (X_BEARER_TOKEN 있을 때만, 월 상한 X_MONTHLY_CAP_USD 기본 5달러)
+  const xStore = firestoreXStore(() => (getIsFirestoreAvailable() ? initFirestore() : null));
+  let xCache: { at: number; items: any[] } | null = null;
+  const cachedXStatements = async () => {
+    if (xCache && Date.now() - xCache.at < 10 * 60_000) return xCache.items;
+    const items = xPostStatements(await xStore.read());
+    xCache = { at: Date.now(), items };
+    return items;
+  };
+  xPostsHook = async (deadline: number) => {
+    const r: any = await collectXPosts({ token: process.env.X_BEARER_TOKEN, store: xStore, now: Date.now, deadline: deadline - 20_000, capUsd: Number(process.env.X_MONTHLY_CAP_USD) || X_DEFAULT_CAP_USD });
+    if (r.status === 'x_not_configured') return r;
+    xCache = null;
+    const statements = await cachedXStatements();
+    const tr = await translatePendingXPosts(getSchedulerCeoRuntime() || ceoRuntime, statements, deadline, 2).catch(() => null);
+    return { ...r, translate: tr };
+  };
   pollStatusHook = async (result: any, headline: any) => {
     const token = process.env.TELEGRAM_BOT_TOKEN, chatId = process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) return;
@@ -642,6 +663,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     verifyAdmin: verifyAdminAuth,
     getReportedEvents: cachedEventHeadlines,
     getVideoStatements: cachedCeoVideoStatements,
+    getXStatements: cachedXStatements,
   }));
 
   // 5. Single Event Detail (Public read)

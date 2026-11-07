@@ -1,0 +1,23 @@
+name: tmp add dependency
+on:
+  push:
+    branches: [ackman-letters]
+    paths: [.github/workflows/tmp-add-dep.yml]
+permissions:
+  contents: write
+jobs:
+  add:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: { ref: ackman-letters }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: { node-version: 22 }
+      - run: npm install --save --save-exact pdfjs-dist@4.10.38 --no-audit --no-fund
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git rm -q .github/workflows/tmp-add-dep.yml
+          git add package.json package-lock.json
+          git commit -m "Add pdfjs-dist 4.10.38 (PDF text for Pershing Square letters)"
+          git push

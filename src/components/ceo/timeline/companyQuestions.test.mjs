@@ -72,3 +72,18 @@ test('video quotes use AI translation and video date', () => {
   assert.equal(r.questions[0].items[0].date.label, '영상 게시일');
   assert.equal(displayText(q).kind, 'ai_translation');
 });
+
+test('one person across companies: each statement classified by its own company, labels prefixed', () => {
+  const data = [
+    st('t1', 'tsla', 'Robotaxis will expand next year', rel('2026-01-01')),
+    st('s1', 'spacex', 'AI satellites are simpler than Starlink satellites', rel('2026-06-08')),
+    st('x', 'nvda', 'Robotaxis and AI satellites', rel('2026-02-01')),
+  ];
+  const r = companyQuestions(data, 'p', ['tsla', 'spacex']);
+  assert.equal(r.total, 2, 'other companies excluded');
+  const ids = r.questions.map(q => q.id);
+  assert.ok(ids.includes('tsla:autonomy') && ids.includes('spacex:space-ai'));
+  assert.ok(!r.questions.find(q => q.id === 'tsla:autonomy').items.some(i => i.statement.companyId !== 'tsla'));
+  assert.match(r.questions.find(q => q.id === 'spacex:space-ai').label, /^SpaceX · /);
+  assert.equal(companyQuestions(data, 'p', 'tsla').questions[0].id, 'autonomy', 'single company keeps plain ids');
+});

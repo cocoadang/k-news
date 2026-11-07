@@ -13,11 +13,8 @@ import type { Firestore, Transaction } from '@google-cloud/firestore';
 export const KO_LEDGER_COLLECTION = 'ceo_ko_summary_ledger';
 /** 코드상 절대 한도: USD 1 (설정은 이 값 이하로만) */
 export const KO_HARD_LIMIT_NANO = 1_000_000_000;
-/** 6년치 백필 기간(사용자 승인 2026-11-07): 2026-11~2027-01은 월 USD 4. 관리자가 한도를 낮춘 경우엔 그 값을 따름 */
-export const KO_BACKFILL_LIMIT_NANO = 4_000_000_000;
-export const KO_BACKFILL_MONTHS = ['2026-11', '2026-12', '2027-01'];
-export const monthCapNano = (s: { limitNano: number }, month: string) =>
-  KO_BACKFILL_MONTHS.includes(month) && s.limitNano >= KO_HARD_LIMIT_NANO ? KO_BACKFILL_LIMIT_NANO : Math.min(s.limitNano, KO_HARD_LIMIT_NANO);
+/** 월 한도 USD 1 유지(사용자 결정 2026-11-07: 먼저 모두 수집하고 중요한 발언부터 번역) */
+export const monthCapNano = (s: { limitNano: number }, _month: string) => Math.min(s.limitNano, KO_HARD_LIMIT_NANO);
 
 export type KoJobStatus = 'reserved' | 'settled' | 'uncertain' | 'released';
 export interface KoJob {

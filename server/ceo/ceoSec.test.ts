@@ -576,7 +576,7 @@ async function main() {
     const r3 = await rt3.refresh();
     assert.strictEqual(r3.httpStatus, 200);
     assert.deepStrictEqual([w.ko.count, w.ko.gen], [n, n], 'no re-summary');
-    assert.strictEqual(rt3.lastKoReport!.considered, 0);
+    assert.strictEqual(rt3.lastKoReport!.calls, 0); // 이미 요약된 발언은 캐시(재요약 없음)
     const g = await w.mk({ pages: allExcludingNasa, withKo: true }).snapshot();
     assert.strictEqual(g.dataset!.statements.filter(s => s.koSummary?.status === 'ready').length, n);
     assert.strictEqual(g.koSummary!.outstandingUsd, 0);

@@ -8,6 +8,7 @@
  *   실패하면 lease만 풀고 실패 시도를 기록(기존 이력·판은 그대로).
  * 이 모듈은 db 싱글턴·Firestore SDK·수집기·스케줄러·Telegram을 불러오지 않습니다(이벤트 목록·저장소는 주입).
  */
+import { koPriority } from './koPriority';
 import { pdfToText } from './pdfText';
 import { randomUUID } from 'node:crypto';
 import { CeoApiResponse, CeoPerson, CeoRole, CeoSourceReport, CeoTopic } from '../../src/ceo/types';
@@ -303,7 +304,8 @@ export class CeoRuntime {
       try {
         const st = await ledger.read();
         if (st.enabled && st.activatedAt) {
-          const fresh = response.dataset.statements.filter(x => x.verification?.firstVerifiedAt === work.result.refreshedAt && x.verification.firstVerifiedAt >= st.activatedAt!);
+          // 아직 요약이 없는 발언 전부를 중요도 순으로: 질문에 분류되는 발언 → 최근 발언 먼저 (월 한도 안에서 차례로)
+          const fresh = koPriority(response.dataset.statements.filter(x => x.verification?.firstVerifiedAt && x.verification.firstVerifiedAt >= st.activatedAt!));
           this.lastKoReport = await runKoSummaries(fresh, { ledger, client: this.opts.koClient?.() ?? null, now: () => this.now(), deadline });
         }
       } catch (e) { this.lastKoReport = { considered: 0, cacheHits: 0, skippedReviewed: 0, counted: 0, calls: 0, settled: 0, uncertain: 0, stoppedReason: `원장 오류: ${short(e)}` }; }

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DISCOVERY_PROVIDERS, DISCOVERY_YEARS, discoveredArticle, extractDiscoveredQuotes, parseDiscoveryIndex } from './officialSource';
-import { availableNano, emptyKoState, KO_BACKFILL_LIMIT_NANO, KO_HARD_LIMIT_NANO } from './koLedger';
+import { availableNano, emptyKoState, KO_HARD_LIMIT_NANO } from './koLedger';
+import { koPriority } from './koPriority';
 import { CEO_PERSONS, CEO_ROLES } from './registry';
 
 const dalio = DISCOVERY_PROVIDERS.find(p => p.id === 'dalio-substack')!;
@@ -48,9 +49,10 @@ test('authored channel post: author = channel, written date, relevant paragraphs
   assert.ok(!rows.some(r => /Short quote/.test(r.quoteText || '')), 'quoted third-party text excluded');
 });
 
-test('Korean summary budget: backfill months allow USD 4 unless admin lowered the limit', () => {
+test('Korean summary: monthly cap stays USD 1; question-matched and newer statements are translated first', () => {
   const s = { ...emptyKoState(), enabled: true };
-  assert.equal(availableNano(s, '2026-12'), KO_BACKFILL_LIMIT_NANO);
-  assert.equal(availableNano(s, '2027-02'), KO_HARD_LIMIT_NANO);
-  assert.equal(availableNano({ ...s, limitNano: 500 }, '2026-12'), 500);
+  assert.equal(availableNano(s, '2026-12'), KO_HARD_LIMIT_NANO);
+  const st = (id: string, text: string, date: string | null) => ({ statementId: id, companyId: 'bridgewater', quoteText: text, kind: 'direct_quote', spokenAt: { value: date, precision: date ? 'day' : 'unknown' } } as any);
+  const order = koPriority([st('a', 'I like cooking dinner with my family on weekends.', '2026-10-01'), st('b', 'Gold is a good diversifier.', '2021-01-01'), st('c', 'The debt cycle is late.', '2025-05-01'), st('d', 'Nothing classified here at all.', null)]).map(x => x.statementId);
+  assert.deepEqual(order, ['c', 'b', 'a', 'd']);
 });

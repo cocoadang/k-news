@@ -57,7 +57,7 @@ Deploy smoke (ops/deploy.py) requires ≥3 public YouTube summaries and none fro
 
 ## 2026-11-07 CEO 발언 확장
 - 탭은 인물 단위(머스크 = Tesla·SpaceX 한 탭, 질문은 회사별 접두어).
-- 공식 원문 탐색 범위 6년(DISCOVERY_YEARS). 백필 기간 한국어 요약 상한 2026-11~2027-01 월 USD 4(koLedger KO_BACKFILL_*), 이후 USD 1.
+- 공식 원문 탐색 범위 6년(DISCOVERY_YEARS). 한국어 요약은 월 USD 1 유지, 아직 요약 없는 발언을 질문 분류→최신 순으로 갱신당 최대 20건(koPriority, KO_MAX_PER_RUN).
 - 레이 달리오: raydalio.substack.com sitemap(본인 채널 authored provider). 빌 애크먼: Pershing Square 자료실 PDF 주주서한(pdfjs-dist, 서명 'William A. Ackman' 확인된 서한만).
 - X 게시물: server/ceo/xPosts.ts, 공식 X API(게시물 1건 USD 0.005). Cloud Run env X_BEARER_TOKEN(Secret Manager) 넣기 전에는 동작하지 않음. 월 상한 X_MONTHLY_CAP_USD(기본 5). 3시간 분석 실행 앞에서 최대 45초 수집·번역. Firestore: ceo_x_state/state, ceo_x_posts/*.
 - SEC Exhibit 2건 '원문 바이트 불일치' 보류 상태(크기 같고 SHA 다름) — PC에서 원인 확인 필요.

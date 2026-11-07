@@ -93,7 +93,9 @@ export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pe
 /** 수집 범위: 최근 6년 (사용자 요청 2026-11-07, 이전: 3년/비교 부족 시 5년) */
 export const DISCOVERY_YEARS = 6;
 
-export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive'; host: string; articlePath: RegExp;
+export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive' | 'pdf-list'; host: string; articlePath: RegExp;
+  /** pdf-list: 자료실 목록(index)의 PDF가 올라가는 호스트 */
+  assetHost?: string;
   /** 본인 공식 채널(사이트 전체가 본인 글): 작성자 = 이 인물. 문단을 본인 작성 발언으로 씀 */
   authored?: boolean }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
@@ -103,9 +105,12 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 IR', index: 'https://ir.tesla.com/press', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/press-release\// },
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
+  // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
+  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true },
   { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true },
 ];
-export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.map(p => p.host))];
+export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
+export const discoveryPdfHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.assetHost ? [p.assetHost] : []))];
 
 function normalizedUrl(value: string, base: string): string | null {
   try { const u = new URL(decodeEntities(value), base); if (u.protocol !== 'https:' || u.username || u.password || u.port) return null; u.hash = ''; return u.href; } catch { return null; }
@@ -113,6 +118,7 @@ function normalizedUrl(value: string, base: string): string | null {
 export function discoveryArticleAllowed(p: DiscoveryProvider, url: string): boolean {
   try {
     const u = new URL(url);
+    if (p.mode === 'pdf-list') return u.protocol === 'https:' && !u.username && !u.password && !u.port && u.hostname === p.assetHost && p.articlePath.test(u.pathname);
     const host = p.id === 'tesla-sec' ? 'www.sec.gov' : p.host;
     return u.protocol === 'https:' && !u.username && !u.password && !u.port && u.hostname === host && p.articlePath.test(u.pathname) && !/\.(?:pdf|jpg|png|zip)$/i.test(u.pathname);
   } catch { return false; }
@@ -122,12 +128,53 @@ function indexAllowed(p: DiscoveryProvider, value: string): boolean {
     const u = new URL(value);
     if (u.protocol !== 'https:' || u.hostname !== p.host || u.username || u.password || u.port) return false;
     if (p.mode === 'sitemap') return (/sitemap[^/]*\.xml$/.test(u.pathname) || (p.authored === true && /^\/sitemap\/\d{4}(?:\/\d{1,2})?$/.test(u.pathname))) && (p.id !== 'google' || u.pathname.startsWith('/en-us/')) && !/(?:author|page)-sitemap/.test(u.pathname);
+    if (p.mode === 'pdf-list') return false;
     if (p.mode === 'archive') return u.pathname === new URL(p.index).pathname && [...u.searchParams.keys()].every(k => ['page', 'items_per_page'].includes(k));
     return u.pathname === '/feed/' && [...u.searchParams.keys()].every(k => k === 'paged');
   } catch { return false; }
 }
 
+/** 주주서한으로 볼 자료 제목 (팩트시트·공지·발표 슬라이드 제외) */
+export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report)\b/i;
+const NOT_LETTER = /\b(?:Fact Sheet|Articles of|Notice|Slides|Presentation|Portfolio Review|Proxy|Circular|Prospectus)\b/i;
+
+/** 자료실 목록: PDF 링크마다 링크 글자(제목)와 바로 앞 날짜를 읽음 */
+function parsePdfList(p: DiscoveryProvider, html: string, base: string): DiscoveryCandidate[] {
+  const out = new Map<string, DiscoveryCandidate>();
+  for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+\.pdf(?:#[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    const u = normalizedUrl(m[1], base); if (!u || !discoveryArticleAllowed(p, u)) continue;
+    const before = htmlToText(html.slice(Math.max(0, (m.index || 0) - 1500), m.index || 0));
+    const title = htmlToText(m[2]).replace(/\s+/g, ' ').trim() || htmlToText(before.split('\n').slice(-2).join(' '));
+    const context = (title + ' ' + before.split('\n').slice(-3).join(' '));
+    if (!LETTER_TITLE.test(context) || NOT_LETTER.test(title)) continue;
+    const dates = extractAbsoluteDates(before.split('\n').slice(-6).join('\n')).filter(d => d.precision === 'day');
+    const filedAt = dates.length ? dates[dates.length - 1].value : undefined;
+    const prev = out.get(u);
+    if (!prev || (!prev.filedAt && filedAt) || /Letter/i.test(title)) out.set(u, { url: u, title, ...(filedAt ? { filedAt, modified: filedAt } : prev?.filedAt ? { filedAt: prev.filedAt, modified: prev.filedAt } : {}) });
+  }
+  return [...out.values()];
+}
+
+/** 서한 PDF 텍스트 → 서한 본문(인사말 ~ 서명). 서명이 확인되지 않으면 null (다른 사람 글로 오귀속 방지) */
+export function pershingLetterArticle(p: DiscoveryProvider, c: DiscoveryCandidate, text: string, now: number): SourceArticle | null {
+  if (!discoveryArticleAllowed(p, c.url) || !c.filedAt || !partialToInterval(c.filedAt)) return null;
+  const publishedAt = `${c.filedAt}T00:00:00.000Z`;
+  if (Date.parse(publishedAt) > now + 86400000) return null;
+  const start = text.search(/(?:To the Shareholders of Pershing Square Holdings|Dear (?:Fellow )?(?:Shareholders|Investors))/i);
+  if (start < 0) return null;
+  const rest = text.slice(start);
+  const sign = /Sincerely,?\s*(?:\n\s*)?(William A\. Ackman|Bill Ackman)/i.exec(rest);
+  if (!sign) return null;
+  const body = `${c.title || 'Pershing Square 주주서한'}\n${rest.slice(0, sign.index).trim()}`.slice(0, 90000);
+  if (body.length < 300) return null;
+  return { articleId: computeUrlHash(c.url), title: c.title || 'Pershing Square 주주서한', body, sourceName: p.name, url: c.url, publishedAt, sourceKind: 'discovered',
+    discoveryCompanyId: p.companyId, discoveryPersonId: p.personId,
+    publishedAtBasis: { kind: 'written', excerpt: c.filedAt, basis: `공식 자료실 목록의 게시일 · 서한 서명 '${sign[1]}' 확인` },
+    discoveryAuthor: { name: 'Bill Ackman', excerpt: `Pershing Square 공식 자료실 서한 (서명: ${sign[1]})` } };
+}
+
 export function parseDiscoveryIndex(p: DiscoveryProvider, html: string, base: string): { articles: DiscoveryCandidate[]; indexes: string[] } {
+  if (p.mode === 'pdf-list') return { articles: parsePdfList(p, html, base), indexes: [] };
   const articles: DiscoveryCandidate[] = [], indexes: string[] = [];
   const add = (value: string, modified?: string) => { const u = normalizedUrl(value, base); if (!u) return; if (discoveryArticleAllowed(p, u)) articles.push({ url: u, modified }); else if (indexAllowed(p, u) && u !== base) indexes.push(u); };
   if (/<(?:sitemapindex|urlset)\b/.test(html)) {
@@ -235,7 +282,9 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
     // 본인 공식 채널 글은 작성자 표지가 본문에 없음(채널 주소로 확인) → 제목 이후 본문 전체가 본인 글
     const authored = marker < 0;
     const after = (authored ? a.body.slice(a.title.length) : a.body.slice(marker + a.discoveryAuthor.excerpt.length)).replace(/^[\s\S]*?(?:Below is (?:an edited |a )?transcript of his remarks\.)/i, '');
-    const paragraphs = after.split('\n').map(x => x.trim()).filter(x => x.length >= 90 && x.length <= 650 && !/[“”"]|\b(?:said|says|told|wrote|according to)\b/i.test(x) && !/^(?:[A-Z ]{3,}:|Related|Share|Read more|Listen|Watch|Image|Photo)/.test(x));
+    // 본인 글의 긴 문단(서한 등)은 문장 경계에서 650자 이하 묶음으로 나눔
+    const splitLong = (x: string) => x.length <= 650 || !authored ? [x] : (x.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [x]).reduce((acc: string[], s) => { const last = acc[acc.length - 1]; if (last !== undefined && (last + s).length <= 650) acc[acc.length - 1] = last + s; else acc.push(s); return acc; }, []).map(s => s.trim());
+    const paragraphs = after.split('\n').map(x => x.trim()).flatMap(splitLong).filter(x => x.length >= 90 && x.length <= 650 && !/[“”"]|\b(?:said|says|told|wrote|according to)\b/i.test(x) && !/^(?:[A-Z ]{3,}:|Related|Share|Read more|Listen|Watch|Image|Photo)/.test(x));
     const englishNames = CEO_PERSONS.filter(p => p.personId !== person.personId).flatMap(p => p.nameVariants).filter(n => /[A-Za-z]/.test(n));
     if (authored || (!englishNames.some(n => after.includes(n)) && !/\n[A-Z][A-Z ]{3,}(?: MESSAGE|:)/.test(after))) {
       const name = a.discoveryAuthor.name;
@@ -260,6 +309,8 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
 export async function loadDiscoveredArticles(o: {
   fetchText: (url: string, opts?: { deadline?: number }) => Promise<string>;
   fetchSecText?: (url: string, deadline: number) => Promise<string>;
+  /** pdf-list 출처: PDF 바이트를 읽어 텍스트로 (허용 호스트만) */
+  fetchPdfText?: (url: string, deadline: number) => Promise<string>;
   parseFeed: OfficialSourceDeps['parseFeed']; now: () => number; deadline: number;
   previous?: DiscoveryState; existing: CeoStatement[]; knownUrls?: Set<string>; providers?: DiscoveryProvider[];
 }): Promise<{ articles: SourceArticle[]; reports: FeedReport[]; state: DiscoveryState; removed: string[] }> {
@@ -320,6 +371,16 @@ export async function loadDiscoveredArticles(o: {
       const c = stream.pending.shift()!; read++; usedByCompany.set(p.companyId, (usedByCompany.get(p.companyId) || 0) + 1);
       if (o.knownUrls?.has(c.url)) continue;
       try {
+        if (p.mode === 'pdf-list') {
+          if (!o.fetchPdfText) throw new Error('PDF 요청기 없음');
+          const text = await o.fetchPdfText(c.url, Math.min(deadline, o.now() + 25000));
+          const a = pershingLetterArticle(p, c, text, now);
+          if (!a || Date.parse(a.publishedAt!) < five.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
+          const rows = await extractDiscoveredQuotes(a);
+          if (rows.length) { a.discoveryTopics = [...new Set(rows.map(r => r.topicId))]; articles.push(a); report.withBody++; }
+          stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true };
+          continue;
+        }
         let html: string;
         if (p.id === 'tesla-sec') { if (!o.fetchSecText) throw new Error('SEC 전용 요청기 없음'); html = await o.fetchSecText(c.url, Math.min(deadline, o.now() + 6000)); }
         else html = await request(c.url);

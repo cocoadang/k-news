@@ -8,6 +8,7 @@
  *   실패하면 lease만 풀고 실패 시도를 기록(기존 이력·판은 그대로).
  * 이 모듈은 db 싱글턴·Firestore SDK·수집기·스케줄러·Telegram을 불러오지 않습니다(이벤트 목록·저장소는 주입).
  */
+import { pdfToText } from './pdfText';
 import { randomUUID } from 'node:crypto';
 import { CeoApiResponse, CeoPerson, CeoRole, CeoSourceReport, CeoTopic } from '../../src/ceo/types';
 import { buildCeoDataset, emptyCeoCache, refreshCeoCache, RefreshReport, SourceArticle, StatementExtractor } from './pipeline';
@@ -40,6 +41,8 @@ export interface CeoRuntimeOptions {
   /** SEC 제출 문서 검증 항목 (운영은 CURATED_SEC_EXHIBITS 명시 전달, 생략하면 없음) + SEC 전용 원본 바이트 요청기 */
   secExhibits?: CuratedSecExhibit[];
   fetchSecBytes?: FetchBytes;
+  /** 공식 자료실 PDF(주주서한) 바이트 요청기: 허용 호스트만 */
+  fetchPdfBytes?: FetchBytes;
   /** 갱신 1회의 원문 요청 상한(피드·IR 기록·페이지·SEC 합계). 기본 12 */
   maxSourceRequests?: number;
   /** 전역 최소 갱신 간격(모든 인스턴스 공통, 저장소 head 기준). 기본 10분 */
@@ -433,6 +436,7 @@ export class CeoRuntime {
         previous: discovery, existing: visibleStatements(base?.payload.records ?? []),
         knownUrls: new Set(articles.map(a => a.url)),
         fetchSecText: this.opts.fetchSecBytes ? async (url, at) => { admit(); return new TextDecoder().decode(await this.opts.fetchSecBytes!(url, { deadline: at })); } : undefined,
+        fetchPdfText: this.opts.fetchPdfBytes ? async (url, at) => { admit(); return pdfToText(await this.opts.fetchPdfBytes!(url, { deadline: at }), { maxPages: 60 }); } : undefined,
       });
       articles.push(...result.articles); reports.push(...result.reports); discovery = result.state;
       result.removed.forEach(id => removed.add(id));

@@ -1,29 +1,43 @@
-// 임시 점검 v2: 페이지 구조 확인 (단계별 ::notice 10개 제한 → PROBE 단계별 실행)
-import { createFetchText } from '../server/ceo/fetchText';
-const step = process.env.PROBE || '';
-const ft = createFetchText({ allowHosts: ['blog.samaltman.com', 'darioamodei.com', 'www.darioamodei.com', 'raydalio.substack.com', 'substack.com'] });
-const note = (m: string) => console.log(`::notice::${m.replace(/\n/g, ' ').slice(0, 1000)}`);
-const clean = (s: string) => s.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/\s+/g, ' ');
-const get = async (u: string) => { try { const t = await ft(u, { deadline: Date.now() + 20000 }); return t; } catch (e: any) { note(`${u} ERROR ${e?.message || e}`); return ''; } };
+// 임시 점검 v3: 운영 파서로 실제 사이트 끝까지 (출처별 단계)
+import { createFetchText, createFetchBytes } from '../server/ceo/fetchText';
+import { DISCOVERY_PROVIDERS, discoveryAllowedHosts, discoveryPdfHosts, parseDiscoveryIndex, discoveredArticle, extractDiscoveredQuotes, pershingLetterArticle } from '../server/ceo/officialSource';
+import { pdfToText } from '../server/ceo/pdfText';
+const id = process.env.PROBE || '';
+const note = (m: string) => console.log(`::notice::${m.replace(/\n/g, ' ').slice(0, 900)}`);
+const clean = (s: string) => s.replace(/\s+/g, ' ').slice(0, 200);
 (async () => {
-  if (step === 'altman') {
-    const h = await get('https://blog.samaltman.com/abundant-intelligence');
-    note(`h1/h2: ${[...h.matchAll(/<(h[12])\b([^>]*)>([\s\S]*?)<\/h[12]>/gi)].map(m => m[1] + m[2].slice(0, 40) + '=' + clean(m[3]).slice(0, 60)).join(' || ')}`);
-    note(`date-ish classes: ${[...h.matchAll(/<[^>]*class=["'][^"']*(?:date|time|posted)[^"']*["'][^>]*>[\s\S]{0,160}/gi)].map(m => clean(m[0]).slice(0, 160)).slice(0, 4).join(' || ')}`);
-    note(`months: ${(clean(h).match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2},? \d{4}\b/g) || []).slice(0, 6).join(' | ')} article=${(h.match(/<article\b/gi) || []).length} meta=${(h.match(/<meta[^>]+(?:published|date)[^>]*>/gi) || []).slice(0, 3).join(' ')}`);
-    const i = clean(h).indexOf('Abundant'); note(`around title: ${clean(h).slice(Math.max(0, i - 200), i + 700)}`);
-  }
-  if (step === 'amodei') {
-    const s = await get('https://darioamodei.com/sitemap.xml');
-    note(`sitemap bytes=${s.length} locs=${(s.match(/<loc>[^<]+/g) || []).slice(0, 12).join(' ')}`);
-    const e = await get('https://darioamodei.com/essay/machines-of-loving-grace');
-    note(`essay bytes=${e.length} h1=${(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(e)?.[1] || '').replace(/<[^>]+>/g, '').slice(0, 80)} meta=${(e.match(/<meta[^>]+(?:published|date)[^>]*>/gi) || []).slice(0, 3).join(' ')} ldjson=${/application\/ld\+json/.test(e)}`);
-    note(`months: ${(clean(e).match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2},? \d{4}\b/g) || []).slice(0, 6).join(' | ')} time=${(/<time\b[^>]*>/i.exec(e)?.[0] || '')}`);
-    const t = clean(e); const i = t.indexOf('Machines of Loving Grace'); note(`around: ${t.slice(Math.max(0, i - 200), i + 600)}`);
-  }
-  if (step === 'dalio') {
-    for (const u of ['https://raydalio.substack.com/feed', 'https://raydalio.substack.com/api/v1/archive?sort=new&offset=0&limit=12', 'https://raydalio.substack.com/sitemap.xml', 'https://raydalio.substack.com/archive']) {
-      const t = await get(u); note(`${u} bytes=${t.length} head=${clean(t).slice(0, 300)}`);
+  if (id === 'dalio-alt') {
+    const ft = createFetchText({ allowHosts: ['www.economicprinciples.org', 'economicprinciples.org', 'www.principles.com', 'principles.com', 'www.linkedin.com'] });
+    for (const u of ['https://www.economicprinciples.org/sitemap.xml', 'https://www.economicprinciples.org/', 'https://www.principles.com/sitemap.xml', 'https://www.linkedin.com/in/raydalio/recent-activity/articles/']) {
+      try { const t = await ft(u, { deadline: Date.now() + 15000 }); note(`${u} bytes=${t.length} locs=${(t.match(/<loc>[^<]+/g) || []).length} sample=${clean((t.match(/<loc>[^<]+/g) || []).slice(0, 8).join(' ') || t.replace(/<[^>]+>/g, ' ').slice(0, 300))}`); }
+      catch (e: any) { note(`${u} ERROR ${e?.message || e}`); }
     }
+    return;
   }
+  const p = DISCOVERY_PROVIDERS.find(x => x.id === id)!;
+  const ft = createFetchText({ allowHosts: discoveryAllowedHosts() });
+  const fb = createFetchBytes({ allowHosts: discoveryPdfHosts(), maxBytes: 20_000_000, timeoutMs: 25_000 });
+  const now = Date.now();
+  const html = await ft(p.index, { deadline: Date.now() + 20000 });
+  const r = parseDiscoveryIndex(p, html, p.index);
+  note(`[${id}] articles=${r.articles.length} indexes=${r.indexes.length}: ${r.articles.map(a => a.url.replace(/^https:\/\/[^/]+/, '') + (a.filedAt ? '@' + a.filedAt : '')).slice(0, 8).join(' | ')}`);
+  for (const c of r.articles.slice(0, 4)) {
+    try {
+      if (p.mode === 'pdf-list') {
+        const text = await pdfToText(await fb(c.url, { deadline: Date.now() + 25000 }), { maxPages: 60 });
+        const a = pershingLetterArticle(p, c, text, now);
+        const start = text.search(/To the Shareholders of Pershing|Dear (?:Fellow )?(?:Shareholders|Investors)/i);
+        const sg = /Sincerely,?\s*(?:\n\s*)?(William A\. Ackman|Bill Ackman)/i.exec(text);
+        note(`[${id}] ${c.title} len=${text.length} start=${start} sign=${sg?.index ?? -1} article=${!!a} ${a ? '' : 'near-start=' + clean(text.slice(Math.max(0, start), start + 200)) + ' near-sincerely=' + clean(text.slice(Math.max(0, text.search(/Sincerely/i) - 50), text.search(/Sincerely/i) + 120))}`);
+        if (a) { const rows = await extractDiscoveredQuotes(a); note(`[${id}] quotes=${rows.length} date=${a.publishedAt} e.g. ${clean(rows[0]?.quoteText || '')} || ${clean(rows[1]?.quoteText || '')}`); }
+      } else {
+        const ah = await ft(c.url, { deadline: Date.now() + 20000 });
+        const a = discoveredArticle(p, c.url, ah, now);
+        if (!a) { note(`[${id}] FAIL ${c.url}`); continue; }
+        const rows = await extractDiscoveredQuotes(a);
+        note(`[${id}] OK ${a.title} @${a.publishedAt?.slice(0, 10)} quotes=${rows.length} e.g. ${clean(rows[0]?.quoteText || '')}`);
+      }
+    } catch (e: any) { note(`[${id}] error ${c.url}: ${e?.message || e}`); }
+  }
+  if (r.indexes[0]) { const h2 = await ft(r.indexes[0], { deadline: Date.now() + 20000 }); const r2 = parseDiscoveryIndex(p, h2, r.indexes[0]); note(`[${id}] page2 ${r.indexes[0]} articles=${r2.articles.length}`); }
 })();

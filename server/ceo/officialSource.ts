@@ -113,7 +113,7 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
   // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
   { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
-  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://www.darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'www.darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
   { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
@@ -153,7 +153,7 @@ function parsePdfList(p: DiscoveryProvider, html: string, base: string): Discove
     const before = htmlToText(html.slice(Math.max(0, (m.index || 0) - 1500), m.index || 0));
     const title = htmlToText(m[2]).replace(/\s+/g, ' ').trim() || htmlToText(before.split('\n').slice(-2).join(' '));
     const context = (title + ' ' + before.split('\n').slice(-3).join(' '));
-    if (!LETTER_TITLE.test(context) || NOT_LETTER.test(title)) continue;
+    if (!LETTER_TITLE.test(context) || NOT_LETTER.test(title) || /Fact-?Sheet|Presentation|Slides/i.test(u)) continue;
     const dates = extractAbsoluteDates(before.split('\n').slice(-6).join('\n')).filter(d => d.precision === 'day');
     const filedAt = dates.length ? dates[dates.length - 1].value : undefined;
     const prev = out.get(u);
@@ -244,6 +244,9 @@ export function discoveryTopic(text: string): string {
 export function authoredDate(html: string): string | null {
   const t = /<time\b[^>]*datetime=["'](\d{4}-\d\d-\d\d)/i.exec(html);
   if (t && partialToInterval(t[1])) return `${t[1]}T00:00:00.000Z`;
+  // Posthaven(올트먼 블로그): 글 게시 시각이 data-unix-time(초)로만 있음 → 첫 번째 값(본문 글)
+  const u = /class=["'][^"']*posthaven-formatted-date[^"']*["'][^>]*data-unix-time=["'](\d{9,11})["']/i.exec(html);
+  if (u) { const d = new Date(Number(u[1]) * 1000); if (Number.isFinite(d.getTime())) return `${d.toISOString().slice(0, 10)}T00:00:00.000Z`; }
   const h = html.search(/<h1\b/i); if (h < 0) return null;
   const near = htmlToText(html.slice(h, h + 4000)).slice(0, 800);
   const ds = [...new Set(extractAbsoluteDates(near).filter(d => d.precision === 'day').map(d => d.value))];
@@ -254,12 +257,12 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   if (!discoveryArticleAllowed(p, url)) return null;
   // 이미지 전사 속 흰색 OCR 텍스트는 범용 추출에서 제외하고 기존 SEC 전용 검증기에만 맡깁니다.
   if (p.id === 'tesla-sec' && /font-size\s*:\s*1pt|color\s*:\s*(?:white|#fff(?:fff)?)\b/i.test(html) && /<img\b/i.test(html)) return null;
-  const title = htmlToText(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
+  const title = htmlToText((p.authored ? metaValue(html, ['og:title'])?.replace(/^(?:Dario Amodei|Sam Altman|Ray Dalio)\s*[—–-]\s*/, '') : '') || /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
   const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored ? authoredDate(html) : null));
   if (!title || !publishedAt || Date.parse(publishedAt) > now + 86400000) return null;
   const articleBlocks = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)].map(m => m[1]);
   const mainBlocks = [...html.matchAll(/<main\b[^>]*>([\s\S]*?)<\/main>/gi)].map(m => m[1]);
-  const main = [...articleBlocks, ...mainBlocks].find(block => /<h1\b/i.test(block) && htmlToText(block).includes(title)) || html;
+  const main = [...articleBlocks, ...mainBlocks].find(block => (p.authored || /<h1\b/i.test(block)) && htmlToText(block).includes(title)) || html;
   let body = htmlToText(main).slice(0, 90000);
   const at = body.indexOf(title); if (at >= 0) body = body.slice(at);
   const end = body.search(/\n(?:Related (?:posts|stories|articles)|Read (?:more|next)|Media Contacts|About NVIDIA|About Tesla|Tags|Share this (?:post|story))\b/i);

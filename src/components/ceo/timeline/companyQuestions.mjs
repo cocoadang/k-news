@@ -98,28 +98,40 @@ export function displayText(s) {
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }
 
+export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX' };
+
 /**
- * Questions for one person+company. Each statement may answer more than one question.
+ * Questions for one person across one or more companies (e.g. Musk: Tesla + SpaceX).
+ * Each statement is classified only by its own company's questions. With several companies,
+ * question ids are prefixed by company and labels show the company name.
+ * Each statement may answer more than one question.
  * Returns only questions with at least one statement, oldest-first items, plus excluded counts.
  */
-export function companyQuestions(statements, personId, companyId) {
-  const scoped = (statements || []).filter(s => s.personId === personId && s.companyId === companyId);
+export function companyQuestions(statements, personId, companyIds) {
+  const ids = Array.isArray(companyIds) ? companyIds : [companyIds];
+  const multi = ids.length > 1;
+  const scoped = (statements || []).filter(s => s.personId === personId && ids.includes(s.companyId));
   const claims = scoped.filter(isComparableClaim);
-  const defs = COMPANY_QUESTIONS[companyId] || GENERIC_QUESTIONS;
   const assigned = new Set();
-  const questions = defs.map(def => {
-    const items = claims.flatMap(s => {
-      const terms = [...new Set((String(s.quoteText).match(def.re) || []).map(t => t.trim()))];
-      if (!terms.length) return [];
-      assigned.add(s.statementId);
-      return [{ statement: s, matchedTerms: terms, date: effectiveDate(s), metrics: literalMetrics(s.quoteText) }];
-    }).sort((a, b) => (a.date.value || '9999').localeCompare(b.date.value || '9999'));
-    const dated = items.filter(x => x.date.value);
-    return {
-      id: def.id, label: def.label, hint: def.hint, items,
-      range: dated.length ? [dated[0].date.value, dated[dated.length - 1].date.value] : null,
-      comparable: new Set(dated.map(x => x.date.value)).size >= 2,
-    };
+  const questions = ids.flatMap(companyId => {
+    const defs = COMPANY_QUESTIONS[companyId] || GENERIC_QUESTIONS;
+    const own = claims.filter(s => s.companyId === companyId);
+    return defs.map(def => {
+      const items = own.flatMap(s => {
+        const terms = [...new Set((String(s.quoteText).match(def.re) || []).map(t => t.trim()))];
+        if (!terms.length) return [];
+        assigned.add(s.statementId);
+        return [{ statement: s, matchedTerms: terms, date: effectiveDate(s), metrics: literalMetrics(s.quoteText) }];
+      }).sort((a, b) => (a.date.value || '9999').localeCompare(b.date.value || '9999'));
+      const dated = items.filter(x => x.date.value);
+      return {
+        id: multi ? companyId + ':' + def.id : def.id,
+        label: multi ? (COMPANY_LABELS[companyId] || companyId) + ' · ' + def.label : def.label,
+        hint: def.hint, companyId, items,
+        range: dated.length ? [dated[0].date.value, dated[dated.length - 1].date.value] : null,
+        comparable: new Set(dated.map(x => x.date.value)).size >= 2,
+      };
+    });
   }).filter(q => q.items.length);
   const other = claims.filter(s => !assigned.has(s.statementId));
   return { questions, other, excludedCount: scoped.length - claims.length, total: scoped.length };

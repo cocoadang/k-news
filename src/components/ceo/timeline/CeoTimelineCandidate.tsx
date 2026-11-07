@@ -46,21 +46,25 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
 }
 
 export function CeoTimeline({ dataset }: { dataset: any }) {
+  // 인물 단위로 묶음(머스크: Tesla·SpaceX를 한 화면에). 질문은 회사별로 나뉘어 표시됨
   const scopes = useMemo(() => {
     const seen = new Map<string, any>();
     for (const r of dataset.roles || []) {
-      const key = r.personId + '|' + r.companyId;
-      if (seen.has(key)) continue;
       const person = (dataset.persons || []).find((p: any) => p.personId === r.personId);
-      const count = (dataset.statements || []).filter((s: any) => s.personId === r.personId && s.companyId === r.companyId).length;
-      seen.set(key, { key, personId: r.personId, companyId: r.companyId, name: person?.displayName || r.personId, company: r.companyName, count });
+      const cur = seen.get(r.personId) || { key: r.personId, personId: r.personId, companyIds: [] as string[], companies: [] as string[], name: person?.displayName || r.personId, count: 0 };
+      if (!cur.companyIds.includes(r.companyId)) { cur.companyIds.push(r.companyId); cur.companies.push(r.companyName); }
+      seen.set(r.personId, cur);
+    }
+    for (const s of seen.values()) {
+      s.company = [...new Set(s.companies)].join('·');
+      s.count = (dataset.statements || []).filter((x: any) => x.personId === s.personId && s.companyIds.includes(x.companyId)).length;
     }
     return [...seen.values()].sort((a, b) => b.count - a.count);
   }, [dataset]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
-  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyId) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope]);
+  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyIds) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 

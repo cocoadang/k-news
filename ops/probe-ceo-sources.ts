@@ -1,41 +1,29 @@
-// 임시 점검: 실제 사이트를 운영과 같은 요청기·파서로 열어 결과를 GitHub 주석(::notice)으로 출력
-import { createFetchText, createFetchBytes } from '../server/ceo/fetchText';
-import { DISCOVERY_PROVIDERS, discoveryAllowedHosts, discoveryPdfHosts, parseDiscoveryIndex, discoveredArticle, extractDiscoveredQuotes, pershingLetterArticle } from '../server/ceo/officialSource';
-import { pdfToText } from '../server/ceo/pdfText';
-
-const ids = (process.env.PROBE_IDS || 'altman-blog,amodei-essays,dalio-substack,pershing-letters').split(',');
-const ft = createFetchText({ allowHosts: discoveryAllowedHosts() });
-const fb = createFetchBytes({ allowHosts: discoveryPdfHosts(), maxBytes: 20_000_000, timeoutMs: 25_000 });
-const note = (m: string) => console.log(`::notice::${m.replace(/\n/g, ' ').slice(0, 900)}`);
-const clean = (s: string) => s.replace(/\s+/g, ' ').slice(0, 160);
-
+// 임시 점검 v2: 페이지 구조 확인 (단계별 ::notice 10개 제한 → PROBE 단계별 실행)
+import { createFetchText } from '../server/ceo/fetchText';
+const step = process.env.PROBE || '';
+const ft = createFetchText({ allowHosts: ['blog.samaltman.com', 'darioamodei.com', 'www.darioamodei.com', 'raydalio.substack.com', 'substack.com'] });
+const note = (m: string) => console.log(`::notice::${m.replace(/\n/g, ' ').slice(0, 1000)}`);
+const clean = (s: string) => s.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/\s+/g, ' ');
+const get = async (u: string) => { try { const t = await ft(u, { deadline: Date.now() + 20000 }); return t; } catch (e: any) { note(`${u} ERROR ${e?.message || e}`); return ''; } };
 (async () => {
-  const now = Date.now();
-  for (const id of ids) {
-    const p = DISCOVERY_PROVIDERS.find(x => x.id === id)!;
-    try {
-      const html = await ft(p.index, { deadline: Date.now() + 20000 });
-      const r = parseDiscoveryIndex(p, html, p.index);
-      note(`[${id}] index ${p.index} bytes=${html.length} articles=${r.articles.length} indexes=${r.indexes.length} first=${r.articles.slice(0, 4).map(a => a.url + (a.filedAt ? '@' + a.filedAt : '')).join(' | ')} nextIdx=${r.indexes.slice(0, 3).join(' | ')}`);
-      if (!r.articles.length) note(`[${id}] index sample: ${clean(html.slice(0, 900))}`);
-      for (const c of r.articles.slice(0, 3)) {
-        try {
-          if (p.mode === 'pdf-list') {
-            const text = await pdfToText(await fb(c.url, { deadline: Date.now() + 25000 }), { maxPages: 60 });
-            const a = pershingLetterArticle(p, c, text, now);
-            const start = text.search(/To the Shareholders|Dear (?:Fellow )?(?:Shareholders|Investors)/i);
-            note(`[${id}] pdf ${c.url} text=${text.length} start=${start} sign=${/Sincerely,?\s*(William A\. Ackman|Bill Ackman)/i.test(text)} article=${!!a} date=${a?.publishedAt}`);
-            if (a) { const rows = await extractDiscoveredQuotes(a); note(`[${id}] quotes=${rows.length} e.g. ${clean(rows[0]?.quoteText || '')}`); }
-            else note(`[${id}] pdf head: ${clean(text.slice(Math.max(0, start), Math.max(0, start) + 300))}`);
-          } else {
-            const ah = await ft(c.url, { deadline: Date.now() + 20000 });
-            const a = discoveredArticle(p, c.url, ah, now);
-            note(`[${id}] article ${c.url} bytes=${ah.length} parsed=${!!a} title=${clean(a?.title || '')} date=${a?.publishedAt} h1=${/<h1\b/i.test(ah)} time=${(/<time\b[^>]*>/i.exec(ah)?.[0] || '').slice(0, 80)} meta=${/article:published_time|datePublished/i.test(ah)}`);
-            if (a) { const rows = await extractDiscoveredQuotes(a); note(`[${id}] quotes=${rows.length} e.g. ${clean(rows[0]?.quoteText || '')}`); }
-            else note(`[${id}] article head: ${clean(ah.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').slice(0, 1500))}`);
-          }
-        } catch (e: any) { note(`[${id}] article error ${c.url}: ${e?.message || e}`); }
-      }
-    } catch (e: any) { note(`[${id}] index error: ${e?.message || e}`); }
+  if (step === 'altman') {
+    const h = await get('https://blog.samaltman.com/abundant-intelligence');
+    note(`h1/h2: ${[...h.matchAll(/<(h[12])\b([^>]*)>([\s\S]*?)<\/h[12]>/gi)].map(m => m[1] + m[2].slice(0, 40) + '=' + clean(m[3]).slice(0, 60)).join(' || ')}`);
+    note(`date-ish classes: ${[...h.matchAll(/<[^>]*class=["'][^"']*(?:date|time|posted)[^"']*["'][^>]*>[\s\S]{0,160}/gi)].map(m => clean(m[0]).slice(0, 160)).slice(0, 4).join(' || ')}`);
+    note(`months: ${(clean(h).match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2},? \d{4}\b/g) || []).slice(0, 6).join(' | ')} article=${(h.match(/<article\b/gi) || []).length} meta=${(h.match(/<meta[^>]+(?:published|date)[^>]*>/gi) || []).slice(0, 3).join(' ')}`);
+    const i = clean(h).indexOf('Abundant'); note(`around title: ${clean(h).slice(Math.max(0, i - 200), i + 700)}`);
+  }
+  if (step === 'amodei') {
+    const s = await get('https://darioamodei.com/sitemap.xml');
+    note(`sitemap bytes=${s.length} locs=${(s.match(/<loc>[^<]+/g) || []).slice(0, 12).join(' ')}`);
+    const e = await get('https://darioamodei.com/essay/machines-of-loving-grace');
+    note(`essay bytes=${e.length} h1=${(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(e)?.[1] || '').replace(/<[^>]+>/g, '').slice(0, 80)} meta=${(e.match(/<meta[^>]+(?:published|date)[^>]*>/gi) || []).slice(0, 3).join(' ')} ldjson=${/application\/ld\+json/.test(e)}`);
+    note(`months: ${(clean(e).match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2},? \d{4}\b/g) || []).slice(0, 6).join(' | ')} time=${(/<time\b[^>]*>/i.exec(e)?.[0] || '')}`);
+    const t = clean(e); const i = t.indexOf('Machines of Loving Grace'); note(`around: ${t.slice(Math.max(0, i - 200), i + 600)}`);
+  }
+  if (step === 'dalio') {
+    for (const u of ['https://raydalio.substack.com/feed', 'https://raydalio.substack.com/api/v1/archive?sort=new&offset=0&limit=12', 'https://raydalio.substack.com/sitemap.xml', 'https://raydalio.substack.com/archive']) {
+      const t = await get(u); note(`${u} bytes=${t.length} head=${clean(t).slice(0, 300)}`);
+    }
   }
 })();

@@ -92,12 +92,16 @@ export const DISCOVERY_VERSION = '1';
 export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pendingPerStream: 180, checkedPerStream: 2000, quotesPerArticle: 6, seconds: 45 };
 /** 수집 범위: 최근 6년 (사용자 요청 2026-11-07, 이전: 3년/비교 부족 시 5년) */
 export const DISCOVERY_YEARS = 6;
+/** 본인 블로그·에세이·주주서한 수집 범위 */
+export const AUTHORED_YEARS = 10;
 
 export interface DiscoveryProvider { id: string; companyId: string; personId: string; name: string; index: string; mode: 'sitemap' | 'feed' | 'archive' | 'pdf-list'; host: string; articlePath: RegExp;
   /** pdf-list: 자료실 목록(index)의 PDF가 올라가는 호스트 */
   assetHost?: string;
   /** 본인 공식 채널(사이트 전체가 본인 글): 작성자 = 이 인물. 문단을 본인 작성 발언으로 씀 */
-  authored?: boolean }
+  authored?: boolean;
+  /** 수집 범위(년). 없으면 DISCOVERY_YEARS(6). 본인 블로그·에세이·서한은 10년(사용자 요청 2026-11-08) */
+  years?: number }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'google', companyId: 'googl', personId: 'sundar-pichai', name: 'Google 공식 블로그', index: 'https://blog.google/en-us/sitemap.xml', mode: 'sitemap', host: 'blog.google', articlePath: /\/(?:company-news|inside-google|technology|products)\// },
   { id: 'microsoft', companyId: 'msft', personId: 'satya-nadella', name: 'Microsoft 공식 블로그', index: 'https://blogs.microsoft.com/sitemap_index.xml', mode: 'sitemap', host: 'blogs.microsoft.com', articlePath: /\/blog\/\d{4}\/\d{2}\/\d{2}\// },
@@ -106,11 +110,10 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
   { id: 'tesla-sec', companyId: 'tsla', personId: 'elon-musk', name: 'Tesla 공식 공시 목록', index: 'https://ir.tesla.com/sec-filings', mode: 'archive', host: 'ir.tesla.com', articlePath: /^\/Archives\/edgar\/data\/1318605\// },
   { id: 'spacex-nasa', companyId: 'spacex', personId: 'elon-musk', name: 'NASA 공식 SpaceX 발표', index: 'https://www.nasa.gov/feed/', mode: 'feed', host: 'www.nasa.gov', articlePath: /^\/(?:news-release|missions)\// },
   // 애크먼: Pershing Square Holdings 공식 자료실의 주주서한(연차보고서 서한·반기 운용사 보고서). 서명(William A. Ackman) 확인된 서한 본문만
-  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/materials/', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true },
+  { id: 'pershing-letters', companyId: 'pershing', personId: 'bill-ackman', name: 'Pershing Square 주주서한', index: 'https://pershingsquareholdings.com/wp-json/wp/v2/media?search=Pershing%20Square%20Holdings&mime_type=application%2Fpdf&per_page=100&orderby=date&order=desc', mode: 'pdf-list', host: 'pershingsquareholdings.com', assetHost: 'assets.pershingsquareholdings.com', articlePath: /^\/wp-content\/uploads\/[\w/.-]+\.pdf$/i, authored: true, years: AUTHORED_YEARS },
   // 올트먼 개인 블로그(Posthaven, ?page=N 목록), 아모데이 개인 에세이 사이트(sitemap). 본인 글만
-  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true },
-  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://www.darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'www.darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true },
-  { id: 'dalio-substack', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true },
+  { id: 'altman-blog', companyId: 'openai', personId: 'sam-altman', name: '샘 올트먼 개인 블로그', index: 'https://blog.samaltman.com/', mode: 'archive', host: 'blog.samaltman.com', articlePath: /^\/[a-z0-9][a-z0-9-]{2,}$/, authored: true, years: AUTHORED_YEARS },
+  { id: 'amodei-essays', companyId: 'anthropic', personId: 'dario-amodei', name: '다리오 아모데이 개인 에세이', index: 'https://darioamodei.com/sitemap.xml', mode: 'sitemap', host: 'darioamodei.com', articlePath: /^\/(?:essay|post|essays|posts)\/[a-z0-9-]+$/, authored: true, years: AUTHORED_YEARS },
 ];
 export const discoveryAllowedHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.mode === 'pdf-list' ? [p.host] : [p.host]))];
 export const discoveryPdfHosts = () => [...new Set(DISCOVERY_PROVIDERS.flatMap(p => p.assetHost ? [p.assetHost] : []))];
@@ -138,18 +141,47 @@ function indexAllowed(p: DiscoveryProvider, value: string): boolean {
 }
 
 /** 주주서한으로 볼 자료 제목 (팩트시트·공지·발표 슬라이드 제외) */
-export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report)\b/i;
+export const LETTER_TITLE = /\b(?:Letter to Shareholders|Investment Manager['’]s Report|Annual Report|Interim(?: Report)?)\b/i;
 const NOT_LETTER = /\b(?:Fact Sheet|Articles of|Notice|Slides|Presentation|Portfolio Review|Proxy|Circular|Prospectus)\b/i;
+
+/** 공식 자료실(materials) 목록의 실제 게시일. 2025-02 사이트 이전 때 옛 파일 업로드일이 바뀌어서, 업로드일이 보고 기간과 맞지 않으면 이 표를 씀 */
+const PERSHING_LISTED: Record<string, string> = {
+  'annual 2021': '2022-03-29', 'interim 2022': '2022-08-19', 'annual 2022': '2023-03-29', 'interim 2023': '2023-08-18',
+  'annual 2023': '2024-03-22', 'interim 2024': '2024-08-15', 'annual 2024': '2025-03-14', 'interim 2025': '2025-08-20', 'annual 2025': '2026-02-18', 'interim 2026': '2026-08-12',
+};
+/** 보고서 제목의 기간으로 게시일 확인: 연차(Y) → Y+1년 1~6월, 반기(June Y) → Y년 7~10월 업로드일만 인정, 아니면 공식 목록 표, 그래도 없으면 버림 */
+export function pershingLetterDate(title: string, uploaded?: string): string | null {
+  const a = /\b(20\d\d)\b[^]*?Annual Report|Annual Report[^]*?\b(20\d\d)\b/i.exec(title); const i = /June (20\d\d)[^]*?Interim|Interim[^]*?June (20\d\d)/i.exec(title);
+  const key = i ? `interim ${i[1] || i[2]}` : a ? `annual ${a[1] || a[2]}` : null; if (!key) return null;
+  const y = Number(key.slice(-4));
+  const ok = uploaded && (i ? uploaded >= `${y}-07-01` && uploaded <= `${y}-10-31` : uploaded >= `${y + 1}-01-01` && uploaded <= `${y + 1}-06-30`);
+  return ok ? uploaded! : PERSHING_LISTED[key] || null;
+}
 
 /** 자료실 목록: PDF 링크마다 링크 글자(제목)와 바로 앞 날짜를 읽음 */
 function parsePdfList(p: DiscoveryProvider, html: string, base: string): DiscoveryCandidate[] {
   const out = new Map<string, DiscoveryCandidate>();
+  // 공식 사이트 미디어 목록(WordPress REST JSON): 파일 제목·업로드일. 같은 보고서의 재업로드(-1 등)는 최신 1개만
+  if (/^\s*\[/.test(html)) {
+    let items: any[] = []; try { items = JSON.parse(html); } catch { return []; }
+    const byName = new Map<string, DiscoveryCandidate>();
+    for (const it of Array.isArray(items) ? items : []) {
+      const u = normalizedUrl(String(it?.source_url || ''), base); if (!u || !discoveryArticleAllowed(p, u)) continue;
+      const title = htmlToText(String(it?.title?.rendered || '')).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!LETTER_TITLE.test(title) || NOT_LETTER.test(title) || /Fact-?Sheet|Presentation|Slides/i.test(u)) continue;
+      const day = pershingLetterDate(title, /^\d{4}-\d\d-\d\d/.exec(String(it?.date || ''))?.[0]); if (!day) continue;
+      const key = title.replace(/\s+\d+$/, '').toLowerCase();
+      const prev = byName.get(key);
+      if (!prev || day > (prev.filedAt || '')) byName.set(key, { url: u, title, filedAt: day, modified: day });
+    }
+    return [...byName.values()];
+  }
   for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+\.pdf(?:#[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     const u = normalizedUrl(m[1], base); if (!u || !discoveryArticleAllowed(p, u)) continue;
     const before = htmlToText(html.slice(Math.max(0, (m.index || 0) - 1500), m.index || 0));
     const title = htmlToText(m[2]).replace(/\s+/g, ' ').trim() || htmlToText(before.split('\n').slice(-2).join(' '));
     const context = (title + ' ' + before.split('\n').slice(-3).join(' '));
-    if (!LETTER_TITLE.test(context) || NOT_LETTER.test(title)) continue;
+    if (!LETTER_TITLE.test(context) || NOT_LETTER.test(title) || /Fact-?Sheet|Presentation|Slides/i.test(u)) continue;
     const dates = extractAbsoluteDates(before.split('\n').slice(-6).join('\n')).filter(d => d.precision === 'day');
     const filedAt = dates.length ? dates[dates.length - 1].value : undefined;
     const prev = out.get(u);
@@ -240,6 +272,9 @@ export function discoveryTopic(text: string): string {
 export function authoredDate(html: string): string | null {
   const t = /<time\b[^>]*datetime=["'](\d{4}-\d\d-\d\d)/i.exec(html);
   if (t && partialToInterval(t[1])) return `${t[1]}T00:00:00.000Z`;
+  // Posthaven(올트먼 블로그): 글 게시 시각이 data-unix-time(초)로만 있음 → 첫 번째 값(본문 글)
+  const u = /class=["'][^"']*posthaven-formatted-date[^"']*["'][^>]*data-unix-time=["'](\d{9,11})["']/i.exec(html);
+  if (u) { const d = new Date(Number(u[1]) * 1000); if (Number.isFinite(d.getTime())) return `${d.toISOString().slice(0, 10)}T00:00:00.000Z`; }
   const h = html.search(/<h1\b/i); if (h < 0) return null;
   const near = htmlToText(html.slice(h, h + 4000)).slice(0, 800);
   const ds = [...new Set(extractAbsoluteDates(near).filter(d => d.precision === 'day').map(d => d.value))];
@@ -250,12 +285,12 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   if (!discoveryArticleAllowed(p, url)) return null;
   // 이미지 전사 속 흰색 OCR 텍스트는 범용 추출에서 제외하고 기존 SEC 전용 검증기에만 맡깁니다.
   if (p.id === 'tesla-sec' && /font-size\s*:\s*1pt|color\s*:\s*(?:white|#fff(?:fff)?)\b/i.test(html) && /<img\b/i.test(html)) return null;
-  const title = htmlToText(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
+  const title = htmlToText((p.authored ? metaValue(html, ['og:title'])?.replace(/^(?:Dario Amodei|Sam Altman|Ray Dalio)\s*[—–-]\s*/, '') : '') || /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
   const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored ? authoredDate(html) : null));
   if (!title || !publishedAt || Date.parse(publishedAt) > now + 86400000) return null;
   const articleBlocks = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)].map(m => m[1]);
   const mainBlocks = [...html.matchAll(/<main\b[^>]*>([\s\S]*?)<\/main>/gi)].map(m => m[1]);
-  const main = [...articleBlocks, ...mainBlocks].find(block => /<h1\b/i.test(block) && htmlToText(block).includes(title)) || html;
+  const main = [...articleBlocks, ...mainBlocks].find(block => (p.authored || /<h1\b/i.test(block)) && htmlToText(block).includes(title)) || html;
   let body = htmlToText(main).slice(0, 90000);
   const at = body.indexOf(title); if (at >= 0) body = body.slice(at);
   const end = body.search(/\n(?:Related (?:posts|stories|articles)|Read (?:more|next)|Media Contacts|About NVIDIA|About Tesla|Tags|Share this (?:post|story))\b/i);
@@ -327,7 +362,7 @@ export async function loadDiscoveredArticles(o: {
   parseFeed: OfficialSourceDeps['parseFeed']; now: () => number; deadline: number;
   previous?: DiscoveryState; existing: CeoStatement[]; knownUrls?: Set<string>; providers?: DiscoveryProvider[];
 }): Promise<{ articles: SourceArticle[]; reports: FeedReport[]; state: DiscoveryState; removed: string[] }> {
-  const now = o.now(); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - DISCOVERY_YEARS); const three = five; // 6년 범위 안이면 모두 대상(이전 3년/5년 구분 없음)
+  const now = o.now(); const five = new Date(now); five.setUTCHours(0, 0, 0, 0); five.setUTCFullYear(five.getUTCFullYear() - DISCOVERY_YEARS); // 출처별 범위(p.years)는 아래 반복문에서
   const deadline = Math.min(o.deadline - 12000, now + DISCOVERY_LIMITS.seconds * 1000);
   const state: DiscoveryState = o.previous?.version === 1 && o.previous.streams && typeof o.previous.streams === 'object' ? JSON.parse(JSON.stringify(o.previous)) : { version: 1, streams: {} };
   const articles: SourceArticle[] = [], reports: FeedReport[] = [], removed: string[] = [];
@@ -347,7 +382,9 @@ export async function loadDiscoveredArticles(o: {
     stream.indexChecked = stream.indexChecked && typeof stream.indexChecked === 'object' ? Object.fromEntries(Object.entries(stream.indexChecked).filter(([, v]) => Number.isFinite(v))) : {};
     if (!Number.isFinite(stream.updatedAt)) stream.updatedAt = 0;
     stream.pending = stream.pending.filter(x => x && discoveryArticleAllowed(p, x.url)); stream.indexes = stream.indexes.filter(u => indexAllowed(p, u));
-    const report: FeedReport = { feedName: `${p.name} · 최근 ${DISCOVERY_YEARS}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
+    const years = p.years ?? DISCOVERY_YEARS;
+    const cutoff = new Date(now); cutoff.setUTCHours(0, 0, 0, 0); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - years);
+    const report: FeedReport = { feedName: `${p.name} · 최근 ${years}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
     const request = (url: string) => o.fetchText(url, { deadline: Math.min(deadline, o.now() + 6000) });
     const indexes = stream.updatedAt < now - 20 * 3600000 ? [p.index, ...stream.indexes] : [...stream.indexes];
     let indexFailed = false;
@@ -360,7 +397,7 @@ export async function loadDiscoveredArticles(o: {
           const feed = await o.parseFeed(html);
           parsed.articles = feed.filter(it => /SpaceX|Elon Musk/i.test(it.title)).filter(it => discoveryArticleAllowed(p, it.link)).map(it => ({ url: it.link, title: it.title, modified: it.pubDate || undefined }));
           const dates = feed.map(it => Date.parse(it.pubDate || '')).filter(Number.isFinite);
-          if (feed.length && dates.length && Math.min(...dates) >= five.getTime()) {
+          if (feed.length && dates.length && Math.min(...dates) >= cutoff.getTime()) {
             const next = new URL(url); next.searchParams.set('paged', String(Number(next.searchParams.get('paged') || 1) + 1));
             parsed.indexes.push(next.href);
           }
@@ -388,7 +425,7 @@ export async function loadDiscoveredArticles(o: {
           if (!o.fetchPdfText) throw new Error('PDF 요청기 없음');
           const text = await o.fetchPdfText(c.url, Math.min(deadline, o.now() + 25000));
           const a = pershingLetterArticle(p, c, text, now);
-          if (!a || Date.parse(a.publishedAt!) < five.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
+          if (!a || Date.parse(a.publishedAt!) < cutoff.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
           const rows = await extractDiscoveredQuotes(a);
           if (rows.length) { a.discoveryTopics = [...new Set(rows.map(r => r.topicId))]; articles.push(a); report.withBody++; }
           stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true };
@@ -399,9 +436,9 @@ export async function loadDiscoveredArticles(o: {
         else html = await request(c.url);
         const a = discoveredArticle(p, c.url, html, now, c.filedAt);
         if (!a) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
-        const date = Date.parse(a.publishedAt!); if (date < five.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
+        const date = Date.parse(a.publishedAt!); if (date < cutoff.getTime()) { stream.checked[c.url] = { at: now, modified: c.modified || '', ok: true }; continue; }
         const rows = await extractDiscoveredQuotes(a);
-        const eligibleTopics = new Set(rows.filter(r => date >= three.getTime() || (coverage.get(p.companyId + '|' + r.topicId)?.size || 0) < 2).map(r => r.topicId));
+        const eligibleTopics = new Set(rows.filter(r => date >= cutoff.getTime() || (coverage.get(p.companyId + '|' + r.topicId)?.size || 0) < 2).map(r => r.topicId));
         const wanted = rows.filter(r => eligibleTopics.has(r.topicId));
         if (wanted.length) {
           // 재추출 시에도 5년 확장 조건을 유지하도록 채택한 주제를 필터로 전달합니다.

@@ -34,6 +34,26 @@ test('lines with a wider gap become separate paragraphs', () => {
   assert.deepEqual(itemsToParagraphs([it('First line of one', 700), it('paragraph continues.', 688), it('Second para- graph here.', 660)]), ['First line of one paragraph continues.', 'Second paragraph here.']);
 });
 
+test('media JSON list: annual/interim letters kept, newest re-upload wins, fact sheets dropped', () => {
+  const j = JSON.stringify([
+    { date: '2024-03-10T10:00:00', source_url: 'https://assets.pershingsquareholdings.com/wp-content/uploads/2024/03/10/Pershing-Square-Holdings-Ltd.-2023-Annual-Report-1.pdf', title: { rendered: 'Pershing-Square-Holdings-Ltd.-2023-Annual-Report-1' } },
+    { date: '2024-03-01T10:00:00', source_url: 'https://assets.pershingsquareholdings.com/wp-content/uploads/2024/03/01/Pershing-Square-Holdings-Ltd.-2023-Annual-Report.pdf', title: { rendered: 'Pershing-Square-Holdings-Ltd.-2023-Annual-Report' } },
+    { date: '2026-08-12T10:00:00', source_url: 'https://assets.pershingsquareholdings.com/wp-content/uploads/2026/08/13002306/Pershing-Square-Holdings-Ltd.-June-2026-Interim.pdf', title: { rendered: 'Pershing-Square-Holdings-Ltd.-June-2026-Interim' } },
+    { date: '2026-07-23T10:00:00', source_url: 'https://assets.pershingsquareholdings.com/wp-content/uploads/2026/07/23144307/PSH-Fact-Sheet-June-2026-Website.pdf', title: { rendered: 'PSH-Fact-Sheet-June-2026-Website' } },
+  ]);
+  const r = parseDiscoveryIndex(p, j, p.index).articles;
+  assert.deepEqual(r.map(x => x.filedAt).sort(), ['2024-03-10', '2026-08-12'], 'in-period upload kept, newest re-upload wins');
+  assert.ok(r.some(x => /Annual-Report-1\.pdf$/.test(x.url)));
+});
+
+test('letter dates: in-period upload kept, migration upload replaced by listed date, unknown → null', async () => {
+  const { pershingLetterDate } = await import('./officialSource');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. June 2025 Interim', '2025-08-20'), '2025-08-20');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. 2022 Annual Report', '2025-02-20'), '2023-03-29');
+  assert.equal(pershingLetterDate('Pershing Square Holdings, Ltd. – 2027 (Annual Report)', '2028-02-20'), '2028-02-20');
+  assert.equal(pershingLetterDate('Pershing Square Holdings Ltd. 2018 Annual Report', '2025-02-20'), null);
+});
+
 test('materials list: letters and reports kept with their listed date, fact sheets dropped', () => {
   const html = `<div class="item"><span>Feb 18, 2026</span><a href="${A}#page=9">Letter to Shareholders in the 2025 Annual Report</a></div>
   <div class="item"><span>Feb 18, 2026</span><a href="${A}">2025 Annual Report</a></div>

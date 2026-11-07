@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DISCOVERY_PROVIDERS, DISCOVERY_YEARS, discoveredArticle, extractDiscoveredQuotes, parseDiscoveryIndex } from './officialSource';
+import { DISCOVERY_PROVIDERS, DISCOVERY_YEARS, DiscoveryProvider, discoveredArticle, extractDiscoveredQuotes, parseDiscoveryIndex } from './officialSource';
 import { availableNano, emptyKoState, KO_HARD_LIMIT_NANO } from './koLedger';
 import { koPriority } from './koPriority';
 import { CEO_PERSONS, CEO_ROLES } from './registry';
 
-const dalio = DISCOVERY_PROVIDERS.find(p => p.id === 'dalio-substack')!;
+// 본인 채널 형태 시험용(Substack은 클라우드 IP에 403이라 운영 출처에서는 뺌 — 달리오는 X로 수집)
+const dalio: DiscoveryProvider = { id: 'test-authored', companyId: 'bridgewater', personId: 'ray-dalio', name: '레이 달리오 공식 Substack', index: 'https://raydalio.substack.com/sitemap.xml', mode: 'sitemap', host: 'raydalio.substack.com', articlePath: /^\/p\/[a-z0-9-]+$/, authored: true };
 const NOW = Date.parse('2026-11-07T00:00:00Z');
 
 const para = (t: string) => `<p>${t}</p>`;
@@ -23,7 +24,7 @@ test('six-year window and new investors registered', () => {
     assert.ok(CEO_PERSONS.some(p => p.personId === id));
     assert.ok(CEO_ROLES.some(r => r.personId === id));
   }
-  assert.ok(dalio && dalio.authored && dalio.personId === 'ray-dalio' && dalio.companyId === 'bridgewater');
+  assert.ok(DISCOVERY_PROVIDERS.filter(p => p.authored).every(p => p.years === 10), 'authored sources 10 years');
 });
 
 test('substack sitemap: posts and yearly sub-sitemaps accepted, other paths ignored', () => {

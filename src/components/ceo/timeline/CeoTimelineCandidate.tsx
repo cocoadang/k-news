@@ -26,6 +26,14 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
       <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
     </>;
   }
+  if (s.kind === 'social_post') {
+    const ko = t.kind === 'ai_translation';
+    return <>
+      <p className="tl-text">{ko ? t.text : <span lang="en">{t.text}</span>}</p>
+      <span className="tl-tag">본인 X 게시물{ko ? ' · AI 번역' : ' · 원문'}</span>
+      {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
+    </>;
+  }
   if (s.kind === 'reported_excerpt') {
     return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">기사 요약 속 인용 · 공식 원문 아님{s.context ? ` · 기사: ${s.context}` : ''}</span></>;
   }

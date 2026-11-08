@@ -135,12 +135,16 @@ export function createCeoRouter(deps: {
   router.get('/api/ceo/dataset', async (_req: express.Request, res: express.Response) => {
     res.setHeader('Cache-Control', 'no-store');
     try {
-      const age = dsCache ? Date.now() - dsCache.at : Infinity;
+      const t0 = Date.now();
+      const age = dsCache ? t0 - dsCache.at : Infinity;
       if (ttl > 0 && dsCache && age < ttl) {
         if (age > ttl / 2) rebuild().catch(() => null);
+        res.setHeader('Server-Timing', `ceo;desc="hit";dur=${Date.now() - t0}`);
         return res.json(dsCache.body);
       }
-      res.json(await rebuild());
+      const body = await rebuild();
+      res.setHeader('Server-Timing', `ceo;desc="miss";dur=${Date.now() - t0}`);
+      res.json(body);
     } catch (e: any) {
       res.status(500).json({ status: 'error', refreshedAt: null, dataset: null, sources: [], error: String(e?.message || e).slice(0, 160) });
     }

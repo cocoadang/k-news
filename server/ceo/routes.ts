@@ -142,7 +142,8 @@ export function createCeoRouter(deps: {
   if (ttl > 0) setTimeout(() => { rebuild().catch(() => null); }, 8000).unref?.();
 
   router.get('/api/ceo/dataset', async (_req: express.Request, res: express.Response) => {
-    res.setHeader('Cache-Control', 'no-store');
+    // 공개 자료(로그인 무관): 가까운 CDN(Firebase Hosting)에 60초 보관, 이후 5분은 묵은 본을 주면서 새로 받음 → 한국에서 즉시 열림
+    res.setHeader('Cache-Control', ttl > 0 ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' : 'no-store');
     try {
       const t0 = Date.now();
       const age = dsCache ? t0 - dsCache.at : Infinity;
@@ -162,6 +163,7 @@ export function createCeoRouter(deps: {
       res.setHeader('Server-Timing', `ceo;desc="miss";dur=${Date.now() - t0}`);
       res.json(body);
     } catch (e: any) {
+      res.setHeader('Cache-Control', 'no-store');
       res.status(500).json({ status: 'error', refreshedAt: null, dataset: null, sources: [], error: String(e?.message || e).slice(0, 160) });
     }
   });

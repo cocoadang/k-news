@@ -14,7 +14,8 @@ export function itemsToParagraphs(items: Item[]): string[] {
   const rows: { y: number; h: number; parts: { x: number; s: string }[] }[] = [];
   for (const it of items) {
     if (!it.str) continue;
-    const row = rows.find(r => Math.abs(r.y - it.y) <= Math.max(1.5, it.h * 0.3));
+    // 위첨자(7th의 th, 각주 번호)는 글자 높이의 절반 이내로 떠 있음 → 같은 줄로 합침
+    const row = rows.find(r => Math.abs(r.y - it.y) <= Math.max(1.5, Math.max(r.h, it.h) * 0.5));
     if (row) row.parts.push({ x: it.x, s: it.str }); else rows.push({ y: it.y, h: it.h || 10, parts: [{ x: it.x, s: it.str }] });
   }
   rows.sort((a, b) => b.y - a.y); // PDF 좌표는 아래에서 위로
@@ -30,7 +31,7 @@ export function itemsToParagraphs(items: Item[]): string[] {
   });
   if (cur.length) paras.push(cur.join(' '));
   // 줄 끝 하이픈으로 나뉜 단어 잇기
-  return paras.map(p => p.replace(/(\w)- (\w)/g, '$1$2').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return paras.map(p => p.replace(/(\w)- (\w)/g, '$1$2').replace(/\s+/g, ' ').trim().replace(/^(?:st|nd|rd|th)\s+(?=[A-Z])/, '')).filter(Boolean);
 }
 
 export async function pdfToText(bytes: Uint8Array, opts: PdfTextOptions = {}): Promise<string> {

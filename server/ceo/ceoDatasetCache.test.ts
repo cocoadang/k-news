@@ -17,6 +17,8 @@ test('public CEO dataset is cached (one assembly for repeated views) and invalid
     const a = await (await fetch(base + '/api/ceo/dataset')).json();
     const b = await (await fetch(base + '/api/ceo/dataset')).json();
     assert.deepEqual(a, b);
+    const raw = await fetch(base + '/api/ceo/dataset', { headers: { 'Accept-Encoding': 'identity' } });
+    assert.deepEqual(await raw.json(), a, 'uncompressed cached copy');
     assert.equal(a.dataset.statements.length, 2);
     assert.equal(snaps, 1, 'second view served from cache');
     assert.equal(koReads, 1, 'translations read once per assembly');

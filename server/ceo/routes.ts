@@ -5,6 +5,8 @@
  *   실패 코드: 409 진행 중·펜싱 거절, 429 최소 간격, 413 저장 크기 초과, 502 모든 출처 실패, 503 저장소 없음·불가·권한, 504 기한·저장 시간 초과
  * db 싱글턴을 불러오지 않습니다. 운영에서는 server.ts가 이벤트 목록 함수와 관리자 인증 미들웨어를 주입합니다.
  */
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from 'zlib';
+import { pickEncoding } from '../httpDelivery';
 import { headlineKey } from './koHeadlines';
 import express from 'express';
 import Parser from 'rss-parser';
@@ -125,11 +127,18 @@ export function createCeoRouter(deps: {
     return { ...snap, dataset: { ...snap.dataset, statements: [...snap.dataset.statements, ...extra] } };
   };
   // 응답 캐시: 2분 동안 같은 묶음을 바로 보내고, 1분이 지나면 뒤에서 새로 만듦(첫 화면 대기 ~2초 → 즉시)
-  let dsCache: { at: number; body: any } | null = null;
+  let dsCache: { at: number; body: any; json?: Buffer; br?: Buffer; gz?: Buffer } | null = null;
   let building: Promise<any> | null = null;
-  const rebuild = () => (building ||= assemble().then(body => { if (body?.dataset) dsCache = { at: Date.now(), body }; return body; }).finally(() => { building = null; }));
-  const invalidate = () => { dsCache = null; };
   const ttl = deps.datasetCacheMs ?? (process.env.NODE_ENV === 'production' ? 120_000 : 0);
+  // 캐시할 때 JSON 문자열과 압축본(br·gzip)을 미리 만들어 둠 → 요청마다 1MB 넘는 직렬화·압축을 반복하지 않음
+  const rebuild = () => (building ||= assemble().then(body => {
+    if (body?.dataset && ttl > 0) {
+      const json = Buffer.from(JSON.stringify(body));
+      dsCache = { at: Date.now(), body, json, br: brotliCompressSync(json, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 6, [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT } }), gz: gzipSync(json, { level: 6 }) };
+    }
+    return body;
+  }).finally(() => { building = null; }));
+  const invalidate = () => { dsCache = null; };
   if (ttl > 0) setTimeout(() => { rebuild().catch(() => null); }, 8000).unref?.();
 
   router.get('/api/ceo/dataset', async (_req: express.Request, res: express.Response) => {
@@ -140,7 +149,14 @@ export function createCeoRouter(deps: {
       if (ttl > 0 && dsCache && age < ttl) {
         if (age > ttl / 2) rebuild().catch(() => null);
         res.setHeader('Server-Timing', `ceo;desc="hit";dur=${Date.now() - t0}`);
-        return res.json(dsCache.body);
+        const enc = pickEncoding(_req.headers['accept-encoding'] as string | undefined);
+        const buf = enc === 'br' ? dsCache.br : enc === 'gzip' ? dsCache.gz : dsCache.json;
+        if (!buf) return res.json(dsCache.body);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        if (enc && buf !== dsCache.json) res.setHeader('Content-Encoding', enc);
+        res.vary('Accept-Encoding');
+        res.setHeader('Content-Length', String(buf.length));
+        return res.end(buf);
       }
       const body = await rebuild();
       res.setHeader('Server-Timing', `ceo;desc="miss";dur=${Date.now() - t0}`);

@@ -29,6 +29,11 @@ function makePdf(lines: string[]): Uint8Array {
   return new Uint8Array(Buffer.from(out, 'latin1'));
 }
 
+test('superscript ordinal stays on its line', () => {
+  const it = (s: string, x: number, y: number, h = 10) => ({ str: s, x, y, h, eol: false });
+  assert.deepEqual(itemsToParagraphs([it('On February 7', 60, 700), it('th', 120, 704, 6), it(', we announced a fund.', 130, 700)]), ['On February 7th, we announced a fund.']);
+});
+
 test('lines with a wider gap become separate paragraphs', () => {
   const it = (s: string, y: number) => ({ str: s, x: 60, y, h: 10, eol: true });
   assert.deepEqual(itemsToParagraphs([it('First line of one', 700), it('paragraph continues.', 688), it('Second para- graph here.', 660)]), ['First line of one paragraph continues.', 'Second paragraph here.']);

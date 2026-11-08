@@ -113,7 +113,7 @@ export function xPostStatements(s: XState | null | undefined): any[] {
     personId: p.personId, companyId: p.companyId, roleTitleAtTime: '', roleStatusAtTime: 'current', topicId: '기타',
     kind: 'social_post', quoteText: p.text, quoteLanguage: 'en', summaryKo: '', sourceType: 'social_post',
     referenceDate: { value: kstDay(p.createdAt), basis: 'written', precision: 'day' },
-    evidence: [{ articleId: 'x_' + p.id, url: `https://x.com/${p.username}/status/${p.id}`, sourceName: `X @${p.username}`, articlePublishedAt: new Date(p.createdAt).toISOString(), excerpt: p.text }],
+    evidence: [{ articleId: 'x_' + p.id, url: `https://x.com/${p.username}/status/${p.id}`, sourceName: `X @${p.username}`, articlePublishedAt: new Date(p.createdAt).toISOString() }], // 본문은 quoteText에만(응답 크기 절약)
     isExample: false,
   }));
 }

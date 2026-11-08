@@ -95,6 +95,8 @@ export function createCeoRouter(deps: {
   getXStatements?: () => any[] | Promise<any[]>;
   getRuntime?: () => CeoRuntime | null;
   verifyAdmin: Middleware;
+  /** 공개 묶음 응답 캐시(ms). 기본: 운영 120초, 그 외 0(끄기) */
+  datasetCacheMs?: number;
 }) {
   const router = express.Router();
   const getActiveRuntime = (): CeoRuntime => {
@@ -103,40 +105,42 @@ export function createCeoRouter(deps: {
     return r;
   };
 
+  /** 공개 화면용 묶음(공식 발언 + 보도 헤드라인 + X + 영상). koResults는 한 번만 읽음 */
+  const assemble = async () => {
+    const snap: any = await getActiveRuntime().snapshot();
+    if (!snap?.dataset || !Array.isArray(snap.dataset.statements)) return snap;
+    let results: Record<string, any> = {};
+    try { results = await getActiveRuntime().koResults(); } catch { /* 번역 없이 원문 표시 */ }
+    const withKo = (x: any) => { const t = results[headlineKey(x.quoteText)]; return t?.title ? { ...x, aiTranslationKo: t.title } : x; };
+    const [reported, posts, vids] = await Promise.all([
+      // Tesla 공식 출처가 403으로 막혀 있어, 이미 수집한 기사 헤드라인의 '머스크 발언 보도'를 따로 표시(직접 인용 아님)
+      deps.getReportedEvents ? Promise.resolve(deps.getReportedEvents()).then(e => reportedCeoStatements(e).map(withKo)).catch(() => []) : [],
+      // 본인 X 게시물 (AI 번역이 있으면 함께)
+      deps.getXStatements ? Promise.resolve(deps.getXStatements()).then(x => x.map(withKo)).catch(() => []) : [],
+      // CEO 발언 영상 자막에서 확인한 인용 (유튜브 요약 런타임이 저장)
+      deps.getVideoStatements ? Promise.resolve(deps.getVideoStatements()).catch(() => []) : [],
+    ]);
+    const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
+    const extra = [...reported, ...posts, ...vids].filter((x: any) => !ids.has(x.statementId) && (ids.add(x.statementId), true));
+    return { ...snap, dataset: { ...snap.dataset, statements: [...snap.dataset.statements, ...extra] } };
+  };
+  // 응답 캐시: 2분 동안 같은 묶음을 바로 보내고, 1분이 지나면 뒤에서 새로 만듦(첫 화면 대기 ~2초 → 즉시)
+  let dsCache: { at: number; body: any } | null = null;
+  let building: Promise<any> | null = null;
+  const rebuild = () => (building ||= assemble().then(body => { if (body?.dataset) dsCache = { at: Date.now(), body }; return body; }).finally(() => { building = null; }));
+  const invalidate = () => { dsCache = null; };
+  const ttl = deps.datasetCacheMs ?? (process.env.NODE_ENV === 'production' ? 120_000 : 0);
+  if (ttl > 0) setTimeout(() => { rebuild().catch(() => null); }, 8000).unref?.();
+
   router.get('/api/ceo/dataset', async (_req: express.Request, res: express.Response) => {
     res.setHeader('Cache-Control', 'no-store');
     try {
-      const snap: any = await getActiveRuntime().snapshot();
-      // Tesla 공식 출처가 403으로 막혀 있어, 이미 수집한 기사 헤드라인의 '머스크 발언 보도'를 따로 표시합니다(직접 인용 아님).
-      if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getReportedEvents) {
-        try {
-          const results = await getActiveRuntime().koResults();
-          const extra = reportedCeoStatements(await deps.getReportedEvents()).map((x: any) => {
-            const t = results[headlineKey(x.quoteText)];
-            return t?.title ? { ...x, aiTranslationKo: t.title } : x;
-          });
-          const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
-          snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...extra.filter(x => !ids.has(x.statementId))] };
-        } catch { /* 보조 자료 실패는 공식 자료 응답에 영향 없음 */ }
+      const age = dsCache ? Date.now() - dsCache.at : Infinity;
+      if (ttl > 0 && dsCache && age < ttl) {
+        if (age > ttl / 2) rebuild().catch(() => null);
+        return res.json(dsCache.body);
       }
-      // 본인 X 게시물 (AI 번역이 있으면 함께)
-      if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getXStatements) {
-        try {
-          const results = await getActiveRuntime().koResults();
-          const posts = (await deps.getXStatements()).map((x: any) => { const t = results[headlineKey(x.quoteText)]; return t?.title ? { ...x, aiTranslationKo: t.title } : x; });
-          const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
-          snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...posts.filter((x: any) => !ids.has(x.statementId))] };
-        } catch { /* X 자료 실패는 공식 자료 응답에 영향 없음 */ }
-      }
-      // CEO 발언 영상 자막에서 확인한 인용 (유튜브 요약 런타임이 저장)
-      if (snap?.dataset && Array.isArray(snap.dataset.statements) && deps.getVideoStatements) {
-        try {
-          const vids = await deps.getVideoStatements();
-          const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
-          snap.dataset = { ...snap.dataset, statements: [...snap.dataset.statements, ...vids.filter((x: any) => !ids.has(x.statementId))] };
-        } catch { /* 영상 자료 실패는 공식 자료 응답에 영향 없음 */ }
-      }
-      res.json(snap);
+      res.json(await rebuild());
     } catch (e: any) {
       res.status(500).json({ status: 'error', refreshedAt: null, dataset: null, sources: [], error: String(e?.message || e).slice(0, 160) });
     }
@@ -145,6 +149,7 @@ export function createCeoRouter(deps: {
     res.setHeader('Cache-Control', 'no-store');
     try {
       const r = await getActiveRuntime().refresh();
+      invalidate();
       // 공식 원문 수집 뒤 언론 헤드라인 번역도 함께(최대 1회 호출, 실패해도 응답에 영향 없음)
       if (deps.getReportedEvents) await translatePendingHeadlines(getActiveRuntime(), deps.getReportedEvents, Date.now() + 90_000).catch(() => null);
       if (r.httpStatus === 200) return res.json(r.response);
@@ -155,6 +160,7 @@ export function createCeoRouter(deps: {
   });
   // CEO 한국어 요약: 관리자 인증 필요(기존 verifyAdmin). 본문 JSON은 server.ts의 전역 express.json()이 해석. 설정(켜기·끄기·한도 USD 1 이하)과 지정 발언 1건 생성만
   router.post('/api/admin/ceo/ko-summary/settings', deps.verifyAdmin, async (req: express.Request, res: express.Response) => {
+    invalidate();
     res.setHeader('Cache-Control', 'no-store');
     try {
       const b = req.body || {};
@@ -163,6 +169,7 @@ export function createCeoRouter(deps: {
     } catch (e: any) { res.status(500).json({ error: String(e?.message || e).slice(0, 160) }); }
   });
   router.post('/api/admin/ceo/ko-summary/one', deps.verifyAdmin, async (req: express.Request, res: express.Response) => {
+    invalidate();
     res.setHeader('Cache-Control', 'no-store');
     try {
       const b = req.body || {};

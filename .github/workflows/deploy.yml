@@ -33,7 +33,7 @@ jobs:
         run: |
           fail=0
           # ceoStore.firestore 는 Firestore 에뮬레이터 전용(로컬에서 FIRESTORE_EMULATOR_HOST 설정 후 실행)이라 CI에서 제외
-          for f in server/ceo/ceoHttp.test.ts server/ceo/ceoKo.test.ts server/ceo/ceoLive.test.ts server/ceo/ceoStatements.test.ts server/ceo/ceoSec.test.ts server/ceo/ceoPages.test.ts server/ceo/ceoAuthored.test.ts server/ceo/ceoPershing.test.ts server/ceo/ceoX.test.ts; do
+          for f in server/ceo/ceoHttp.test.ts server/ceo/ceoKo.test.ts server/ceo/ceoLive.test.ts server/ceo/ceoStatements.test.ts server/ceo/ceoSec.test.ts server/ceo/ceoPages.test.ts server/ceo/ceoAuthored.test.ts server/ceo/ceoPershing.test.ts server/ceo/ceoX.test.ts server/ceo/ceoDatasetCache.test.ts; do
             if ! node --import tsx --test "$f" > /tmp/t.txt 2>&1; then
               echo "::error title=$f::$(grep -E 'not ok|rror|xpected|actual' /tmp/t.txt | head -12 | tr '\n' ' ' | cut -c1-1500)"; fail=1
             fi

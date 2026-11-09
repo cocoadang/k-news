@@ -63,3 +63,7 @@ Deploy smoke (ops/deploy.py) requires ≥3 public YouTube summaries and none fro
 - X 게시물: server/ceo/xPosts.ts, 공식 X API(게시물 1건 USD 0.005). Cloud Run env X_BEARER_TOKEN(Secret Manager) 넣기 전에는 동작하지 않음. 월 상한 X_MONTHLY_CAP_USD(기본 5). 3시간 분석 실행 앞에서 최대 45초 수집·번역. Firestore: ceo_x_state/state, ceo_x_posts/*.
 - SEC Exhibit 2건 '원문 바이트 불일치' 보류 상태(크기 같고 SHA 다름) — PC에서 원인 확인 필요.
 2026-11-09 (Claude 점검): 아침 상태보고 '헤드라인 번역 중단: 예약 실패(exists)' — 남은 대기 10건이 이미 정산된 묶음과 같은 키라 매번 막힘. 수정: 응답은 정상인데 거부된 항목은 빈 제목으로 '시도 완료' 표시(화면은 원문), 예전 방식으로 정산된 같은 묶음은 ':r2' 키로 1회만 재시도 후 조용히 건너뜀. 같은 날 07:00 간단 분석 16건 실패는 10:02 실행에서 119건 정상 처리돼 일시 오류로 판단.
+
+## 2026-11-10 Cloud Run 세션 어피니티 끔
+- 서비스가 maxScale 1(인스턴스 1대)이라 세션 어피니티는 이점이 없고, 응답마다 GAESA 쿠키가 붙어 Firebase Hosting CDN 캐시(공개 CEO 자료 s-maxage=60)를 막았음 → 콘솔에서 끔. deploy.py는 서비스 템플릿을 그대로 복사하므로 이후 배포에도 유지됨.
+- Firestore(ai-studio-spacexintelligen…)는 asia-south1(뭄바이) — 서버만 서울로 옮기면 DB 왕복이 늘어 느려짐. 지역 이전은 DB 이전과 함께 계획 필요.

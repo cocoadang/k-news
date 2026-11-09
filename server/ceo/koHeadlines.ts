@@ -69,7 +69,12 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   const reservedInput = Math.ceil(count * 1.1) + 32;
   const costNano = Math.ceil(reservedInput * price.inNano + KH_MAX_OUTPUT_TOKENS * price.outNano);
   if (availableNano(state, utcMonth(o.now())) < costNano) { r.stoppedReason = '월 한도 부족'; return r; }
-  const jobKey = 'hlb:' + crypto.createHash('sha256').update(batch.map(([k]) => k).join('|')).digest('hex');
+  // 같은 묶음이 이미 정산됐는데 항목이 아직 남아 있으면(이전 코드에서 번역 거부된 항목) 한 번만 다른 키(':r2')로 재시도.
+  // 그것도 이미 있으면 같은 묶음을 다시 부르지 않고 조용히 넘김(원문 표시 유지, 경고 아님).
+  const baseKey = 'hlb:' + crypto.createHash('sha256').update(batch.map(([k]) => k).join('|')).digest('hex');
+  const prev = state.jobs[baseKey];
+  const jobKey = prev && prev.status === 'settled' ? baseKey + ':r2' : baseKey;
+  if (jobKey !== baseKey && state.jobs[jobKey]?.status === 'settled') return r;
   const attemptId = crypto.randomUUID();
   const res = await o.ledger.reserve({ jobKey, statementId: 'headline-batch', costNano, now: o.now(), attemptId }).catch(() => null);
   if (!res || res.ok === false) { r.stoppedReason = `예약 실패(${res && res.ok === false ? res.reason : '원장 오류'})`; return r; }
@@ -91,6 +96,9 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   const at = new Date(o.now()).toISOString();
   const extraResults: Record<string, KoResult> = {};
   for (const [i, ko] of parsed) extraResults[batch[i][0]] = { title: ko, summary: '', generatedAt: at, model: resp.modelVersion! };
+  // 응답 JSON은 정상인데 개별 항목만 거부(숫자 불일치·한글 없음 등)되면 빈 제목으로 '시도 완료' 표시 → 같은 묶음 반복 호출·'예약 실패(exists)' 고착 방지.
+  // 화면은 title이 비어 있으면 원문을 그대로 보여 줌. 응답 자체가 깨진 경우(parsed 0)는 표시하지 않아 다음 묶음에서 다시 시도.
+  if (modelOk && parsed.size > 0) for (const [k] of batch) if (!extraResults[k]) extraResults[k] = { title: '', summary: '', generatedAt: at, model: resp.modelVersion! };
   const halt = !modelOk ? `예상 밖 모델 응답(${resp.modelVersion ?? '없음'})` : cost.mismatch ? 'usage 합계 불일치' : cost.prompt > reservedInput ? '실제 입력 토큰이 예약을 넘음' : null;
   try {
     await o.ledger.settle({ jobKey, attemptId, costNano: cost.costNano, now: o.now(),

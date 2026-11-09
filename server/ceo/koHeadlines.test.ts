@@ -39,3 +39,28 @@ test('disabled ledger makes no call', async () => {
   const r = await translateHeadlines(['Musk says X'], { ledger: x.ledger, client: x.client, now: () => now, deadline: now + 120_000 });
   assert.equal(r.stoppedReason, '꺼짐'); assert.equal(x.calls(), 0);
 });
+
+test('rejected items are marked tried (empty title) so the same batch is not re-sent', async () => {
+  const x = setup(() => JSON.stringify({ items: [{ i: 0, ko: '엔비디아 매출 45% 증가' }, { i: 1, ko: '머스크, 로보택시 언급' }] }));
+  await x.ledger.configure({ enabled: true, now });
+  const texts = ['Nvidia sales rise 40%', 'Musk on robotaxi'];
+  const r = await translateHeadlines(texts, { ledger: x.ledger, client: x.client, now: () => now, deadline: now + 120_000 });
+  assert.equal(r.translated, 1);
+  const st = await x.ledger.read();
+  assert.equal(st.results[headlineKey(texts[0])].title, '');
+  const again = await translateHeadlines(texts, { ledger: x.ledger, client: x.client, now: () => now, deadline: now + 120_000 });
+  assert.equal(again.pending, 0); assert.equal(again.stoppedReason, null); assert.equal(x.calls(), 1);
+});
+
+test('a batch already settled (legacy, nothing marked) is retried once with a new key, then skipped quietly', async () => {
+  const x = setup(() => 'not json');
+  await x.ledger.configure({ enabled: true, now });
+  const texts = ['Musk says A', 'Huang says B'];
+  const o = { ledger: x.ledger, client: x.client, now: () => now, deadline: now + 120_000 };
+  const r1 = await translateHeadlines(texts, o);
+  assert.equal(r1.stoppedReason, null); assert.equal(x.calls(), 1);
+  const r2 = await translateHeadlines(texts, o);
+  assert.equal(r2.stoppedReason, null); assert.equal(x.calls(), 2);
+  const r3 = await translateHeadlines(texts, o);
+  assert.equal(r3.stoppedReason, null); assert.equal(r3.sent, 0); assert.equal(x.calls(), 2);
+});

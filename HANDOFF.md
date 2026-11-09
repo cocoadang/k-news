@@ -67,3 +67,4 @@ Deploy smoke (ops/deploy.py) requires ≥3 public YouTube summaries and none fro
 ## 2026-11-10 Cloud Run 세션 어피니티 끔
 - 서비스가 maxScale 1(인스턴스 1대)이라 세션 어피니티는 이점이 없고, 응답마다 GAESA 쿠키가 붙어 Firebase Hosting CDN 캐시(공개 CEO 자료 s-maxage=60)를 막았음 → 콘솔에서 끔. deploy.py는 서비스 템플릿을 그대로 복사하므로 이후 배포에도 유지됨.
 - Firestore(ai-studio-spacexintelligen…)는 asia-south1(뭄바이) — 서버만 서울로 옮기면 DB 왕복이 늘어 느려짐. 지역 이전은 DB 이전과 함께 계획 필요.
+- Firebase Hosting(site gen-lang-client-0064554427, news.dsoom.com) 설정은 저장소 밖에 있음: headers `/api/**` → `private, no-store`, 그 뒤 `/api/ceo/dataset` → `public, max-age=0, s-maxage=60, stale-while-revalidate=300`(2026-11-10, version f51e506353e22476; 이전 10a5fe556456aea2). 공개 CEO 자료만 CDN 캐시, 관리자 API는 캐시 금지 유지.

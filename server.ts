@@ -4,7 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { db } from './server/db';
-import { jsonCompression, serveBuiltApp } from './server/httpDelivery';
+import { jsonCompression, packedCache, publicCdnHeader, sendPacked, serveBuiltApp } from './server/httpDelivery';
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
 import { sendEventToTelegram, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
@@ -478,9 +478,10 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   });
 
   // 4. Events List (Public read, filtered)
-  app.get('/api/events', async (req, res) => {
+  // 뉴스 목록: 필터 없는 기본 목록(화면이 12초마다 부름)은 미리 압축한 응답을 10초 보관 + CDN 15초 → 매번 수 MB 직렬화·압축하지 않음
+  const listEvents = async (q: Record<string, unknown>) => {
     let events = (await db.getEventsForRead()).map(e => projectEventAnalysisStatus(e));
-    const { company, category, minImportance, impact, query, onlyImportant, telegramSent } = req.query;
+    const { company, category, minImportance, impact, query, onlyImportant, telegramSent } = q as Record<string, any>;
 
     if (company && company !== 'all' && typeof company === 'string') {
       const target = company.toLowerCase().trim();
@@ -550,18 +551,49 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       return b.id.localeCompare(a.id);
     });
 
-    res.json(events);
+    return events;
+  };
+  const eventsCache = packedCache(() => listEvents({}), process.env.NODE_ENV === 'production' ? 10_000 : 0);
+  app.get('/api/events', async (req, res) => {
+    const keys = Object.keys(req.query);
+    try {
+      if (!keys.length || (keys.length === 1 && 'fresh' in req.query)) {
+        const t0 = Date.now();
+        // fresh=…: 관리자 작업 직후 화면 갱신용(주소가 매번 달라 CDN도 거침없이 새로 받음)
+        const r = 'fresh' in req.query ? { packed: await eventsCache.fresh(), hit: false } : await eventsCache.get();
+        res.setHeader('Cache-Control', 'fresh' in req.query ? 'no-store' : publicCdnHeader(15, 30));
+        res.setHeader('Server-Timing', `events;desc="${r.hit ? 'hit' : 'miss'}";dur=${Date.now() - t0}`);
+        return sendPacked(req, res, r.packed);
+      }
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(await listEvents(req.query));
+    } catch {
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(503).json({ error: 'events_unavailable' });
+    }
   });
 
   // CEO 발언: 동일 CeoRuntime 인스턴스를 라우터와 스케줄러가 공유 (조회는 저장된 상태 읽기만, 관리자 갱신만 CEO 전용 컬렉션에 저장)
+  const wallstreetRuntime = createConfiguredWallstreetRuntime({
+    getFirestore: () => getIsFirestoreAvailable() ? initFirestore() : null,
+  });
+  // 유튜브 요약 목록(공개): 저장 상태 전체를 읽는 데 ~1초 → 서버 60초 보관 + CDN 60초(이후 5분 묵은 본 제공하며 갱신)
+  const youtubeCache = packedCache(() => wallstreetRuntime.publicLibrary(), process.env.NODE_ENV === 'production' ? 60_000 : 0);
   registerWallstreetRoutes(app, { verifyAdmin: verifyAdminAuth,
     verifyJob: (req: express.Request, res: express.Response, next: express.NextFunction) => {
       if (!process.env.CRON_SECRET?.trim()) return res.status(503).json({status:'job_auth_unconfigured'});
       if (!verifyCronAuth(req).authorized) return res.status(401).json({status:'unauthorized'});
       next();
-    }, runtime: createConfiguredWallstreetRuntime({
-    getFirestore: () => getIsFirestoreAvailable() ? initFirestore() : null,
-  }) });
+    }, runtime: wallstreetRuntime,
+    publicSummaries: async (req: express.Request, res: express.Response) => {
+      const t0 = Date.now();
+      const r = await youtubeCache.get();
+      res.setHeader('Cache-Control', publicCdnHeader(60, 300));
+      res.setHeader('Server-Timing', `yt;desc="${r.hit ? 'hit' : 'miss'}";dur=${Date.now() - t0}`);
+      sendPacked(req, res, r.packed);
+    },
+    onRunFinished: () => youtubeCache.invalidate(),
+  });
   const ceoRuntime = options?.ceoRuntime || createCeoRuntime(
     () => db.getEvents(),
     () => (getIsFirestoreAvailable() ? initFirestore() : null)

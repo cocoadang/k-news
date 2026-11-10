@@ -184,3 +184,31 @@ test('short source repair keeps the already-grounded claims and adds new ones', 
  const result = await s.summarize({ segments: seg, maxCostMicros: 30000 });
  assert.equal(result.items.length, 3); assert.equal(result.items[0].text, first.items[0].text); assert.equal(calls, 4);
 });
+
+test('long broadcasts request more points spread over the timeline; short ones keep 5-8', async () => {
+ const { summaryTargets, summaryInstruction, SUMMARY_ID_INSTRUCTION, MAX_SUMMARY_ITEMS } = await import('./groundedSummary.mjs');
+ const at = min => [{ id: 'B0000', start: 0, text: 'a' }, { id: 'B0001', start: min * 60, text: 'b' }];
+ assert.deepEqual([summaryTargets(at(18)).lo, summaryTargets(at(18)).hi, summaryTargets(at(18)).generationCap], [5, 8, 2500]);
+ assert.equal(summaryInstruction(at(18)), SUMMARY_ID_INSTRUCTION);
+ assert.match(SUMMARY_ID_INSTRUCTION, /Cover the whole broadcast/);
+ const t40 = summaryTargets(at(40)); assert.deepEqual([t40.lo, t40.hi], [9, 11]);
+ assert.match(summaryInstruction(at(40)), /Write 9 to 11 distinct/);
+ const t90 = summaryTargets(at(90)); assert.deepEqual([t90.lo, t90.hi], [12, MAX_SUMMARY_ITEMS]);
+ assert.ok(t90.generationCap <= 4500 && t90.reviewCap(14) <= 1400 && t90.reviewCap(5) === 700);
+});
+
+test('a 45-minute video can deliver more than eight grounded points', async () => {
+ const seg = Array.from({ length: 900 }, (_, i) => ({ start: i * 3, text: `방송 구간 ${i}의 조건부 전망입니다.` }));
+ const bl = evidenceBlocks(seg);
+ const pick = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 299];
+ const first = { items: pick.map(i => ({ title: `구간 ${i}`, text: `출연자는 방송 구간 ${i * 3}에 관해 조건부로 전망했습니다.`, kind: 'outlook', evidenceIds: [bl[i].id] })) };
+ const findings = n => ({ findings: Array.from({ length: n }, (_, index) => ({ index, status: 'clear', sourceIds: [], reason: '추가 단서 없음' })) });
+ const checks = n => ({ checks: Array.from({ length: n }, (_, index) => ({ index, supported: true, classificationCorrect: true, recommendedKind: 'outlook', reason: '근거 일치' })) });
+ const responses = [first, findings(11), checks(11)]; const caps = []; let calls = 0;
+ const client = { countTokens: async () => ({ totalTokens: 100 }), generate: async ({ maxOutputTokens, contents }) => { caps.push(maxOutputTokens); if (!calls) assert.match(contents, /Write 10 to 12 distinct/); return { text: JSON.stringify(responses[calls++]) }; } };
+ const s = groundedSummarizer({ client, model: 'gemini-3.5-flash-lite', inputMicrosPerToken: .3, outputMicrosPerToken: 2.5, approved: true, allowSourceRepair: true, minimumSummaryItems: 5, acceptMinimumItems: 3, counterEvidenceRequired: true });
+ const result = await s.summarize({ segments: seg, maxCostMicros: 50000 });
+ assert.equal(result.items.length, 11);
+ assert.ok(caps[0] > 2500 && caps[1] > 700 && caps[2] > 700, JSON.stringify(caps));
+ assert.deepEqual(result.validationJournal.targets, { lo: 10, hi: 12, minutes: 45 });
+});

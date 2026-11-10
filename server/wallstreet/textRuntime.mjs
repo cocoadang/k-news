@@ -57,9 +57,23 @@ export function parseUiTranscript(text,video){
   validateTranscript(segments,video);return segments;
 }
 function due(now,hhmm){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);return p>=hhmm;}
-function reserve(s,now,c){const iso=new Date(now).toISOString(),keys=[iso.slice(0,10),iso.slice(0,7)].map(x=>'text:'+x),limits=[c.dailySummaryMicros,c.monthlySummaryMicros];
-  if(keys.some((k,i)=>(s.budgets[k]||0)+c.summaryReservationMicros>limits[i]))return false;
-  keys.forEach(k=>s.budgets[k]=(s.budgets[k]||0)+c.summaryReservationMicros);return true;}
+function reserve(s,now,c,amount=c.summaryReservationMicros){const iso=new Date(now).toISOString(),keys=[iso.slice(0,10),iso.slice(0,7)].map(x=>'text:'+x),limits=[c.dailySummaryMicros,c.monthlySummaryMicros];
+  if(keys.some((k,i)=>(s.budgets[k]||0)+amount>limits[i]))return false;
+  keys.forEach(k=>s.budgets[k]=(s.budgets[k]||0)+amount);return {keys,amount};}
+// Long broadcasts get more summary points, so their per-video ceiling is larger (daily/monthly caps unchanged).
+export function summaryReservation(c,transcript){
+  const minutes=(Array.isArray(transcript)&&Number(transcript.at(-1)?.start)||0)/60;
+  const base=c.summaryReservationMicros,long=c.longSummaryReservationMicros;
+  return Number.isSafeInteger(long)&&long>base&&minutes>c.longSummaryMinutes?long:base;
+}
+// After an attempt, give back what the recorded calls could not have used. Each call's ceiling already counts its exact
+// input tokens plus the maximum output, so the kept amount is still an upper bound. Unknown outcomes keep the full reservation.
+export function settleReservation(s,held,journal){
+  if(!held||!Array.isArray(journal?.calls)||journal.calls.some(x=>!Number.isSafeInteger(x?.ceiling)||x.ceiling<0))return 0;
+  const used=journal.calls.reduce((a,x)=>a+x.ceiling,0),back=held.amount-used;
+  if(!(back>0))return 0;
+  held.keys.forEach(k=>s.budgets[k]=Math.max(0,(s.budgets[k]||0)-back));return back;
+}
 // Native providers explicitly reject ongoing/scheduled streams. A successful native
 // response is checked before treating an RSS candidate as completed long-form content.
 export function acceptNativeCaption(segments,video){
@@ -165,19 +179,21 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(r.stage==='text_summary'){
             if(c.summaryApproved!==true||!summarizer||c.combinedTokenCapVerified!==true){r.hold='text_summary_approval_or_verified_cap_required';continue;}
             for(const k of ['summaryReservationMicros','dailySummaryMicros','monthlySummaryMicros'])if(!Number.isSafeInteger(c[k])||c[k]<=0)throw Error('text_budget_required');
+            const amount=summaryReservation(c,r.transcript);let held=null;
             const attempt=async()=>{
               r.stage='text_summary_inflight';delete r.hold;await save();
-              try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:c.summaryReservationMicros});
+              try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount});
+                settleReservation(s,held,result?.validationJournal);
                 r.summaryCandidate=result;await save();
                 const message=c.summaryProtocol==='evidence_ids_v1'?renderGroundedBrief(r.video,result):renderBrief(r.video,r.transcript,result);
                 r.parts=splitMessage(message).map(text=>({text,hash:hash(text),status:'pending'}));r.stage='text_delivery';
-              }catch(error){if(error?.candidate)r.summaryCandidate=error.candidate;else delete r.summaryCandidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.summaryFailedAt=now;r.summaryFixVersion=SUMMARY_FIX_VERSION;r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}await save();
+              }catch(error){settleReservation(s,held,error?.candidate);if(error?.candidate)r.summaryCandidate=error.candidate;else delete r.summaryCandidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.summaryFailedAt=now;r.summaryFixVersion=SUMMARY_FIX_VERSION;r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}await save();
             };
-            if(!reserve(s,now,c)){r.hold='text_budget';continue;}
+            if(!(held=reserve(s,now,c,amount))){r.hold='text_budget';continue;}
             await attempt();
             if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)){
               r.summaryRetried=true;
-              if(reserve(s,now,c))await attempt();else{r.hold='text_budget';await save();}
+              if((held=reserve(s,now,c,amount)))await attempt();else{r.hold='text_budget';await save();}
             }
           }
           if(r.stage!=='text_delivery')continue;
@@ -202,6 +218,23 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             r.previousParts=r.parts;r.parts=splitMessage(renderGroundedBrief(r.video,result)).map(text=>({text,hash:hash(text),status:'sent',webOnly:true}));
             r.summaryCandidate=result;r.supplementedAt=now;delete r.supplementFailure;
           }catch(error){r.supplementFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';}
+          await save();
+        }
+        // Web-only full re-summary (more points for long broadcasts) of already-sent videos whose captions are still kept.
+        // Never Telegram; the new summary replaces the web view only when it covers more points than the stored one.
+        for(const r of pendingSummary?[]:Object.values(s.videos)){
+          const f=c.fullResummarize;
+          if(!(r.stage==='sent'&&f?.ids?.includes(r.video.id)&&(r.fullResummaryVersion||0)<f.version&&Array.isArray(r.transcript)&&r.transcript.length&&c.summaryApproved===true&&c.summaryProtocol==='evidence_ids_v1'))continue;
+          const amount=summaryReservation(c,r.transcript),held=reserve(s,now,c,amount);if(!held)break;
+          r.fullResummaryVersion=f.version;await save();
+          try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount});
+            settleReservation(s,held,result?.validationJournal);
+            const before=Array.isArray(r.summaryCandidate?.items)?r.summaryCandidate.items.length:(r.parts||[]).reduce((n,p)=>n+((p.text||'').match(/^• /gm)||[]).length,0);
+            if(result.items.length>before){
+              r.previousParts=r.parts;r.parts=splitMessage(renderGroundedBrief(r.video,result)).map(text=>({text,hash:hash(text),status:'sent',webOnly:true}));
+              r.summaryCandidate=result;r.fullResummarizedAt=now;r.fullResummary={before,after:result.items.length};
+            }else r.fullResummary={before,after:result.items.length,kept:'previous'};
+          }catch(error){settleReservation(s,held,error?.candidate);r.fullResummary={failure:/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified'};}
           await save();
         }
         // CEO 발언 영상: 프로그램 처리 뒤 남는 Supadata 여유로 최대 1편. 실패해도 유튜브 요약 결과에 영향 없음.

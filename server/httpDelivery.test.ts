@@ -6,7 +6,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { brotliDecompressSync, gunzipSync, brotliCompressSync } from 'node:zlib';
 import express from 'express';
-import { jsonCompression, pickEncoding, serveBuiltApp } from './httpDelivery';
+import { jsonCompression, packedCache, pickEncoding, publicCdnHeader, sendPacked, serveBuiltApp } from './httpDelivery';
 
 function raw(port: number, p: string, enc?: string): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: Buffer }> {
   return new Promise((resolve, reject) => {
@@ -75,4 +75,35 @@ test('built app: precompressed hashed assets with long cache, index.html no-cach
     assert.equal(i.status, 200); assert.match(i.body.toString(), /doctype/);
     assert.equal(i.headers['cache-control'], 'no-cache');
   } finally { srv.close(); fs.rmSync(dist, { recursive: true, force: true }); }
+});
+
+test('packedCache: hit within ttl, background rebuild after half, single-flight, fresh after admin action', async () => {
+  let t = 0, builds = 0;
+  const c = packedCache(async () => { builds++; await new Promise(r => setTimeout(r, 5)); return { n: builds }; }, 10_000, () => t);
+  const [a, b] = await Promise.all([c.get(), c.get()]);
+  assert.equal(builds, 1); assert.equal(a.hit, false); assert.equal(b.hit, false);
+  t = 3000; assert.equal((await c.get()).hit, true); assert.equal(builds, 1);
+  t = 6000; const stale = await c.get(); assert.equal(stale.hit, true); assert.deepEqual(JSON.parse(stale.packed.json.toString()), { n: 1 });
+  await new Promise(r => setTimeout(r, 20)); assert.equal(builds, 2, 'rebuilt in background');
+  const f = await c.fresh(); assert.deepEqual(JSON.parse(f.json.toString()), { n: 3 });
+  const none = packedCache(async () => ({ x: ++builds }), 0);
+  await none.get(); await none.get(); assert.equal(builds, 5, 'ttl 0 never caches');
+  assert.equal(publicCdnHeader(15, 30), 'public, max-age=0, s-maxage=15, stale-while-revalidate=30');
+});
+
+test('sendPacked serves the precompressed body for br, gzip and identity', async () => {
+  const app = express();
+  const c = packedCache(async () => Array.from({ length: 300 }, (_, i) => ({ id: i, t: '뉴스 ' + i })), 60_000);
+  app.get('/x', async (req, res) => sendPacked(req, res, (await c.get()).packed));
+  const srv = app.listen(0); const port = (srv.address() as any).port;
+  try {
+    const br = await raw(port, '/x', 'br');
+    assert.equal(br.headers['content-encoding'], 'br');
+    assert.equal(JSON.parse(brotliDecompressSync(br.body).toString()).length, 300);
+    const gz = await raw(port, '/x', 'gzip');
+    assert.equal(JSON.parse(gunzipSync(gz.body).toString())[5].t, '뉴스 5');
+    const plain = await raw(port, '/x');
+    assert.equal(plain.headers['content-encoding'], undefined);
+    assert.equal(JSON.parse(plain.body.toString()).length, 300);
+  } finally { srv.close(); }
 });

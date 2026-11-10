@@ -1,6 +1,6 @@
 import { PageHeader, RefreshButton, CollectButton } from './components/ui';
 import { YoutubeMenu } from './components/YoutubeMenu';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { CompanyTabs } from './components/CompanyTabs';
 import { FilterBar } from './components/FilterBar';
@@ -102,10 +102,16 @@ export default function App() {
     }
   }, []);
 
-  const fetchEvents = useCallback(async () => {
-    const data = await safeFetchJson<NewsEvent[]>('/api/events');
+  // 평소(12초 주기)는 CDN·서버 캐시본, 관리자 작업 직후에는 fresh로 바로 새 목록
+  // 방금 재분석·전송한 건은 2분 동안 화면의 새 값을 유지(캐시된 목록이 잠시 옛 값을 줄 수 있음)
+  const pinnedRef = useRef(new Map<string, { at: number; event: NewsEvent }>());
+  const pinEvent = (event: NewsEvent) => { pinnedRef.current.set(event.id, { at: Date.now(), event }); };
+  const fetchEvents = useCallback(async (fresh = false) => {
+    const data = await safeFetchJson<NewsEvent[]>(fresh ? `/api/events?fresh=${Date.now()}` : '/api/events');
     if (data && Array.isArray(data)) {
-      setEvents(data);
+      const pins = pinnedRef.current, now = Date.now();
+      for (const [id, p] of pins) if (now - p.at > 120_000) pins.delete(id);
+      setEvents(pins.size ? data.map(e => pins.get(e.id)?.event ?? e) : data);
     }
   }, []);
 
@@ -151,7 +157,7 @@ export default function App() {
     showToast('관리자 인증이 완료되었습니다!', 'success');
     fetchStatus();
     fetchSettings();
-    fetchEvents();
+    fetchEvents(true);
     fetchCompanies();
   };
 
@@ -197,7 +203,7 @@ export default function App() {
         if (handlePotentialAuthError(res)) return;
         showToast('서버 응답을 처리할 수 없습니다.', 'error');
       }
-      await fetchEvents();
+      await fetchEvents(true);
       await fetchStatus();
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -221,6 +227,7 @@ export default function App() {
       }
       if (res.ok && contentType && contentType.includes('application/json')) {
         const updated = await res.json();
+        pinEvent(updated);
         setEvents((prev) => prev.map((e) => (e.id === id ? updated : e)));
         if (detailEvent?.id === id) setDetailEvent(updated);
         showToast('다중 기업 교차 AI 재분석이 완료되었습니다!');
@@ -249,7 +256,12 @@ export default function App() {
         if (data.success) {
           showToast('Telegram으로 투자 인텔리전스 알림이 성공적으로 전송되었습니다!');
           setEvents((prev) =>
-            prev.map((e) => (e.id === id ? { ...e, isSentToTelegram: true, sentAt: new Date().toISOString() } : e))
+            prev.map((e) => {
+              if (e.id !== id) return e;
+              const sent = { ...e, isSentToTelegram: true, sentAt: new Date().toISOString() };
+              pinEvent(sent);
+              return sent;
+            })
           );
           if (previewTelegramEvent?.id === id) {
             setPreviewTelegramEvent(null);
@@ -501,7 +513,7 @@ export default function App() {
           <CeoMenu isAdmin={!!authStatus?.isAuthenticated} />
         ) : (<>
         <PageHeader title="뉴스 피드" description="감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다."
-          actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(); fetchStatus(); }} /></>} />
+          actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(true); fetchStatus(); }} /></>} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}
         <CompanyTabs
           companies={companies}

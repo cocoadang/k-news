@@ -22,10 +22,11 @@ export function createWallstreetRuntime({getFirestore,config={enabled:false},pro
   };
 }
 // Register against the existing Express app without importing its startup side effects.
-export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob}) {
-  app.get('/api/youtube/summaries',async(_req,res)=>{
-    res.setHeader('Cache-Control','no-store');
-    try{res.json(await runtime.publicLibrary());}catch{res.status(503).json({status:'unavailable'});}
+export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob,publicSummaries,onRunFinished}) {
+  // publicSummaries: 서버가 넘겨주는 캐시·압축 응답기(없으면 매번 저장 상태를 읽음)
+  app.get('/api/youtube/summaries',async(req,res)=>{
+    try{if(publicSummaries)return await publicSummaries(req,res);res.setHeader('Cache-Control','no-store');res.json(await runtime.publicLibrary());}
+    catch{res.setHeader('Cache-Control','no-store');res.status(503).json({status:'unavailable'});}
   });
   app.get('/api/admin/wallstreet/library',verifyAdmin,async(_req,res)=>{
     res.setHeader('Cache-Control','no-store');
@@ -34,7 +35,7 @@ export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob}) {
   // Dedicated authenticated job, independent of existing news polling and admin endpoints.
   if(verifyJob)app.post('/api/jobs/youtube-summaries',verifyJob,async(_req,res)=>{
     res.setHeader('Cache-Control','no-store');
-    try{res.json(await runtime.run());}catch{res.status(503).json({status:'unavailable',message:'Review durable state before retry.'});}
+    try{res.json(await runtime.run());}catch{res.status(503).json({status:'unavailable',message:'Review durable state before retry.'});}finally{onRunFinished?.();}
   });
   app.post('/api/admin/wallstreet/transcript',verifyAdmin,async(req,res)=>{
     res.setHeader('Cache-Control','no-store');
@@ -48,7 +49,7 @@ export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob}) {
     res.setHeader('Cache-Control','no-store');
     const manualRunId=req.get('X-Knews-Run-Id');
     if(typeof manualRunId!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_-]{15,79}$/.test(manualRunId))return res.status(400).json({status:'manual_run_id_required'});
-    try {res.json(await runtime.run({manualRunId}));}
+    try {res.json(await runtime.run({manualRunId}));onRunFinished?.();}
     catch {res.status(503).json({status:'unavailable',message:'Wallstreet job unavailable; inspect durable state before retry.'});}
   });
 }

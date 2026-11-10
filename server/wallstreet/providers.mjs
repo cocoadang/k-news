@@ -21,7 +21,7 @@ export function createGeminiTextSdkClient({GoogleGenAI,apiKey}){
   return {
     async countTokens({model,contents}){return ai.models.countTokens({model,contents,config:{httpOptions:{timeout:10000,retryOptions:{attempts:1}}}});},
     async generate({model,contents,maxOutputTokens,timeoutMs}){
-      if(model!=='gemini-3.5-flash-lite'||!Number.isSafeInteger(maxOutputTokens)||maxOutputTokens<1||maxOutputTokens>2500)throw Error('text_model_or_cap_unverified');
+      if(model!=='gemini-3.5-flash-lite'||!Number.isSafeInteger(maxOutputTokens)||maxOutputTokens<1||maxOutputTokens>4500)throw Error('text_model_or_cap_unverified');
       const result=await ai.interactions.create({model,input:contents,store:false,stream:false,
         generation_config:{thinking_level:'minimal',max_output_tokens:maxOutputTokens}},{maxRetries:0,timeout:timeoutMs});
       const text=typeof result.output_text==='string'?result.output_text:(result.steps||[]).filter(x=>x.type==='model_output').flatMap(x=>x.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('');

@@ -171,3 +171,30 @@ test('vidIQ caption failure retries once at a later run; uncharged call is refun
  assert.equal(r.stage,'text_review_required');assert.equal(r.hold,'caption_failed_or_uncertain_no_retry');
  await x.run().run();assert.equal(calls,2);
 });
+
+test('long-video reservation is larger; unused reservation is given back from recorded call ceilings only', async () => {
+ const { summaryReservation, settleReservation } = await import('./textRuntime.mjs');
+ const c = { summaryReservationMicros: 30000, longSummaryReservationMicros: 50000, longSummaryMinutes: 30 };
+ assert.equal(summaryReservation(c, [{ start: 0 }, { start: 20 * 60 }]), 30000);
+ assert.equal(summaryReservation(c, [{ start: 0 }, { start: 45 * 60 }]), 50000);
+ const s = { budgets: { 'text:2026-11-10': 50000, 'text:2026-11': 90000 } }, held = { keys: ['text:2026-11-10', 'text:2026-11'], amount: 50000 };
+ assert.equal(settleReservation(s, held, undefined), 0, 'unknown outcome keeps all');
+ assert.equal(settleReservation(s, held, { calls: [{ ceiling: 12000 }, { ceiling: 3000 }] }), 35000);
+ assert.deepEqual(s.budgets, { 'text:2026-11-10': 15000, 'text:2026-11': 55000 });
+});
+
+test('web-only full re-summary: replaces the web view only with more points, never Telegram, once per version', async () => {
+ const x = setup({ summaryProtocol: 'evidence_ids_v1', summaryReservationMicros: 100, dailySummaryMicros: 1000, monthlySummaryMicros: 1000, fullResummarize: { version: 1, ids: ['Idn_d5ArZvA', 'annR-E8m5WQ'] } });
+ let full = 0;
+ const { acceptVerification } = await import('./groundedSummary.mjs');
+ const mk = n => { const r = acceptVerification(Array.from({ length: n }, (_, i) => ({ title: `주제 ${i}`, text: `요약 ${i}`, kind: 'outlook', starts: [i * 60] })), { checks: Array.from({ length: n }, (_, index) => ({ index, supported: true, classificationCorrect: true, reason: 'ok' })) }); r.validationJournal = { calls: [{ ceiling: 10 }] }; return r; };
+ x.deps.summarizer.summarize = async ({ video }) => { full++; return mk(video.id === 'Idn_d5ArZvA' ? 6 : 2); };
+ const old = id => ({ video: video(id), programmes: ['wallstreet'], recipient: '123', stage: 'sent', transcript: [{ start: 0, text: 'a' }], parts: [{ text: 'old', status: 'sent' }], summaryCandidate: { items: [1, 2, 3] }, firstSeen: now });
+ await x.store.exclusive(async (s, save) => { s.videos.Idn_d5ArZvA = old('Idn_d5ArZvA'); s.videos['annR-E8m5WQ'] = old('annR-E8m5WQ'); await save(); });
+ await x.run().run(); await x.run().run();
+ const a = x.store.state.videos.Idn_d5ArZvA, b = x.store.state.videos['annR-E8m5WQ'];
+ assert.equal(full, 2, 'once per video'); assert.equal(x.sent.length, 0);
+ assert.ok(a.parts.every(p => p.webOnly && p.status === 'sent'), JSON.stringify(a.fullResummary)); assert.match(a.parts.map(p => p.text).join('\n'), /요약 5/);
+ assert.equal(a.previousParts[0].text, 'old'); assert.deepEqual(a.fullResummary, { before: 3, after: 6 });
+ assert.equal(b.parts[0].text, 'old'); assert.equal(b.fullResummary.kept, 'previous');
+});

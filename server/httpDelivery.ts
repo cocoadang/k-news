@@ -86,3 +86,48 @@ export function serveBuiltApp(app: express.Express, distPath: string) {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+export interface PackedJson { at: number; json: Buffer; br: Buffer; gz: Buffer }
+
+/** JSON을 한 번 직렬화하고 br·gzip 압축본까지 미리 만들어 둠 */
+export function packJson(body: unknown, at = Date.now()): PackedJson {
+  const json = Buffer.from(JSON.stringify(body));
+  return { at, json, br: brotliCompressSync(json, { params: { [constants.BROTLI_PARAM_QUALITY]: 5, [constants.BROTLI_PARAM_MODE]: constants.BROTLI_MODE_TEXT } }), gz: gzipSync(json, { level: 6 }) };
+}
+
+/** 미리 압축한 JSON 보내기(요청마다 수 MB 직렬화·압축을 반복하지 않음) */
+export function sendPacked(req: express.Request, res: express.Response, p: PackedJson) {
+  const enc = pickEncoding(req.headers['accept-encoding'] as string | undefined);
+  const buf = enc === 'br' ? p.br : enc === 'gzip' ? p.gz : p.json;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  if (enc) res.setHeader('Content-Encoding', enc);
+  res.vary('Accept-Encoding');
+  res.setHeader('Content-Length', String(buf.length));
+  res.end(buf);
+}
+
+/**
+ * 짧은 응답 캐시: ttl 안에는 저장된 압축본을 바로 보내고, 절반이 지나면 뒤에서 새로 만듦.
+ * 동시에 여러 요청이 와도 만드는 작업은 한 번만(single-flight). ttl 0 이면 캐시하지 않음.
+ */
+export function packedCache(build: () => Promise<unknown>, ttlMs: number, now: () => number = Date.now) {
+  let cur: PackedJson | null = null;
+  let building: Promise<PackedJson> | null = null;
+  const rebuild = () => (building ||= build().then(body => (cur = packJson(body, now()))).finally(() => { building = null; }));
+  return {
+    async get(): Promise<{ packed: PackedJson; hit: boolean }> {
+      const age = cur ? now() - cur.at : Infinity;
+      if (ttlMs > 0 && cur && age < ttlMs) {
+        if (age > ttlMs / 2) rebuild().catch(() => null);
+        return { packed: cur, hit: true };
+      }
+      return { packed: await rebuild(), hit: false };
+    },
+    /** 관리자 작업 직후: 캐시를 버리고 바로 새로 만듦 */
+    async fresh(): Promise<PackedJson> { if (building) await building.catch(() => null); cur = null; return rebuild(); },
+    invalidate() { cur = null; },
+  };
+}
+
+/** 공개(로그인 무관) 목록용 CDN 헤더: Firebase Hosting 가장자리에 잠깐 보관, 이후 묵은 본을 주면서 새로 받음 */
+export const publicCdnHeader = (sMaxAge: number, swr: number) => `public, max-age=0, s-maxage=${sMaxAge}, stale-while-revalidate=${swr}`;

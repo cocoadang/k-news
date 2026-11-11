@@ -172,15 +172,15 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         {order.map(k => <tr key={k}><td className={tdL}><Dot k={k}/>{label(k)}</td><td className={td}>{pct(M[k]?.startAvg)}</td><td className={`${td} ${mh}`}>{pct(M[k]?.startWorstMdd)}</td><td className={td}>{pct(M[k]?.fiveAvg)}</td><td className={`${td} ${mh}`}>{pct(M[k]?.fiveMin)}</td><td className={td}>{M[k]?.fiveBeatQqq == null ? '—' : `${M[k].fiveBeatQqq} / ${M[k].fiveN}`}</td></tr>)}
       </Table></div>
       <div className="mt-3"><Table head={['시작', ...order.map(k => label(k))]}>
-        {bt.startYears.map(r => <tr key={r.year}><td className={tdL}>{r.year}</td>{order.map(k => <td key={k} className={td}>{r[k]?.[0] == null ? '—' : <>{pct(r[k][0])} <span className="hidden text-slate-500 sm:inline">{pct(r[k][1], 0)}</span></>}</td>)}</tr>)}
+        {bt.startYears.map(r => <tr key={r.year}><td className={tdL}>{r.year}</td>{order.map(k => <td key={k} className={td}>{r[k]?.[0] == null ? '—' : <>{pct(r[k][0])}<span className="block text-xs text-slate-500 sm:ml-1 sm:inline sm:text-sm">{pct(r[k][1], 0)}</span></>}</td>)}</tr>)}
       </Table></div>
       <p className="mt-2 text-xs text-slate-400">IRR · (최대낙폭), 각 연도 1월 시작 ~ 현재.</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">5년 보유 구간별 결과 ({bt.fiveRange[0]}~{bt.fiveRange[1]}년 시작)</summary>
       <div className="mt-3"><Table head={['구간', ...order.map(k => label(k))]}>
-        {bt.fiveYear.map(r => <tr key={r.year}><td className={tdL}>{r.year}~{r.year + 5}</td>{order.map(k => <td key={k} className={`${td} ${k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : ''}`}>{pct(r[k])}</td>)}</tr>)}
+        {bt.fiveYear.map(r => <tr key={r.year}><td className={tdL}>{r.year}~{r.year + 5}</td>{order.map(k => <td key={k} className={`${td} ${k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : ''}`}>{pct(r[k])}{r.mdd?.[k] != null && <span className="block text-xs text-slate-500 sm:ml-1 sm:inline sm:text-sm">{pct(r.mdd[k], 0)}</span>}</td>)}</tr>)}
       </Table></div>
-      <p className="mt-2 text-xs text-slate-400">빨간색: 같은 기간 QQQ 적립보다 낮음. 구간이 겹치므로 독립 표본이 아닙니다.</p>
+      <p className="mt-2 text-xs text-slate-400">IRR · (최대낙폭). 빨간색: 같은 기간 QQQ 적립보다 IRR이 낮음. 구간이 겹치므로 독립 표본이 아닙니다.</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">계산 기준</summary>
       <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-400">

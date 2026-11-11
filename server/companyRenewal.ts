@@ -55,14 +55,15 @@ export const isExcludedFromCompanyRenewal = isNoiseNewsArticle;
 export function getRecentCompanyArticlesForRenewal(
   companyId: string,
   days = 30,
-  maxArticles = 20
+  maxArticles = 20,
+  nowMs: number = Date.now()
 ): { id: string; title: string; snippet: string }[] {
   const events = db.getEvents();
   const company = db.getCompanyById(companyId);
   const companyName = company?.name?.toLowerCase() || companyId.toLowerCase();
   const targetId = companyId.toLowerCase();
 
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const cutoff = nowMs - days * 24 * 60 * 60 * 1000;
 
   const matched: { id: string; title: string; snippet: string; timestamp: number }[] = [];
 
@@ -218,7 +219,7 @@ export async function executeWeeklyCompanyRenewal(
   }
 
   // 2. Gather recent 30-day internal data (Max 20 items)
-  const recentArticles = options?.preFilteredArticles || getRecentCompanyArticlesForRenewal(company.id, 30, 20);
+  const recentArticles = options?.preFilteredArticles || getRecentCompanyArticlesForRenewal(company.id, 30, 20, now.getTime());
   if (recentArticles.length < 2) {
     // Insufficient recent investment data: skip Gemini call, preserve existing values without overwriting concurrent edits
     if (getIsFirestoreAvailable()) {
@@ -766,7 +767,7 @@ export async function runWeeklyCompanyRenewalsBatch(options?: {
     }
 
     // Requirement 7: Check if recent articles are sufficient BEFORE claiming lock and reserving budget!
-    const recentArticles = getRecentCompanyArticlesForRenewal(company.id, 30, 20);
+    const recentArticles = getRecentCompanyArticlesForRenewal(company.id, 30, 20, now.getTime());
     if (recentArticles.length < 2) {
       // Insufficient articles: skip Gemini call, do NOT consume budget!
       // But record last attempt to enforce 7-day cooldown so it doesn't retry daily

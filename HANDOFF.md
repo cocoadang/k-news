@@ -70,3 +70,8 @@ Deploy smoke (ops/deploy.py) requires ≥3 public YouTube summaries and none fro
 - Firebase Hosting(site gen-lang-client-0064554427, news.dsoom.com) 설정은 저장소 밖에 있음: headers `/api/**` → `private, no-store`, 그 뒤 `/api/ceo/dataset` → `public, max-age=0, s-maxage=60, stale-while-revalidate=300`(2026-11-10, version f51e506353e22476; 이전 10a5fe556456aea2). 공개 CEO 자료만 CDN 캐시, 관리자 API는 캐시 금지 유지.
 - 2026-11-10 뉴스·유튜브 목록 캐시: `/api/events`(필터 없는 기본 목록만) 서버 10초 + `s-maxage=15, swr=30`, `?fresh=<ts>`는 관리자 작업 직후 새로 만듦(no-store). `/api/youtube/summaries` 서버 60초 + `s-maxage=60, swr=300`. Hosting 헤더 규칙에 두 경로를 같은 값으로 추가함(2026-11-10, version 94dde215f86d9c4b; 이전 f51e506353e22476). `/api/**` no-store가 기본값이라 경로별 규칙이 있어야 CDN이 캐시함.
 - 2026-11-10 유튜브 요약 주제 수(사용자 요청 수정): 길이 기준 개수 지정 없음 — 방송 전체에서 중요한 주제를 먼저 찾고 주제마다 1개(내용에 따라 보통 3~14개, 억지로 늘리거나 줄이지 않음). 원문 대조에서 떨어진 주제는 1회 고쳐 쓰기 시도(중요 주제 누락 방지). 30분 넘는 영상은 자막이 길어 영상당 예약 5센트(일·월 상한 그대로), 호출 뒤 남는 예약 환급. `fullResummarize`: 최근 5편 웹 전용 재요약(텔레그램 없음, 주제가 늘 때만 교체).
+
+## 2026-11-11 나스닥 전략 메뉴 (#67, 배포 run 42970261646)
+- 주 메뉴 4번째 '나스닥 전략'(src/components/StrategyMenu.tsx). 서버·API 변경 없음, 브라우저가 외부 공개 자료를 직접 읽음.
+- 자료 출처는 KS Wealth OS(cocoadang/ks-wealth-os): 실전 추적 = Firestore busan-redevelopment `kswealth_public/strategy`(공개 get, 금액·계좌 정보 없음, Apps Script가 매시간 게시), 백테스트 = https://asset.dsoom.com/strategy-backtest.json(CORS news.dsoom.com만 허용). 숫자를 바꾸려면 ks-wealth-os 쪽을 고침.
+- 같은 PR에서 server/companyRenewal.ts의 30일 기사 범위가 실제 시계(Date.now) 대신 실행 시각(now)을 쓰도록 수정 — 테스트 고정 날짜(2026-10-14)가 30일을 넘긴 11/11부터 CI가 실패했음.

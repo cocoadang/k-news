@@ -10,6 +10,7 @@ import { TelegramPreviewModal } from './components/TelegramPreviewModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { CeoMenu } from './components/ceo/CeoMenu';
+import { StrategyMenu } from './components/StrategyMenu';
 import { NewsEvent, SystemStatus, MonitorSettings, NewsCategory, CompanyProfile, AuthStatus } from './types';
 import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -39,7 +40,7 @@ export default function App() {
 
   // Toast Notification
   // 상단 메뉴: 뉴스 피드 / CEO 발언 (CEO 발언은 읽기 전용 API /api/ceo/dataset, 예시 데이터 대체 없음)
-  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube'>('youtube');
+  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube' | 'strategy'>('youtube');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -495,13 +496,13 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
         <nav className="mb-4 flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label="주 메뉴">
-          {([['youtube', '유튜브 요약'], ['news', '뉴스 피드'], ['ceo', 'CEO 발언']] as const).map(([key, label]) => (
+          {([['youtube', '유튜브 요약'], ['news', '뉴스 피드'], ['ceo', 'CEO 발언'], ['strategy', '나스닥 전략']] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
               aria-current={mainView === key ? 'page' : undefined}
               onClick={() => setMainView(key)}
-              className={`flex-1 sm:flex-none min-h-[40px] rounded-lg px-4 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+              className={`flex-1 sm:flex-none min-h-[40px] rounded-lg px-1.5 sm:px-4 text-[13px] sm:text-sm whitespace-nowrap font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                 mainView === key ? 'bg-cyan-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
             >
               {label}
@@ -511,6 +512,8 @@ export default function App() {
 
         {mainView === 'youtube' ? (<YoutubeMenu isAdmin={!!authStatus?.isAuthenticated} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
           <CeoMenu isAdmin={!!authStatus?.isAuthenticated} />
+        ) : mainView === 'strategy' ? (
+          <StrategyMenu />
         ) : (<>
         <PageHeader title="뉴스 피드" description="감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다."
           actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(true); fetchStatus(); }} /></>} />

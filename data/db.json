@@ -1,0 +1,2667 @@
+{
+  "events": [],
+  "rawArticles": [],
+  "companies": [
+    {
+      "id": "spacex",
+      "name": "SpaceX",
+      "ticker": "SpaceX (Private)",
+      "color": "#0ea5e9",
+      "searchKeywords": [
+        "SpaceX Starship",
+        "Starlink Direct to Cell"
+      ],
+      "coreBusinesses": [
+        "Launch Services",
+        "Direct-to-Cell"
+      ],
+      "pinnedSearchKeywords": [
+        "SpaceX Starship"
+      ],
+      "pinnedCoreBusinesses": [
+        "Launch Services"
+      ],
+      "autoWeeklyRenewalEnabled": true,
+      "version": 2,
+      "renewalHistory": [
+        {
+          "id": "hist-1794377165642-dm3w0",
+          "companyId": "spacex",
+          "timestamp": "2026-10-28T10:00:00.000Z",
+          "status": "success",
+          "before": {
+            "searchKeywords": [
+              "SpaceX Starship"
+            ],
+            "coreBusinesses": [
+              "Launch Services"
+            ]
+          },
+          "after": {
+            "searchKeywords": [
+              "SpaceX Starship",
+              "Starlink Direct to Cell"
+            ],
+            "coreBusinesses": [
+              "Launch Services",
+              "Direct-to-Cell"
+            ]
+          },
+          "addedKeywords": [
+            "Starlink Direct to Cell"
+          ],
+          "removedKeywords": [],
+          "addedBusinesses": [
+            "Direct-to-Cell"
+          ],
+          "removedBusinesses": [],
+          "reason": "실제 claim 반환 lockedCompany 단일 호출 검증",
+          "evidenceArticleIds": [
+            "evt-spx-real-1"
+          ],
+          "versionBefore": 1,
+          "versionAfter": 2
+        }
+      ],
+      "importantKeywords": [
+        "IPO",
+        "상장",
+        "valuation",
+        "기업가치",
+        "funding",
+        "자금조달",
+        "Starship",
+        "스타십",
+        "Starlink",
+        "스타링크",
+        "Starshield",
+        "스타실드",
+        "NASA",
+        "Artemis",
+        "아르테미스",
+        "FAA",
+        "Pentagon",
+        "DoD",
+        "NRO",
+        "미국 국방부",
+        "우주군",
+        "Space Force",
+        "정부계약",
+        "government contract",
+        "화성",
+        "Mars",
+        "발사 실패",
+        "폭발",
+        "explosion",
+        "CAPEX",
+        "생산시설",
+        "Starbase",
+        "스타베이스"
+      ],
+      "lowImportanceKeywords": [
+        "routine launch",
+        "batch launch",
+        "falcon 9 batch",
+        "일반 발사",
+        "정기 발사"
+      ],
+      "competitorKeywords": [
+        "Blue Origin",
+        "Rocket Lab",
+        "ULA",
+        "Kuiper"
+      ],
+      "enabled": true,
+      "lastKeywordRenewalAttemptAt": "2026-10-28T10:00:00.000Z",
+      "lastRenewalStatus": "success",
+      "renewalLock": null,
+      "updatedAt": "2026-11-11T06:06:05.642Z",
+      "lastKeywordRenewalSuccessAt": "2026-11-11T06:06:05.642Z",
+      "lastRenewalReason": "실제 claim 반환 lockedCompany 단일 호출 검증"
+    },
+    {
+      "id": "googl",
+      "name": "Alphabet / Google",
+      "ticker": "GOOGL",
+      "color": "#3b82f6",
+      "searchKeywords": [
+        "Google Gemini AI",
+        "Waymo robotaxi",
+        "Original KW"
+      ],
+      "coreBusinesses": [
+        "Gemini / DeepMind",
+        "Google Cloud"
+      ],
+      "pinnedSearchKeywords": [
+        "Google Gemini AI",
+        "Waymo robotaxi"
+      ],
+      "pinnedCoreBusinesses": [
+        "Gemini / DeepMind",
+        "Google Cloud"
+      ],
+      "autoWeeklyRenewalEnabled": true,
+      "version": 4,
+      "renewalHistory": [
+        {
+          "id": "hist-1794377165661-pzr4z",
+          "companyId": "googl",
+          "timestamp": "2026-11-11T06:06:05.661Z",
+          "status": "rolled_back",
+          "before": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "Original KW"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud"
+            ]
+          },
+          "after": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "Original KW"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud"
+            ]
+          },
+          "addedKeywords": [],
+          "removedKeywords": [],
+          "addedBusinesses": [],
+          "removedBusinesses": [],
+          "reason": "관리자에 의한 이전 상태 복원 (기준 이력: 2026. 11. 11. 오후 3:06:05)",
+          "evidenceArticleIds": [
+            "evt-123"
+          ],
+          "versionBefore": 3,
+          "versionAfter": 4
+        },
+        {
+          "id": "hist-1794377165646-bf4t8",
+          "companyId": "googl",
+          "timestamp": "2026-11-11T06:06:05.646Z",
+          "status": "rolled_back",
+          "before": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "New Keyword Added"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud",
+              "New Business"
+            ]
+          },
+          "after": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "Original KW"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud"
+            ]
+          },
+          "addedKeywords": [
+            "Original KW"
+          ],
+          "removedKeywords": [
+            "New Keyword Added"
+          ],
+          "addedBusinesses": [],
+          "removedBusinesses": [
+            "New Business"
+          ],
+          "reason": "관리자에 의한 이전 상태 복원 (기준 이력: 2026. 11. 11. 오후 3:06:05)",
+          "evidenceArticleIds": [
+            "evt-123"
+          ],
+          "versionBefore": 2,
+          "versionAfter": 3
+        },
+        {
+          "id": "hist-test-rollback-1",
+          "companyId": "googl",
+          "timestamp": "2026-11-11T06:06:05.645Z",
+          "status": "success",
+          "before": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "Original KW"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud"
+            ]
+          },
+          "after": {
+            "searchKeywords": [
+              "Google Gemini AI",
+              "Waymo robotaxi",
+              "New Keyword Added"
+            ],
+            "coreBusinesses": [
+              "Gemini / DeepMind",
+              "Google Cloud",
+              "New Business"
+            ]
+          },
+          "addedKeywords": [
+            "New Keyword Added"
+          ],
+          "removedKeywords": [
+            "Original KW"
+          ],
+          "addedBusinesses": [
+            "New Business"
+          ],
+          "removedBusinesses": [],
+          "reason": "과거 변경",
+          "evidenceArticleIds": [
+            "evt-123"
+          ],
+          "versionBefore": 1,
+          "versionAfter": 2
+        }
+      ],
+      "importantKeywords": [
+        "Gemini",
+        "제미나이",
+        "DeepMind",
+        "딥마인드",
+        "AI 모델",
+        "AI Agent",
+        "TPU",
+        "Google Cloud",
+        "구글 클라우드",
+        "검색 점유율",
+        "AI 검색",
+        "AI Search",
+        "광고 매출",
+        "YouTube",
+        "유튜브",
+        "Waymo",
+        "웨이모",
+        "Android",
+        "안드로이드",
+        "Chrome",
+        "크롬",
+        "반독점",
+        "Antitrust",
+        "DOJ",
+        "소송",
+        "미국 규제",
+        "EU 규제",
+        "데이터센터 투자",
+        "AI CAPEX",
+        "인수합병",
+        "M&A",
+        "실적",
+        "매출",
+        "영업이익",
+        "경쟁력"
+      ],
+      "lowImportanceKeywords": [
+        "service update",
+        "app update",
+        "minor patch",
+        "doodle",
+        "단순 업데이트",
+        "앱 패치"
+      ],
+      "competitorKeywords": [
+        "OpenAI",
+        "Microsoft Copilot",
+        "Meta AI",
+        "Amazon AWS",
+        "Apple Intelligence"
+      ],
+      "enabled": true,
+      "lastKeywordRenewalAttemptAt": "2026-10-28T10:00:00.000Z",
+      "lastRenewalStatus": "success",
+      "lastRenewalReason": "관리자에 의한 이전 상태 복원 (기준 이력: 2026. 11. 11. 오후 3:06:05)",
+      "renewalLock": null
+    },
+    {
+      "id": "tsla",
+      "name": "Tesla",
+      "ticker": "TSLA",
+      "color": "#ef4444",
+      "searchKeywords": [
+        "Tesla deliveries production",
+        "Tesla FSD Robotaxi",
+        "Tesla Cybercab",
+        "Tesla Optimus humanoid",
+        "Tesla Megapack energy",
+        "Tesla auto margin capex"
+      ],
+      "coreBusinesses": [
+        "EV (Model 3/Y/Cybercab)",
+        "FSD & Autonomous AI",
+        "Optimus Humanoid Robot",
+        "Energy Storage / Megapack"
+      ],
+      "pinnedSearchKeywords": [
+        "Tesla deliveries production",
+        "Tesla FSD Robotaxi"
+      ],
+      "pinnedCoreBusinesses": [
+        "EV (Model 3/Y/Cybercab)",
+        "FSD & Autonomous AI"
+      ],
+      "autoWeeklyRenewalEnabled": true,
+      "version": 1,
+      "renewalHistory": [],
+      "importantKeywords": [
+        "차량 판매량",
+        "deliveries",
+        "생산량",
+        "production",
+        "가격 인하",
+        "가격 인상",
+        "price cut",
+        "자동차 마진",
+        "auto gross margin",
+        "FSD",
+        "Robotaxi",
+        "로보택시",
+        "Cybercab",
+        "사이버캡",
+        "Optimus",
+        "옵티머스",
+        "휴머노이드",
+        "자율주행 규제",
+        "FSD 승인",
+        "FSD approval",
+        "신규 공장",
+        "Gigafactory",
+        "생산능력",
+        "4680 배터리",
+        "Megapack",
+        "메가팩",
+        "Energy Storage",
+        "중국 판매",
+        "중국 인도량",
+        "미국 판매",
+        "유럽 판매",
+        "신규 차량",
+        "Next-gen vehicle",
+        "CAPEX",
+        "실적",
+        "매출",
+        "영업이익",
+        "Elon Musk 경영 이슈",
+        "Musk compensation"
+      ],
+      "lowImportanceKeywords": [
+        "minor car crash",
+        "단순 사고",
+        "SNS 발언",
+        "celebrity tweet"
+      ],
+      "competitorKeywords": [
+        "Waymo",
+        "BYD",
+        "Lucid",
+        "Rivian",
+        "Cruise"
+      ],
+      "enabled": true,
+      "lastKeywordRenewalAttemptAt": "2026-10-28T10:00:00.000Z"
+    },
+    {
+      "id": "msft",
+      "name": "Microsoft",
+      "ticker": "MSFT",
+      "color": "#10b981",
+      "searchKeywords": [
+        "Microsoft Azure growth",
+        "Microsoft Copilot AI",
+        "Microsoft OpenAI investment",
+        "Microsoft AI capex datacenters",
+        "Microsoft Nvidia GPU purchase",
+        "Microsoft Maia AI chip"
+      ],
+      "coreBusinesses": [
+        "Azure Cloud",
+        "Microsoft 365 / Copilot",
+        "OpenAI Alliance",
+        "Enterprise AI & Security"
+      ],
+      "pinnedSearchKeywords": [
+        "Microsoft Azure growth",
+        "Microsoft Copilot AI"
+      ],
+      "pinnedCoreBusinesses": [
+        "Azure Cloud",
+        "Microsoft 365 / Copilot"
+      ],
+      "autoWeeklyRenewalEnabled": true,
+      "version": 1,
+      "renewalHistory": [],
+      "importantKeywords": [
+        "Azure",
+        "애저",
+        "Azure 성장률",
+        "Azure growth",
+        "Microsoft 365",
+        "M365",
+        "Copilot",
+        "코파일럿",
+        "AI 데이터센터",
+        "AI CAPEX",
+        "OpenAI",
+        "오픈AI",
+        "Anthropic",
+        "앤트로픽",
+        "AI 투자",
+        "NVIDIA GPU 구매",
+        "GPU purchase",
+        "자체 AI 칩",
+        "Maia",
+        "Cobalt",
+        "클라우드 시장 점유율",
+        "Cloud market share",
+        "기업용 AI",
+        "Enterprise AI",
+        "Windows",
+        "GitHub",
+        "깃허브",
+        "Activision",
+        "액티비전",
+        "인수합병",
+        "M&A",
+        "독점 규제",
+        "실적",
+        "매출",
+        "영업이익",
+        "AI 투자 수익성",
+        "AI monetization"
+      ],
+      "lowImportanceKeywords": [
+        "windows update",
+        "patch tuesday",
+        "단순 윈도우 패치",
+        "단순 버그 수정"
+      ],
+      "competitorKeywords": [
+        "Google Cloud",
+        "Amazon AWS",
+        "Meta",
+        "Salesforce"
+      ],
+      "enabled": true,
+      "lastKeywordRenewalAttemptAt": "2026-10-28T10:00:00.000Z"
+    },
+    {
+      "id": "nvda",
+      "name": "NVIDIA",
+      "ticker": "NVDA",
+      "color": "#84cc16",
+      "searchKeywords": [
+        "Nvidia Blackwell GPU",
+        "Nvidia Rubin datacenter",
+        "Nvidia datacenter revenue",
+        "Nvidia TSMC HBM supply",
+        "Nvidia China chip export restrictions",
+        "Nvidia Hyperscaler capex"
+      ],
+      "coreBusinesses": [
+        "AI Accelerators (Blackwell / Rubin / H100 / B200)",
+        "Data Center GPU Systems",
+        "CUDA Software Ecosystem",
+        "Networking (NVLink / Spectrum-X)"
+      ],
+      "pinnedSearchKeywords": [
+        "Nvidia Blackwell GPU",
+        "Nvidia datacenter revenue"
+      ],
+      "pinnedCoreBusinesses": [
+        "AI Accelerators (Blackwell / Rubin / H100 / B200)",
+        "Data Center GPU Systems"
+      ],
+      "autoWeeklyRenewalEnabled": true,
+      "version": 1,
+      "renewalHistory": [],
+      "importantKeywords": [
+        "GPU",
+        "AI Accelerator",
+        "AI 가속기",
+        "Blackwell",
+        "블랙웰",
+        "Rubin",
+        "루빈",
+        "차세대 GPU",
+        "데이터센터 매출",
+        "Datacenter revenue",
+        "GPU 수요",
+        "GPU demand",
+        "GPU 공급",
+        "GPU supply",
+        "TSMC",
+        "HBM",
+        "SK hynix",
+        "SK하이닉스",
+        "Micron",
+        "마이크론",
+        "Samsung Electronics",
+        "삼성전자",
+        "CUDA",
+        "쿠다",
+        "AI inference",
+        "AI 추론",
+        "AI training",
+        "Hyperscaler CAPEX",
+        "하이퍼스케일러 투자",
+        "Microsoft GPU",
+        "Google GPU",
+        "Meta GPU",
+        "Amazon GPU",
+        "OpenAI GPU",
+        "중국 수출규제",
+        "중국 반도체 규제",
+        "China export control",
+        "중국용 GPU",
+        "네트워킹",
+        "NVLink",
+        "Spectrum-X",
+        "실적",
+        "매출",
+        "영업이익",
+        "마진율",
+        "gross margin",
+        "공급망",
+        "대형 고객 주문"
+      ],
+      "lowImportanceKeywords": [
+        "geforce driver",
+        "gaming driver update",
+        "단순 그래픽카드 드라이버"
+      ],
+      "competitorKeywords": [
+        "AMD Instinct",
+        "Intel Gaudi",
+        "Google TPU",
+        "AWS Trainium",
+        "Meta MTIA"
+      ],
+      "enabled": true,
+      "lastKeywordRenewalAttemptAt": "2026-10-28T10:00:00.000Z"
+    }
+  ],
+  "settings": {
+    "minImportance": 3,
+    "pollIntervalMinutes": 30,
+    "autoSendTelegram": true,
+    "autoAnalyzeWithGemini": true,
+    "enabledCategories": [
+      "IPO / 주식",
+      "기업가치 / 자금조달",
+      "실적 / 재무",
+      "AI 가속기 / 반도체",
+      "AI 모델 / Agent",
+      "클라우드 / 데이터센터",
+      "자율주행 / Robotaxi",
+      "Starship / 우주인프라",
+      "Starlink / 통신",
+      "국방 / 정부계약",
+      "규제 / 반독점",
+      "에너지 / 배터리",
+      "공급망 / CAPEX",
+      "경쟁사 / 시장점유율",
+      "기타"
+    ],
+    "enabledCompanies": [
+      "spacex",
+      "googl",
+      "tsla",
+      "msft",
+      "nvda"
+    ],
+    "customKeywords": [
+      "SpaceX Starship",
+      "SpaceX Starlink",
+      "SpaceX IPO",
+      "Google Gemini AI",
+      "Google TPU",
+      "Waymo Robotaxi",
+      "Tesla FSD",
+      "Tesla Optimus",
+      "Tesla Robotaxi",
+      "Microsoft Azure AI",
+      "Microsoft Copilot",
+      "Microsoft OpenAI",
+      "NVIDIA Blackwell",
+      "NVIDIA Rubin GPU",
+      "NVIDIA Datacenter",
+      "Hyperscaler AI CAPEX",
+      "TSMC HBM SK hynix"
+    ],
+    "lastPollTime": "2026-11-11T06:06:10.683Z",
+    "nextPollTime": "2026-11-11T06:36:10.683Z",
+    "totalArticlesTracked": 0,
+    "totalEventsCreated": 32,
+    "totalTelegramAlertsSent": 10
+  },
+  "logs": [
+    {
+      "id": "log-1794377090309",
+      "timestamp": "2026-11-11T06:04:50.309Z",
+      "level": "info",
+      "module": "System",
+      "message": "Investment Intelligence Monitor initialized with 5 core investment targets (SpaceX, Google, Tesla, Microsoft, NVIDIA)."
+    },
+    {
+      "id": "log-1794377090594-mukhw",
+      "timestamp": "2026-11-11T06:04:50.594Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 deliveries beat estimates ...\""
+    },
+    {
+      "id": "log-1794377090595-2twpc",
+      "timestamp": "2026-11-11T06:04:50.595Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377090596-16u2d",
+      "timestamp": "2026-11-11T06:04:50.596Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"테슬라 3분기 차량 인도량 시장 예상치 상회... 주가 반응...\" into unified event \"Tesla Q3 deliveries beat estimates ...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377090596-j3b3s",
+      "timestamp": "2026-11-11T06:04:50.596Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377090601-0lwzk",
+      "timestamp": "2026-11-11T06:04:50.601Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Tesla Q3 deliveries beat estimates ...\" (5★)"
+    },
+    {
+      "id": "log-1794377090602-tna1w",
+      "timestamp": "2026-11-11T06:04:50.602Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 deliveries beat estimates...\""
+    },
+    {
+      "id": "log-1794377090603-lense",
+      "timestamp": "2026-11-11T06:04:50.603Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377090605-ub56x",
+      "timestamp": "2026-11-11T06:04:50.605Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Tesla Q3 deliveries beat estimates...\" (5★)"
+    },
+    {
+      "id": "log-1794377090605-jk8xr",
+      "timestamp": "2026-11-11T06:04:50.605Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377090606-pwzqr",
+      "timestamp": "2026-11-11T06:04:50.606Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"MarketWatch: Tesla beats Q3 deliver...\" into unified event \"Tesla Q3 deliveries beat estimates...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377090606-bvzfv",
+      "timestamp": "2026-11-11T06:04:50.606Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377090607-1ixhv",
+      "timestamp": "2026-11-11T06:04:50.607Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377090607-yad21",
+      "timestamp": "2026-11-11T06:04:50.607Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Yahoo Finance: Tesla stock surges a...\" into unified event \"Tesla Q3 deliveries beat estimates...\" (3 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377090608-soamk",
+      "timestamp": "2026-11-11T06:04:50.608Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377090610-nqr5w",
+      "timestamp": "2026-11-11T06:04:50.610Z",
+      "level": "info",
+      "module": "Telegram",
+      "message": "[Telegram Filter] Auto-dispatch blocked: \"NVIDIA announces new enterpris...\" - Telegram auto-dispatch is strictly restricted to importance === 5 (current: 4★)"
+    },
+    {
+      "id": "log-1794377090612-tercf",
+      "timestamp": "2026-11-11T06:04:50.612Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"SpaceX Starship orbital flight test...\" (5★)"
+    },
+    {
+      "id": "log-1794377090616-qho4j",
+      "timestamp": "2026-11-11T06:04:50.616Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"NVIDIA B200 Blackwell chips drive $...\" (5★)"
+    },
+    {
+      "id": "log-1794377090618-d970k",
+      "timestamp": "2026-11-11T06:04:50.618Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Google DeepMind reveals Gemini 3.0 ...\" (5★)"
+    },
+    {
+      "id": "log-1794377090619-k30g2",
+      "timestamp": "2026-11-11T06:04:50.619Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 vehicle deliveries beat Wa...\""
+    },
+    {
+      "id": "log-1794377090620-5vue4",
+      "timestamp": "2026-11-11T06:04:50.620Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 vehicle deliveries be...\""
+    },
+    {
+      "id": "log-1794377090620-cd5ov",
+      "timestamp": "2026-11-11T06:04:50.620Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"테슬라 3분기 차량 인도량 시장 예상치 상회 발표...\" into unified event \"Tesla Q3 vehicle deliveries beat Wa...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377090621-d3qxz",
+      "timestamp": "2026-11-11T06:04:50.621Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377090622-qlv79",
+      "timestamp": "2026-11-11T06:04:50.622Z",
+      "level": "info",
+      "module": "Telegram",
+      "message": "[Telegram Filter] Auto-dispatch blocked: \"SpaceX secretly preparing imme...\" - Insufficient source credibility: Tier 3 single uncorroborated source (requires Tier 1, Tier 2, or cross-source corroboration)"
+    },
+    {
+      "id": "log-1794377090689-vfdg6",
+      "timestamp": "2026-11-11T06:04:50.689Z",
+      "level": "warn",
+      "module": "Scheduler",
+      "message": "Unauthorized Cloud Scheduler trigger attempt from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090693-trgqb",
+      "timestamp": "2026-11-11T06:04:50.693Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on GET /api/settings from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090696-kgwco",
+      "timestamp": "2026-11-11T06:04:50.696Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/poll from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090698-zm4no",
+      "timestamp": "2026-11-11T06:04:50.698Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on GET /api/settings from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090712-nq46u",
+      "timestamp": "2026-11-11T06:04:50.712Z",
+      "level": "warn",
+      "module": "System",
+      "message": "CSRF Origin verification failed on auth route POST /api/auth/login from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090716-q04ex",
+      "timestamp": "2026-11-11T06:04:50.716Z",
+      "level": "info",
+      "module": "System",
+      "message": "Admin session established successfully from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090719-hwrtd",
+      "timestamp": "2026-11-11T06:04:50.719Z",
+      "level": "warn",
+      "module": "System",
+      "message": "CSRF Origin verification failed for POST /api/settings from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090723-z4pxb",
+      "timestamp": "2026-11-11T06:04:50.723Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "Serverless mode active: Internal background setInterval is idle (ENABLE_INTERNAL_SCHEDULER is false). Periodic execution is delegated to Cloud Scheduler (/api/jobs/poll) or manual triggers."
+    },
+    {
+      "id": "log-1794377090723-wom0z",
+      "timestamp": "2026-11-11T06:04:50.723Z",
+      "level": "info",
+      "module": "System",
+      "message": "Settings updated by admin."
+    },
+    {
+      "id": "log-1794377090727-oihyq",
+      "timestamp": "2026-11-11T06:04:50.727Z",
+      "level": "warn",
+      "module": "Telegram",
+      "message": "Unauthorized Telegram Webhook attempt from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377090736-vtl4c",
+      "timestamp": "2026-11-11T06:04:50.736Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 1/4] Verifying candidate \"구글 알파벳 Gemini 2.0 모델 공식 공개 및 플...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377090740-0g2ln",
+      "timestamp": "2026-11-11T06:04:50.740Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377091947-rixca",
+      "timestamp": "2026-11-11T06:04:51.947Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377091948-izm0b",
+      "timestamp": "2026-11-11T06:04:51.948Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 capex and infrast...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377093152-1b7sv",
+      "timestamp": "2026-11-11T06:04:53.152Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 2/4] Verifying candidate \"Alphabet / Google 사업 분석...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377093154-miext",
+      "timestamp": "2026-11-11T06:04:53.154Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377094355-efnwk",
+      "timestamp": "2026-11-11T06:04:54.355Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 3/4] Verifying candidate \"구글 알파벳 Gemini 2.0 모델 공식 공개 및 플...\" with Gemini: Entity (gemini 2.0) & Title Overlap 23% within 0.0h"
+    },
+    {
+      "id": "log-1794377094357-73qo0",
+      "timestamp": "2026-11-11T06:04:54.357Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377095561-bu44g",
+      "timestamp": "2026-11-11T06:04:55.561Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377095562-b9hcj",
+      "timestamp": "2026-11-11T06:04:55.562Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 quarterly financi...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377096765-uifi8",
+      "timestamp": "2026-11-11T06:04:56.765Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 4/4] Verifying candidate \"Alphabet / Google 사업 분석...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377096766-3o94s",
+      "timestamp": "2026-11-11T06:04:56.766Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377097970-ypmv2",
+      "timestamp": "2026-11-11T06:04:57.970Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377097971-y3bdt",
+      "timestamp": "2026-11-11T06:04:57.971Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 antitrust regulat...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377099173-7p3u2",
+      "timestamp": "2026-11-11T06:04:59.173Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377099175-eh97u",
+      "timestamp": "2026-11-11T06:04:59.175Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377099176-z0llz",
+      "timestamp": "2026-11-11T06:04:59.176Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 government defens...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377100379-0t26f",
+      "timestamp": "2026-11-11T06:05:00.379Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377100381-0yr59",
+      "timestamp": "2026-11-11T06:05:00.381Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377100382-53uly",
+      "timestamp": "2026-11-11T06:05:00.382Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 international avi...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377101586-86mwz",
+      "timestamp": "2026-11-11T06:05:01.586Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377101588-u1q69",
+      "timestamp": "2026-11-11T06:05:01.588Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377101588-mjos4",
+      "timestamp": "2026-11-11T06:05:01.588Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 orbital flight te...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377102791-bya9q",
+      "timestamp": "2026-11-11T06:05:02.791Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 6/8 (예산초과 스킵: 0), 의미중복검증: 4/4 (예산초과 스킵: 4), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377102794-luk8i",
+      "timestamp": "2026-11-11T06:05:02.794Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377102794-5o3x4",
+      "timestamp": "2026-11-11T06:05:02.794Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Falcon 9 orbital satellite l...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377104000-qzrik",
+      "timestamp": "2026-11-11T06:05:04.000Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377104001-5a234",
+      "timestamp": "2026-11-11T06:05:04.001Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Tesla Cybertruck production factory...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377105206-gcjw4",
+      "timestamp": "2026-11-11T06:05:05.206Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377105207-td689",
+      "timestamp": "2026-11-11T06:05:05.207Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"NVIDIA Rubin GPU architecture next ...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377106411-zbh43",
+      "timestamp": "2026-11-11T06:05:06.411Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377106412-9lf16",
+      "timestamp": "2026-11-11T06:05:06.412Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Alphabet Waymo autonomous ride hail...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377107616-sk7k1",
+      "timestamp": "2026-11-11T06:05:07.616Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377107617-49xz9",
+      "timestamp": "2026-11-11T06:05:07.617Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Microsoft Azure quantum computing d...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377108822-0t0qk",
+      "timestamp": "2026-11-11T06:05:08.822Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377108823-8u5a0",
+      "timestamp": "2026-11-11T06:05:08.823Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Starlink direct to cell cons...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377110027-aec2v",
+      "timestamp": "2026-11-11T06:05:10.027Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377110028-eufg0",
+      "timestamp": "2026-11-11T06:05:10.028Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Tesla Megapack utility grid battery...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377111233-fxn31",
+      "timestamp": "2026-11-11T06:05:11.233Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377111234-aeirk",
+      "timestamp": "2026-11-11T06:05:11.234Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"NVIDIA Blackwell server rack coolin...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377112440-363e0",
+      "timestamp": "2026-11-11T06:05:12.440Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Alphabet DeepMind biological protei...\""
+    },
+    {
+      "id": "log-1794377112442-nb95c",
+      "timestamp": "2026-11-11T06:05:12.442Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Microsoft Copilot workplace product...\""
+    },
+    {
+      "id": "log-1794377112444-umqv3",
+      "timestamp": "2026-11-11T06:05:12.444Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"SpaceX Starshield military defense ...\""
+    },
+    {
+      "id": "log-1794377112447-jp482",
+      "timestamp": "2026-11-11T06:05:12.447Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Tesla Optimus humanoid robot assemb...\""
+    },
+    {
+      "id": "log-1794377112448-6pz8r",
+      "timestamp": "2026-11-11T06:05:12.448Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 8/8 (예산초과 스킵: 4), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377112449-aqh9w",
+      "timestamp": "2026-11-11T06:05:12.449Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 60%] Matched to event \"SpaceX Starship flight 8 upcom...\""
+    },
+    {
+      "id": "log-1794377112450-vvb13",
+      "timestamp": "2026-11-11T06:05:12.450Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[SourceFilter] 대표 출처 승격: \"SpaceX Starship flight 8 upcom...\" → Reuters [TIER1]"
+    },
+    {
+      "id": "log-1794377112451-gv6qb",
+      "timestamp": "2026-11-11T06:05:12.451Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377112452-k8zr0",
+      "timestamp": "2026-11-11T06:05:12.452Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Starship flight 8 static fir...\" -> [AI 모델 / Agent] [product_event] [TIER1] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377113655-2v9bo",
+      "timestamp": "2026-11-11T06:05:13.655Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377113656-4kays",
+      "timestamp": "2026-11-11T06:05:13.656Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 60%] Matched to event \"Alphabet / Google 사업 분석...\""
+    },
+    {
+      "id": "log-1794377113657-59r9d",
+      "timestamp": "2026-11-11T06:05:13.657Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (3 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377113657-2acq7",
+      "timestamp": "2026-11-11T06:05:13.657Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 67%] Matched to event \"Alphabet / Google 사업 분석...\""
+    },
+    {
+      "id": "log-1794377113658-resf7",
+      "timestamp": "2026-11-11T06:05:13.658Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (4 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377113658-uuz85",
+      "timestamp": "2026-11-11T06:05:13.658Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 1/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377113662-mo9oy",
+      "timestamp": "2026-11-11T06:05:13.662Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377113662-o0aqy",
+      "timestamp": "2026-11-11T06:05:13.662Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 4...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377113663-qf5tn",
+      "timestamp": "2026-11-11T06:05:13.663Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377114866-jfteo",
+      "timestamp": "2026-11-11T06:05:14.866Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377114867-ov6jt",
+      "timestamp": "2026-11-11T06:05:14.867Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 3...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377114868-xw9t8",
+      "timestamp": "2026-11-11T06:05:14.868Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377116071-1gnpl",
+      "timestamp": "2026-11-11T06:05:16.071Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377116072-8zi2m",
+      "timestamp": "2026-11-11T06:05:16.072Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 2...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377116074-g3yzf",
+      "timestamp": "2026-11-11T06:05:16.074Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377117278-1xpn6",
+      "timestamp": "2026-11-11T06:05:17.278Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "Gemini (gemini-3.7-flash) analysis failed: {\"error\":{\"code\":429,\"message\":\"RESOURCE_EXHAUSTED: Rate limit quota exceeded\",\"status\":\"RESOURCE_EX. Marking event as pending analysis."
+    },
+    {
+      "id": "log-1794377118482-hhf89",
+      "timestamp": "2026-11-11T06:05:18.482Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Rate Limit 429 감지] 분당 호출 제한 방어를 위해 이번 사이클의 남은 기사를 대기(Pending) 상태로 전환합니다."
+    },
+    {
+      "id": "log-1794377118483-2zhkj",
+      "timestamp": "2026-11-11T06:05:18.483Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377118485-e6jsa",
+      "timestamp": "2026-11-11T06:05:18.485Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #1...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377118486-mzecl",
+      "timestamp": "2026-11-11T06:05:18.486Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377118487-bg309",
+      "timestamp": "2026-11-11T06:05:18.487Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #2...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377118487-0zlsu",
+      "timestamp": "2026-11-11T06:05:18.487Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377118489-y7eyx",
+      "timestamp": "2026-11-11T06:05:18.489Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #3...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377118489-x61j6",
+      "timestamp": "2026-11-11T06:05:18.489Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377118490-yrgkv",
+      "timestamp": "2026-11-11T06:05:18.490Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #4...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377118490-3acje",
+      "timestamp": "2026-11-11T06:05:18.490Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377118491-5jrqk",
+      "timestamp": "2026-11-11T06:05:18.491Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #5...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377118491-snhjj",
+      "timestamp": "2026-11-11T06:05:18.491Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 1/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: true (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377118492-i51m9",
+      "timestamp": "2026-11-11T06:05:18.492Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Gemini Retry] 이전 단계에서 429/Quota 감지되어 이번 사이클 재시도를 전체 건너뜁니다."
+    },
+    {
+      "id": "log-1794377118496-jvo0n",
+      "timestamp": "2026-11-11T06:05:18.496Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 180, output: 65, total: 245 for SpaceX"
+    },
+    {
+      "id": "log-1794377118498-pf2fu",
+      "timestamp": "2026-11-11T06:05:18.498Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 2)"
+    },
+    {
+      "id": "log-1794377118499-78fi2",
+      "timestamp": "2026-11-11T06:05:18.499Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 150, output: 50, total: 200 for SpaceX"
+    },
+    {
+      "id": "log-1794377118500-ako5o",
+      "timestamp": "2026-11-11T06:05:18.500Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 1)"
+    },
+    {
+      "id": "log-1794377118501-cd3hh",
+      "timestamp": "2026-11-11T06:05:18.501Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Weekly Renewal] JSON 파싱 실패 for SpaceX: finishReason=unknown, length=27, head=\"{ malformed json: not valid\""
+    },
+    {
+      "id": "log-1794377118505-4e8q3",
+      "timestamp": "2026-11-11T06:05:18.505Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Weekly Renewal] JSON 파싱 실패 for SpaceX: finishReason=unknown, length=27, head=\"{ malformed json: not valid\""
+    },
+    {
+      "id": "log-1794377118507-awicy",
+      "timestamp": "2026-11-11T06:05:18.507Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal] Firestore is not available. Skipping weekly renewal batch."
+    },
+    {
+      "id": "log-1794377118510-49asx",
+      "timestamp": "2026-11-11T06:05:18.510Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for SpaceX"
+    },
+    {
+      "id": "log-1794377118511-8apkl",
+      "timestamp": "2026-11-11T06:05:18.511Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 1)"
+    },
+    {
+      "id": "log-1794377118514-v49t5",
+      "timestamp": "2026-11-11T06:05:18.514Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal Summary] week: 2026-W42, calls: 1/5, updated: 1, skipped: 4, failed: 0"
+    },
+    {
+      "id": "log-1794377137649-pj6ma",
+      "timestamp": "2026-11-11T06:05:37.649Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 deliveries beat estimates ...\""
+    },
+    {
+      "id": "log-1794377137651-oveba",
+      "timestamp": "2026-11-11T06:05:37.651Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377137652-a5pcm",
+      "timestamp": "2026-11-11T06:05:37.652Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"테슬라 3분기 차량 인도량 시장 예상치 상회... 주가 반응...\" into unified event \"Tesla Q3 deliveries beat estimates ...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377137653-coemv",
+      "timestamp": "2026-11-11T06:05:37.653Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377137658-41tr3",
+      "timestamp": "2026-11-11T06:05:37.658Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Tesla Q3 deliveries beat estimates ...\" (5★)"
+    },
+    {
+      "id": "log-1794377137659-wrtoe",
+      "timestamp": "2026-11-11T06:05:37.659Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 deliveries beat estimates...\""
+    },
+    {
+      "id": "log-1794377137659-78bbp",
+      "timestamp": "2026-11-11T06:05:37.659Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377137661-amsah",
+      "timestamp": "2026-11-11T06:05:37.661Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Tesla Q3 deliveries beat estimates...\" (5★)"
+    },
+    {
+      "id": "log-1794377137662-4oitw",
+      "timestamp": "2026-11-11T06:05:37.662Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377137663-cl70o",
+      "timestamp": "2026-11-11T06:05:37.663Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"MarketWatch: Tesla beats Q3 deliver...\" into unified event \"Tesla Q3 deliveries beat estimates...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377137663-65jep",
+      "timestamp": "2026-11-11T06:05:37.663Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377137664-wrgfd",
+      "timestamp": "2026-11-11T06:05:37.664Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 deliveries beat estim...\""
+    },
+    {
+      "id": "log-1794377137665-jqd47",
+      "timestamp": "2026-11-11T06:05:37.665Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Yahoo Finance: Tesla stock surges a...\" into unified event \"Tesla Q3 deliveries beat estimates...\" (3 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377137665-8k2fs",
+      "timestamp": "2026-11-11T06:05:37.665Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377137673-9wpsl",
+      "timestamp": "2026-11-11T06:05:37.673Z",
+      "level": "info",
+      "module": "Telegram",
+      "message": "[Telegram Filter] Auto-dispatch blocked: \"NVIDIA announces new enterpris...\" - Telegram auto-dispatch is strictly restricted to importance === 5 (current: 4★)"
+    },
+    {
+      "id": "log-1794377137675-jl81w",
+      "timestamp": "2026-11-11T06:05:37.675Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"SpaceX Starship orbital flight test...\" (5★)"
+    },
+    {
+      "id": "log-1794377137680-qyliz",
+      "timestamp": "2026-11-11T06:05:37.680Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"NVIDIA B200 Blackwell chips drive $...\" (5★)"
+    },
+    {
+      "id": "log-1794377137682-b89ec",
+      "timestamp": "2026-11-11T06:05:37.682Z",
+      "level": "success",
+      "module": "Telegram",
+      "message": "Alert sent to fallback Telegram chat (test-chat-777) for [기타] \"Google DeepMind reveals Gemini 3.0 ...\" (5★)"
+    },
+    {
+      "id": "log-1794377137684-nbfo0",
+      "timestamp": "2026-11-11T06:05:37.684Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (autoAnalyzeWithGemini 설정 비활성화로 분석 대기): \"Tesla Q3 vehicle deliveries beat Wa...\""
+    },
+    {
+      "id": "log-1794377137685-r3hqs",
+      "timestamp": "2026-11-11T06:05:37.685Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 3: Fingerprint Match (tsla:q3:deliveries:beat <=> tsla:q3:deliveries:beat)] Matched to event \"Tesla Q3 vehicle deliveries be...\""
+    },
+    {
+      "id": "log-1794377137685-q9u3b",
+      "timestamp": "2026-11-11T06:05:37.685Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"테슬라 3분기 차량 인도량 시장 예상치 상회 발표...\" into unified event \"Tesla Q3 vehicle deliveries beat Wa...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377137686-938br",
+      "timestamp": "2026-11-11T06:05:37.686Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 0/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377137687-lbhp3",
+      "timestamp": "2026-11-11T06:05:37.687Z",
+      "level": "info",
+      "module": "Telegram",
+      "message": "[Telegram Filter] Auto-dispatch blocked: \"SpaceX secretly preparing imme...\" - Insufficient source credibility: Tier 3 single uncorroborated source (requires Tier 1, Tier 2, or cross-source corroboration)"
+    },
+    {
+      "id": "log-1794377137729-o8dl6",
+      "timestamp": "2026-11-11T06:05:37.729Z",
+      "level": "warn",
+      "module": "Scheduler",
+      "message": "Unauthorized Cloud Scheduler trigger attempt from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137733-cwj5w",
+      "timestamp": "2026-11-11T06:05:37.733Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on GET /api/settings from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137739-6ghz7",
+      "timestamp": "2026-11-11T06:05:37.739Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/poll from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137754-l3xrz",
+      "timestamp": "2026-11-11T06:05:37.754Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on GET /api/settings from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137772-l2b72",
+      "timestamp": "2026-11-11T06:05:37.772Z",
+      "level": "warn",
+      "module": "System",
+      "message": "CSRF Origin verification failed on auth route POST /api/auth/login from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137784-esqvt",
+      "timestamp": "2026-11-11T06:05:37.784Z",
+      "level": "info",
+      "module": "System",
+      "message": "Admin session established successfully from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137788-hdq9r",
+      "timestamp": "2026-11-11T06:05:37.788Z",
+      "level": "warn",
+      "module": "System",
+      "message": "CSRF Origin verification failed for POST /api/settings from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137792-11u0x",
+      "timestamp": "2026-11-11T06:05:37.792Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "Serverless mode active: Internal background setInterval is idle (ENABLE_INTERNAL_SCHEDULER is false). Periodic execution is delegated to Cloud Scheduler (/api/jobs/poll) or manual triggers."
+    },
+    {
+      "id": "log-1794377137793-w1mu8",
+      "timestamp": "2026-11-11T06:05:37.793Z",
+      "level": "info",
+      "module": "System",
+      "message": "Settings updated by admin."
+    },
+    {
+      "id": "log-1794377137796-zmryo",
+      "timestamp": "2026-11-11T06:05:37.796Z",
+      "level": "warn",
+      "module": "Telegram",
+      "message": "Unauthorized Telegram Webhook attempt from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377137806-e4t0j",
+      "timestamp": "2026-11-11T06:05:37.806Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 1/4] Verifying candidate \"구글 알파벳 Gemini 2.0 모델 공식 공개 및 플...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377137810-jb42r",
+      "timestamp": "2026-11-11T06:05:37.810Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377139015-wliik",
+      "timestamp": "2026-11-11T06:05:39.015Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377139016-56vg0",
+      "timestamp": "2026-11-11T06:05:39.016Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 capex and infrast...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377140220-26dz9",
+      "timestamp": "2026-11-11T06:05:40.220Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 2/4] Verifying candidate \"Alphabet / Google 사업 분석...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377140222-k2mf1",
+      "timestamp": "2026-11-11T06:05:40.222Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377141424-jvznl",
+      "timestamp": "2026-11-11T06:05:41.424Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 3/4] Verifying candidate \"구글 알파벳 Gemini 2.0 모델 공식 공개 및 플...\" with Gemini: Entity (gemini 2.0) & Title Overlap 23% within 0.0h"
+    },
+    {
+      "id": "log-1794377141426-6sdb1",
+      "timestamp": "2026-11-11T06:05:41.426Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377142630-thmeh",
+      "timestamp": "2026-11-11T06:05:42.630Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377142631-pskye",
+      "timestamp": "2026-11-11T06:05:42.631Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 quarterly financi...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377143834-2ssth",
+      "timestamp": "2026-11-11T06:05:43.834Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Semantic Check 4/4] Verifying candidate \"Alphabet / Google 사업 분석...\" with Gemini: Entity (gemini 2.0) & Title Overlap 25% within 0.0h"
+    },
+    {
+      "id": "log-1794377143836-e7mdc",
+      "timestamp": "2026-11-11T06:05:43.836Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: semantic_dedup] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377145039-8bpbj",
+      "timestamp": "2026-11-11T06:05:45.039Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377145040-0elvg",
+      "timestamp": "2026-11-11T06:05:45.040Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 antitrust regulat...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377146244-sev3g",
+      "timestamp": "2026-11-11T06:05:46.244Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377146246-joa1b",
+      "timestamp": "2026-11-11T06:05:46.246Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377146247-k4478",
+      "timestamp": "2026-11-11T06:05:46.247Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 government defens...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377147451-hkt2r",
+      "timestamp": "2026-11-11T06:05:47.451Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377147453-im28m",
+      "timestamp": "2026-11-11T06:05:47.453Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377147454-o4ybm",
+      "timestamp": "2026-11-11T06:05:47.454Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 international avi...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377148658-93o0y",
+      "timestamp": "2026-11-11T06:05:48.658Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Budget Exceeded] 사이클당 의미 검증 상한(4회) 도달로 규칙 기반 판정만 적용합니다."
+    },
+    {
+      "id": "log-1794377148661-mqumx",
+      "timestamp": "2026-11-11T06:05:48.661Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377148662-3p3ec",
+      "timestamp": "2026-11-11T06:05:48.662Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Google Gemini 2.0 orbital flight te...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377149865-rrkfo",
+      "timestamp": "2026-11-11T06:05:49.865Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 6/8 (예산초과 스킵: 0), 의미중복검증: 4/4 (예산초과 스킵: 4), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377149868-d3131",
+      "timestamp": "2026-11-11T06:05:49.868Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377149869-zxbb5",
+      "timestamp": "2026-11-11T06:05:49.869Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Falcon 9 orbital satellite l...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377151074-pmcu0",
+      "timestamp": "2026-11-11T06:05:51.075Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377151076-7ji4a",
+      "timestamp": "2026-11-11T06:05:51.076Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Tesla Cybertruck production factory...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377152281-4vdfr",
+      "timestamp": "2026-11-11T06:05:52.281Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377152282-e69ox",
+      "timestamp": "2026-11-11T06:05:52.282Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"NVIDIA Rubin GPU architecture next ...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377153487-0hpg4",
+      "timestamp": "2026-11-11T06:05:53.487Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377153489-k9vn9",
+      "timestamp": "2026-11-11T06:05:53.489Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Alphabet Waymo autonomous ride hail...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377154694-44rzu",
+      "timestamp": "2026-11-11T06:05:54.694Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377154696-h47yc",
+      "timestamp": "2026-11-11T06:05:54.696Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Microsoft Azure quantum computing d...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377155901-iavan",
+      "timestamp": "2026-11-11T06:05:55.901Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377155902-ahge4",
+      "timestamp": "2026-11-11T06:05:55.902Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Starlink direct to cell cons...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377157107-kjkl7",
+      "timestamp": "2026-11-11T06:05:57.107Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377157110-tbe7d",
+      "timestamp": "2026-11-11T06:05:57.110Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Tesla Megapack utility grid battery...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377158315-fxodx",
+      "timestamp": "2026-11-11T06:05:58.315Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377158316-04hos",
+      "timestamp": "2026-11-11T06:05:58.316Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"NVIDIA Blackwell server rack coolin...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377159521-dkdxr",
+      "timestamp": "2026-11-11T06:05:59.521Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Alphabet DeepMind biological protei...\""
+    },
+    {
+      "id": "log-1794377159524-cr7fo",
+      "timestamp": "2026-11-11T06:05:59.524Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Microsoft Copilot workplace product...\""
+    },
+    {
+      "id": "log-1794377159526-ahvu6",
+      "timestamp": "2026-11-11T06:05:59.526Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"SpaceX Starshield military defense ...\""
+    },
+    {
+      "id": "log-1794377159529-weufa",
+      "timestamp": "2026-11-11T06:05:59.529Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "Created unanalyzed pending event (Cycle당 Gemini 분석 한도(8건) 초과로 다음 사이클 대기): \"Tesla Optimus humanoid robot assemb...\""
+    },
+    {
+      "id": "log-1794377159530-j2655",
+      "timestamp": "2026-11-11T06:05:59.530Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 8/8 (예산초과 스킵: 4), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377159532-eepse",
+      "timestamp": "2026-11-11T06:05:59.532Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 60%] Matched to event \"SpaceX Starship flight 8 upcom...\""
+    },
+    {
+      "id": "log-1794377159533-qiein",
+      "timestamp": "2026-11-11T06:05:59.533Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[SourceFilter] 대표 출처 승격: \"SpaceX Starship flight 8 upcom...\" → Reuters [TIER1]"
+    },
+    {
+      "id": "log-1794377159535-rq8pl",
+      "timestamp": "2026-11-11T06:05:59.535Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377159536-h92pg",
+      "timestamp": "2026-11-11T06:05:59.536Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Starship flight 8 static fir...\" -> [AI 모델 / Agent] [product_event] [TIER1] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377160739-x1gul",
+      "timestamp": "2026-11-11T06:06:00.739Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (2 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377160740-evtiq",
+      "timestamp": "2026-11-11T06:06:00.740Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 60%] Matched to event \"Alphabet / Google 사업 분석...\""
+    },
+    {
+      "id": "log-1794377160741-rypgs",
+      "timestamp": "2026-11-11T06:06:00.741Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (3 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377160743-5brbl",
+      "timestamp": "2026-11-11T06:06:00.743Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 67%] Matched to event \"Alphabet / Google 사업 분석...\""
+    },
+    {
+      "id": "log-1794377160747-557to",
+      "timestamp": "2026-11-11T06:06:00.747Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"SpaceX Starship flight 8 static fir...\" into unified event \"Alphabet / Google 사업 분석...\" (4 sources, Tier: TIER1) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377160748-j2kxw",
+      "timestamp": "2026-11-11T06:06:00.748Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 1/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: false (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377160752-61f16",
+      "timestamp": "2026-11-11T06:06:00.752Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377160752-p8jbw",
+      "timestamp": "2026-11-11T06:06:00.752Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 4...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377160754-n892o",
+      "timestamp": "2026-11-11T06:06:00.754Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377161957-kbz7w",
+      "timestamp": "2026-11-11T06:06:01.957Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377161959-a3929",
+      "timestamp": "2026-11-11T06:06:01.959Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 3...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377161961-lu3mg",
+      "timestamp": "2026-11-11T06:06:01.961Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377163165-9gjws",
+      "timestamp": "2026-11-11T06:06:03.165Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377163166-nwjfk",
+      "timestamp": "2026-11-11T06:06:03.166Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Pending Article for Retry 2...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377163169-4je5s",
+      "timestamp": "2026-11-11T06:06:03.169Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377164373-vgykm",
+      "timestamp": "2026-11-11T06:06:04.373Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "Gemini (gemini-3.7-flash) analysis failed: {\"error\":{\"code\":429,\"message\":\"RESOURCE_EXHAUSTED: Rate limit quota exceeded\",\"status\":\"RESOURCE_EX. Marking event as pending analysis."
+    },
+    {
+      "id": "log-1794377165576-teaiv",
+      "timestamp": "2026-11-11T06:06:05.576Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Rate Limit 429 감지] 분당 호출 제한 방어를 위해 이번 사이클의 남은 기사를 대기(Pending) 상태로 전환합니다."
+    },
+    {
+      "id": "log-1794377165579-8tl7v",
+      "timestamp": "2026-11-11T06:06:05.579Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377165580-9zil8",
+      "timestamp": "2026-11-11T06:06:05.580Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #1...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377165581-2cw3r",
+      "timestamp": "2026-11-11T06:06:05.581Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377165583-fo42f",
+      "timestamp": "2026-11-11T06:06:05.583Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #2...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377165586-n453x",
+      "timestamp": "2026-11-11T06:06:05.586Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377165588-rph89",
+      "timestamp": "2026-11-11T06:06:05.588Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #3...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377165589-w3k77",
+      "timestamp": "2026-11-11T06:06:05.589Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377165593-c5oag",
+      "timestamp": "2026-11-11T06:06:05.593Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #4...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377165594-lqeah",
+      "timestamp": "2026-11-11T06:06:05.594Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup Step 2: Title Similarity 100%] Matched to event \"Article before 429 error #0...\""
+    },
+    {
+      "id": "log-1794377165595-4ps4y",
+      "timestamp": "2026-11-11T06:06:05.595Z",
+      "level": "info",
+      "module": "Dedup",
+      "message": "[Dedup] Consolidated article \"Article before 429 error #5...\" into unified event \"Article before 429 error #0...\" (2 sources, Tier: TIER3) - Telegram 재발송 금지"
+    },
+    {
+      "id": "log-1794377165596-nx2gn",
+      "timestamp": "2026-11-11T06:06:05.596Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Cycle Gemini 요약] 신규분석: 1/8 (예산초과 스킵: 0), 의미중복검증: 0/4 (예산초과 스킵: 0), 429중단여부: true (실제 토큰 절감률은 실측 전 추정치입니다)"
+    },
+    {
+      "id": "log-1794377165597-gbmvy",
+      "timestamp": "2026-11-11T06:06:05.597Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Gemini Retry] 이전 단계에서 429/Quota 감지되어 이번 사이클 재시도를 전체 건너뜁니다."
+    },
+    {
+      "id": "log-1794377165603-4d32d",
+      "timestamp": "2026-11-11T06:06:05.603Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 180, output: 65, total: 245 for SpaceX"
+    },
+    {
+      "id": "log-1794377165606-bu7ls",
+      "timestamp": "2026-11-11T06:06:05.606Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 2)"
+    },
+    {
+      "id": "log-1794377165607-rmn1q",
+      "timestamp": "2026-11-11T06:06:05.607Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 150, output: 50, total: 200 for SpaceX"
+    },
+    {
+      "id": "log-1794377165609-xt1eb",
+      "timestamp": "2026-11-11T06:06:05.609Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 1)"
+    },
+    {
+      "id": "log-1794377165611-s114v",
+      "timestamp": "2026-11-11T06:06:05.611Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Weekly Renewal] JSON 파싱 실패 for SpaceX: finishReason=unknown, length=27, head=\"{ malformed json: not valid\""
+    },
+    {
+      "id": "log-1794377165616-5rs95",
+      "timestamp": "2026-11-11T06:06:05.616Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Weekly Renewal] JSON 파싱 실패 for SpaceX: finishReason=unknown, length=27, head=\"{ malformed json: not valid\""
+    },
+    {
+      "id": "log-1794377165618-cz7cg",
+      "timestamp": "2026-11-11T06:06:05.618Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal] Firestore is not available. Skipping weekly renewal batch."
+    },
+    {
+      "id": "log-1794377165621-07vv0",
+      "timestamp": "2026-11-11T06:06:05.621Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for SpaceX"
+    },
+    {
+      "id": "log-1794377165623-a7cha",
+      "timestamp": "2026-11-11T06:06:05.623Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 6/6, Businesses: 4/4, Evidence IDs: 1)"
+    },
+    {
+      "id": "log-1794377165624-olv8i",
+      "timestamp": "2026-11-11T06:06:05.624Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for Alphabet / Google"
+    },
+    {
+      "id": "log-1794377165626-vx433",
+      "timestamp": "2026-11-11T06:06:05.626Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for Tesla"
+    },
+    {
+      "id": "log-1794377165630-r874h",
+      "timestamp": "2026-11-11T06:06:05.630Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for Microsoft"
+    },
+    {
+      "id": "log-1794377165631-htwqd",
+      "timestamp": "2026-11-11T06:06:05.631Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 100, output: 30, total: 130 for NVIDIA"
+    },
+    {
+      "id": "log-1794377165633-ztzto",
+      "timestamp": "2026-11-11T06:06:05.633Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal Summary] week: 2026-W42, calls: 5/5, updated: 1, skipped: 0, failed: 4"
+    },
+    {
+      "id": "log-1794377165636-fhsz5",
+      "timestamp": "2026-11-11T06:06:05.636Z",
+      "level": "warn",
+      "module": "Gemini",
+      "message": "[Weekly Renewal] Gemini call failed for SpaceX: 429 Too Many Requests: Quota exceeded for gemini-3.7-flash"
+    },
+    {
+      "id": "log-1794377165636-m22ob",
+      "timestamp": "2026-11-11T06:06:05.636Z",
+      "level": "warn",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal] 429 Rate limit detected for SpaceX. Aborting subsequent weekly renewals for this cycle."
+    },
+    {
+      "id": "log-1794377165637-88zwh",
+      "timestamp": "2026-11-11T06:06:05.637Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal Summary] week: 2026-W43, calls: 1/5, updated: 0, skipped: 0, failed: 1"
+    },
+    {
+      "id": "log-1794377165641-cj4h7",
+      "timestamp": "2026-11-11T06:06:05.641Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: weekly-renewal] prompt: 120, output: 40, total: 160 for SpaceX"
+    },
+    {
+      "id": "log-1794377165643-6t7ru",
+      "timestamp": "2026-11-11T06:06:05.643Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Weekly Renewal] Successfully renewed keywords/businesses for SpaceX (Keywords: 2/6, Businesses: 2/4, Evidence IDs: 1)"
+    },
+    {
+      "id": "log-1794377165644-08p0k",
+      "timestamp": "2026-11-11T06:06:05.644Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[Weekly Renewal Summary] week: 2026-W44, calls: 1/5, updated: 1, skipped: 0, failed: 0"
+    },
+    {
+      "id": "log-1794377165647-6yrm1",
+      "timestamp": "2026-11-11T06:06:05.647Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Rollback] Restored company keywords/businesses for Alphabet / Google to history hist-test-rollback-1 (Version: v3)"
+    },
+    {
+      "id": "log-1794377165653-a57dv",
+      "timestamp": "2026-11-11T06:06:05.653Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/companies/googl/rollback from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377165656-8p6p1",
+      "timestamp": "2026-11-11T06:06:05.656Z",
+      "level": "warn",
+      "module": "System",
+      "message": "CSRF Origin verification failed for POST /api/companies/googl/rollback from IP 127.0.0.1"
+    },
+    {
+      "id": "log-1794377165662-dqznx",
+      "timestamp": "2026-11-11T06:06:05.662Z",
+      "level": "info",
+      "module": "System",
+      "message": "[Rollback] Restored company keywords/businesses for Alphabet / Google to history hist-test-rollback-1 (Version: v4)"
+    },
+    {
+      "id": "log-1794377165670-27vfi",
+      "timestamp": "2026-11-11T06:06:05.670Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Gemini Retry] 이전 단계에서 429/Quota 감지되어 이번 사이클 재시도를 전체 건너뜁니다."
+    },
+    {
+      "id": "log-1794377165672-jeha6",
+      "timestamp": "2026-11-11T06:06:05.672Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377165673-jrxg1",
+      "timestamp": "2026-11-11T06:06:05.673Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Older SpaceX Falcon 9 Mission...\" -> [AI 모델 / Agent] [product_event] [TIER1] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377165674-g47uy",
+      "timestamp": "2026-11-11T06:06:05.674Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377166877-vks0b",
+      "timestamp": "2026-11-11T06:06:06.877Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377166880-51jgo",
+      "timestamp": "2026-11-11T06:06:06.880Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Older SpaceX Falcon 9 Mission...\" -> [AI 모델 / Agent] [product_event] [TIER1] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377166882-eoorc",
+      "timestamp": "2026-11-11T06:06:06.882Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377168085-thjbx",
+      "timestamp": "2026-11-11T06:06:08.085Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377168086-924wb",
+      "timestamp": "2026-11-11T06:06:08.086Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"Older SpaceX Falcon 9 Mission...\" -> [AI 모델 / Agent] [product_event] [TIER1] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377168088-ytbpa",
+      "timestamp": "2026-11-11T06:06:08.088Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377169293-ya3ih",
+      "timestamp": "2026-11-11T06:06:09.293Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Normalize Skipped] Event \"Cloud Completed Event...\" was already updated in Firestore (cloud_already_completed_or_sent (Status: completed, TelegramSent: true)). Synced authoritative state."
+    },
+    {
+      "id": "log-1794377169294-sa273",
+      "timestamp": "2026-11-11T06:06:09.294Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Gemini Retry] 이전 단계에서 429/Quota 감지되어 이번 사이클 재시도를 전체 건너뜁니다."
+    },
+    {
+      "id": "log-1794377169298-fjue7",
+      "timestamp": "2026-11-11T06:06:09.298Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[Token Usage: analysis] prompt: 150, output: 35, total: 185"
+    },
+    {
+      "id": "log-1794377169299-uuc0w",
+      "timestamp": "2026-11-11T06:06:09.299Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "Analyzed [gemini-3.7-flash]: \"SpaceX Falcon 9 Commercial Satellit...\" -> [AI 모델 / Agent] [product_event] [TIER3] 4★ (positive)"
+    },
+    {
+      "id": "log-1794377169302-7fwmu",
+      "timestamp": "2026-11-11T06:06:09.302Z",
+      "level": "success",
+      "module": "Gemini",
+      "message": "[Retry Success] Re-analyzed pending event \"Alphabet / Google 사업 분석...\" -> 4★"
+    },
+    {
+      "id": "log-1794377170541-9qd5j",
+      "timestamp": "2026-11-11T06:06:10.541Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":20,\"screened\":20,\"detailed\":1,\"failed\":0,\"excluded\":0,\"unassessed\":0,\"awaitingDetail\":0,\"screeningCalls\":2,\"detailedCalls\":1,\"accountedTokens\":400,\"actualTokens\":400,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[\"high\"],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170547-c9mh4",
+      "timestamp": "2026-11-11T06:06:10.547Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":1,\"screened\":1,\"detailed\":0,\"failed\":0,\"excluded\":0,\"unassessed\":0,\"awaitingDetail\":1,\"screeningCalls\":1,\"detailedCalls\":0,\"accountedTokens\":100,\"actualTokens\":100,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170550-eg5r7",
+      "timestamp": "2026-11-11T06:06:10.550Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":1,\"screened\":0,\"detailed\":1,\"failed\":0,\"excluded\":0,\"unassessed\":0,\"awaitingDetail\":0,\"screeningCalls\":0,\"detailedCalls\":1,\"accountedTokens\":200,\"actualTokens\":200,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[\"high\"],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170553-b7le6",
+      "timestamp": "2026-11-11T06:06:10.553Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":1,\"screened\":0,\"detailed\":0,\"failed\":0,\"excluded\":0,\"unassessed\":1,\"awaitingDetail\":0,\"screeningCalls\":0,\"detailedCalls\":0,\"accountedTokens\":0,\"actualTokens\":0,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=0. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170567-a69v2",
+      "timestamp": "2026-11-11T06:06:10.567Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":12,\"screened\":0,\"detailed\":0,\"failed\":12,\"excluded\":0,\"unassessed\":12,\"awaitingDetail\":0,\"screeningCalls\":1,\"detailedCalls\":0,\"accountedTokens\":8741,\"actualTokens\":0,\"estimatedCalls\":1,\"isRateLimited\":true,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170570-wv3o8",
+      "timestamp": "2026-11-11T06:06:10.570Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":1,\"screened\":1,\"detailed\":0,\"failed\":1,\"excluded\":0,\"unassessed\":0,\"awaitingDetail\":1,\"screeningCalls\":1,\"detailedCalls\":1,\"accountedTokens\":16246,\"actualTokens\":100,\"estimatedCalls\":1,\"isRateLimited\":true,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170573-1l9k7",
+      "timestamp": "2026-11-11T06:06:10.573Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":0,\"screened\":0,\"detailed\":0,\"failed\":0,\"excluded\":1,\"unassessed\":0,\"awaitingDetail\":0,\"screeningCalls\":0,\"detailedCalls\":0,\"accountedTokens\":0,\"actualTokens\":0,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170609-twe0o",
+      "timestamp": "2026-11-11T06:06:10.609Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/admin/ceo/refresh from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377170613-6ienw",
+      "timestamp": "2026-11-11T06:06:10.613Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/admin/ceo/ko-summary/settings from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377170617-jpbgb",
+      "timestamp": "2026-11-11T06:06:10.617Z",
+      "level": "warn",
+      "module": "System",
+      "message": "Unauthorized Admin API access attempt on POST /api/admin/ceo/ko-summary/one from 127.0.0.1"
+    },
+    {
+      "id": "log-1794377170677-wkivy",
+      "timestamp": "2026-11-11T06:06:10.677Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "Monitoring cycle started (Manual Trigger)."
+    },
+    {
+      "id": "log-1794377170678-m6u59",
+      "timestamp": "2026-11-11T06:06:10.678Z",
+      "level": "info",
+      "module": "Gemini",
+      "message": "[TwoStage] {\"eligible\":0,\"screened\":0,\"detailed\":0,\"failed\":0,\"excluded\":0,\"unassessed\":0,\"awaitingDetail\":0,\"screeningCalls\":0,\"detailedCalls\":0,\"accountedTokens\":0,\"actualTokens\":0,\"estimatedCalls\":0,\"isRateLimited\":false,\"completedEventIds\":[],\"timeBudgetExceeded\":false}; estimatedTokenBudget=60000. 토큰 예산은 보수적 추정이며 실제 사용량을 응답마다 반영합니다."
+    },
+    {
+      "id": "log-1794377170681-lxox3",
+      "timestamp": "2026-11-11T06:06:10.681Z",
+      "level": "info",
+      "module": "Scheduler",
+      "message": "[CEO Daily] Starting scheduled CEO official collection for Asia/Seoul 2026-11-11..."
+    },
+    {
+      "id": "log-1794377170682-29v0h",
+      "timestamp": "2026-11-11T06:06:10.682Z",
+      "level": "warn",
+      "module": "Scheduler",
+      "message": "[CEO Daily] CEO collection skipped or not accepted: 잠시 후 다시 시도하세요 (최소 간격 10분, 모든 서버 공통)."
+    },
+    {
+      "id": "log-1794377170684-rd7kr",
+      "timestamp": "2026-11-11T06:06:10.684Z",
+      "level": "success",
+      "module": "Scheduler",
+      "message": "Monitoring cycle finished in 0.0s. New articles: 0, Events: 0, Telegram alerts: 0."
+    }
+  ],
+  "telegramSubscribers": []
+}

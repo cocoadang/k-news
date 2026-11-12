@@ -10,8 +10,8 @@ const COLORS: Record<string, string> = {old: '#e0a040', b3325: '#4c9be8', mubot:
 const ORDER = ['old', 'b3325', 'mubot', 'qqq'];
 const LABELS: Record<string, string> = {old: '5/10/20', b3325: '3/25', mubot: '무한매수 20분할', qqq: 'QQQ 적립'};
 const RULES: Record<string, string> = {
-  b3325: '하락폭 3% 미만 SGOV · 3~25% QQQM · 25% 이상 TQQQ(+SGOV를 1/6씩 이동) · 전고점 돌파 시 TQQQ→QQQ',
-  old: '하락폭 5% 미만 SGOV · 5~10% SCHD · 10~20% QQQM · 20% 이상 TQQQ · 전고점 돌파 시 TQQQ→QQQ',
+  b3325: '하락폭 3% 미만 SGOV · 3~25% QQQ · 25% 이상 TQQQ(+SGOV를 1/6씩 이동) · 전고점 돌파 시 TQQQ→QQQ',
+  old: '하락폭 5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20% 이상 TQQQ · 전고점 돌파 시 TQQQ→QQQ',
   mubot: '라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식',
   qqq: '같은 날 같은 금액을 QQQ에 적립',
 };
@@ -31,10 +31,11 @@ const pct = (v: unknown, d = 2) => { const n = num(v); return n === null ? '—'
 const won = (v: unknown) => { const n = num(v); if (n === null) return '—'; const a = Math.abs(n); return (n < 0 ? '−' : '') + (a >= 1e8 ? `${(a / 1e8).toFixed(2)}억` : `${Math.round(a / 1e4).toLocaleString('ko-KR')}만`); };
 const dot = (d: string) => d.replace(/-/g, '.');
 const label = (k: string, fallback?: string) => LABELS[k] || fallback || k;
+const bucketName = (b?: string | null) => (b === 'QQQM' ? 'QQQ' : b || null); // QQQM·QQQ는 같은 지수라 QQQ로 통일
 
 function Dot({k}: {k: string}) { return <span className="mr-2 inline-block h-2.5 w-2.5 shrink-0 rounded-full align-middle" style={{background: COLORS[k]}} aria-hidden="true"/>; }
 
-type Line = {key: string; label: string; color: string; dashed?: boolean; points: {t: number; y: number}[]};
+type Line = {key: string; label: string; color: string; dashed?: boolean; width?: number; points: {t: number; y: number}[]};
 function LineChart({lines, yFormat, height = 240, ariaLabel}: {lines: Line[]; yFormat: (v: number) => string; height?: number; ariaLabel: string}) {
   const [hover, setHover] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null), [W, setW] = useState(720);
@@ -62,11 +63,11 @@ function LineChart({lines, yFormat, height = 240, ariaLabel}: {lines: Line[]; yF
   const near = (l: Line, t: number) => { let b = l.points[0], bd = Infinity; for (const p of l.points) { const d = Math.abs(p.t - t); if (d < bd) { bd = d; b = p; } } return b; };
   return <div className="min-w-0" ref={box}>
     <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">{lines.map(l => <span key={l.key} className="inline-flex items-center">
-      <span className="mr-1.5 inline-block h-0.5 w-4" style={{background: l.color, opacity: l.dashed ? 0.6 : 1}}/>{l.label}</span>)}</div>
+      <span className="mr-1.5 inline-block w-4" style={{borderTop: `2px ${l.dashed ? 'dashed' : 'solid'} ${l.color}`, opacity: l.dashed && !l.width ? 0.6 : 1}}/>{l.label}</span>)}</div>
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full max-w-full touch-none select-none" role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
       {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#1e293b"/><text x={L - 6} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#94a3b8">{yFormat(v)}</text></g>)}
       {xt.map((t, i) => <text key={i} x={x(t)} y={H - 6} textAnchor={i === 0 ? 'start' : i === xt.length - 1 ? 'end' : 'middle'} fontSize="11" fill="#94a3b8">{fmtT(t)}</text>)}
-      {lines.map(l => <polyline key={l.key} fill="none" stroke={l.color} strokeWidth={l.dashed ? 1 : 2} strokeDasharray={l.dashed ? '4 4' : undefined} strokeLinejoin="round"
+      {lines.map(l => <polyline key={l.key} fill="none" stroke={l.color} strokeWidth={l.width ?? (l.dashed ? 1 : 2)} strokeDasharray={l.dashed ? (l.width ? '6 5' : '4 4') : undefined} strokeLinejoin="round"
         points={l.points.map(p => `${x(p.t).toFixed(1)},${y(p.y).toFixed(1)}`).join(' ')}/>)}
       {hp && <line x1={x(hp.t)} x2={x(hp.t)} y1={T} y2={H - B} stroke="#64748b" strokeDasharray="3 3"/>}
     </svg>
@@ -119,7 +120,10 @@ export function StrategyMenu() {
 function LiveSection({live}: {live: Live}) {
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
-  const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label), color: COLORS[k],
+  const same = (a?: [string, number][], b?: [string, number][]) => !!a && !!b && a.length === b.length && a.every((p, i) => p[0] === b[i][0] && Math.abs(p[1] - b[i][1]) < 1e-9);
+  const sameAsQqq = same(live.virtual.b3325?.series, live.virtual.qqq?.series);
+  const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label) + (k === 'qqq' && sameAsQqq ? ' (지금은 3/25와 같음)' : ''), color: COLORS[k],
+    dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
   const nb = live.virtual.b3325, no = live.virtual.old, mu = live.virtual.mubot?.mubot;
   return <>
@@ -127,18 +131,18 @@ function LiveSection({live}: {live: Live}) {
       <Kpi title="나스닥100 하락폭" value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`전고점 ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
       <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[m.vix?.label, num(m.vix?.percentile) !== null ? `역사 ${Math.round(m.vix!.percentile!)}%` : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
       <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
-      <Kpi title="3/25 구간" value={nb?.bucket || '—'} sub={nb?.deployLeft ? `SGOV 이동 남은 횟수 ${nb.deployLeft}회` : '3% 미만 SGOV · 3~25% QQQM · 25%↑ TQQQ'}/>
-      <Kpi title="5/10/20 구간" value={no?.bucket || '—'} sub="5% 미만 SGOV · 5~10% SCHD · 10~20% QQQM · 20%↑ TQQQ"/>
+      <Kpi title="3/25 구간" value={bucketName(nb?.bucket) || '—'} sub={nb?.deployLeft ? `SGOV 이동 남은 횟수 ${nb.deployLeft}회` : '3% 미만 SGOV · 3~25% QQQ · 25%↑ TQQQ'}/>
+      <Kpi title="5/10/20 구간" value={bucketName(no?.bucket) || '—'} sub="5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20%↑ TQQQ"/>
     </div>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">실전 추적</h2>
       <p className="mt-1 text-sm text-slate-400">{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}{m.stale ? ' · 지표 갱신 지연' : ''}</p>
       <div className="mt-3"><Table head={['전략', '수익률', '최대낙폭', '다음 매수']}>
         {order.map(k => { const v = live.virtual[k]; return <tr key={k}><td className={tdL}><Dot k={k}/>{k === 'mubot' ? <>무한매수<span className="hidden sm:inline"> 20분할</span></> : label(k, v.label)}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
-          <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? '리버스 ' : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : v.bucket || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
+          <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? '리버스 ' : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
       </Table></div>
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} ariaLabel="실전 추적 가상 계좌 단위가치"/></div>
-      <p className="mt-2 text-xs leading-5 text-slate-400">수익률·그래프는 넣은 돈 효과를 뺀 시간가중 기준(시작=100)입니다. 전일 종가로 판단해 당일 종가에 매매하고 수수료 0.25%를 반영합니다.{mu ? ` 무한매수 평단 $${mu.avgUsd?.toFixed(2)} · 현재 $${mu.closeUsd?.toFixed(2)}.` : ''} 처음 몇 달은 차이가 작고 우연이 크게 작용합니다.</p>
+      <p className="mt-2 text-xs leading-5 text-slate-400">수익률·그래프는 넣은 돈 효과를 뺀 시간가중 기준(시작=100)입니다.{sameAsQqq ? ' 3/25는 하락폭 3~25% 구간이라 지금까지 QQQ만 사서 QQQ 적립과 결과가 같고, 그래프에서는 QQQ 점선 사이로 3/25 선이 보입니다.' : ''} 전일 종가로 판단해 당일 종가에 매매하고 수수료 0.25%를 반영합니다.{mu ? ` 무한매수 평단 $${mu.avgUsd?.toFixed(2)} · 현재 $${mu.closeUsd?.toFixed(2)}.` : ''} 처음 몇 달은 차이가 작고 우연이 크게 작용합니다.</p>
     </div>
   </>;
 }
@@ -150,7 +154,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const bI = best(k => S[k].irr), bL = best(k => S[k].irrLiq), bM = best(k => S[k].mdd);
   const cls = (v: number | undefined, b: number) => `${td} ${v === b ? 'font-bold text-white' : ''}`;
   const lines: Line[] = useMemo(() => {
-    const ls: Line[] = ok.map(k => ({key: k, label: label(k, S[k].label), color: COLORS[k], points: (S[k].curve || []).map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[1]}))}));
+    const ls: Line[] = ok.map(k => ({key: k, label: label(k, S[k].label), color: COLORS[k], dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined, points: (S[k].curve || []).map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[1]}))}));
     const inv = S[ok[0]]?.curve || [];
     ls.push({key: 'inv', label: '넣은 돈', color: '#94a3b8', dashed: true, points: inv.map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[2]}))});
     return ls;

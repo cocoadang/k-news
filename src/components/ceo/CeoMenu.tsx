@@ -5,9 +5,11 @@ import { CeoStatementsView, CeoViewState } from './CeoStatementsView';
 import { CeoTimeline } from './timeline/CeoTimelineCandidate';
 import { CeoKoAdmin } from './CeoKoAdmin';
 import { PageHeader, RefreshButton, CollectButton } from '../ui';
+import { useLang } from '../../i18n';
 
 /** CEO 메뉴 컨테이너: 읽기 전용 API 조회 → 화면 상태. 관리자에게만 원문 새로고침 버튼 */
 export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useLang();
   const [api, setApi] = useState<CeoApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,10 +55,10 @@ export function CeoMenu({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div>
-      <PageHeader title="CEO 발언" description="같은 질문에 대한 CEO의 발언을 최신순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않습니다. 원문과 수치를 함께 확인하세요."
+      <PageHeader title={t('CEO 발언', 'CEO Quotes')} description={t('같은 질문에 대한 CEO의 발언을 최신순으로 보여줍니다. 입장 변화는 자동으로 판단하지 않습니다. 원문과 수치를 함께 확인하세요.', 'What CEOs said on the same questions, newest first. Changes in stance are not judged automatically — check the original wording and numbers.')}
         status={notice || undefined}
         actions={<>{isAdmin && <CollectButton onClick={onRefresh} busy={refreshing} label="공식 원문 수집 (관리자)" />}<RefreshButton onClick={load} /></>} />
-      {state.status === 'ready' ? <><p className="mb-3 text-xs text-slate-500">저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.</p><SectionBoundary label="CEO 발언 타임라인"><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-sm text-slate-400">기존 목록과 수집 상태 보기</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
+      {state.status === 'ready' ? <><p className="mb-3 text-xs text-slate-500">{t('저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.', 'Some sources or dates may be unconfirmed. Missing data does not mean nothing was said.')}</p><SectionBoundary label={t('CEO 발언 타임라인', 'CEO timeline')}><CeoTimeline dataset={state.dataset} /></SectionBoundary><details className="mt-6"><summary className="cursor-pointer text-sm text-slate-400">{t('기존 목록과 수집 상태 보기', 'Legacy list and collection status (Korean)')}</summary><SectionBoundary label="기존 목록"><CeoStatementsView state={legacyState} onRetry={load} isAdmin={isAdmin} /></SectionBoundary></details></> : <CeoStatementsView state={state} onRetry={load} isAdmin={isAdmin} />}
       {/* 관리자 도구는 화면 맨 아래 접힌 상태로만 (비관리자에게는 렌더링하지 않음) */}
       {isAdmin && (
         <details className="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-testid="ceo-admin-panel">

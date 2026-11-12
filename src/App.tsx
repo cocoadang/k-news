@@ -11,10 +11,12 @@ import { SettingsModal } from './components/SettingsModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { CeoMenu } from './components/ceo/CeoMenu';
 import { StrategyMenu } from './components/StrategyMenu';
+import { useLang } from './i18n';
 import { NewsEvent, SystemStatus, MonitorSettings, NewsCategory, CompanyProfile, AuthStatus } from './types';
 import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
+  const { t } = useLang();
   const [events, setEvents] = useState<NewsEvent[]>([]);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
@@ -495,8 +497,8 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
-        <nav className="mb-4 flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label="주 메뉴">
-          {([['youtube', '유튜브 요약'], ['news', '뉴스 피드'], ['ceo', 'CEO 발언'], ['strategy', '나스닥 전략']] as const).map(([key, label]) => (
+        <nav className="mb-4 flex gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+          {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')]] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -515,7 +517,7 @@ export default function App() {
         ) : mainView === 'strategy' ? (
           <StrategyMenu />
         ) : (<>
-        <PageHeader title="뉴스 피드" description="감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다."
+        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다.', 'Key news on tracked companies with AI analysis. Times are in Korea time (KST). Summaries are in Korean; titles show the original.')}
           actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(true); fetchStatus(); }} /></>} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}
         <CompanyTabs
@@ -550,12 +552,12 @@ export default function App() {
         />
 
         <div className="mb-4 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-xs text-slate-300" role="status">
-          현재 불러온 {events.length}건 기준 · 상세 분석 완료 {events.filter(e => e.analysisStatus === 'completed' || (!e.analysisStatus && e.importance > 0)).length}건
-          {' · '}간단 평가 완료 {events.filter(e => e.screening && e.analysisStatus !== 'completed').length}건
-          {' · '}미평가 {events.filter(e => !e.screening && (e.analysisStatus === 'pending' || e.analysisStatus === 'failed' || (!e.analysisStatus && !e.importance))).length}건
-          {' · '}상세 분석 대기 {events.filter(e => e.screening && e.analysisStatus === 'pending').length}건
-          {' · '}실패 {events.filter(e => e.analysisStatus === 'failed').length}건
-          <p className="mt-1 text-slate-500">간단 평가 점수는 잠정치입니다. 미평가·상세 분석 대기는 낮은 중요도나 분석 제외를 뜻하지 않습니다.</p>
+          {t('현재 불러온', 'Loaded')} {events.length}{t('건 기준', '')} · {t('상세 분석 완료', 'Fully analyzed')} {events.filter(e => e.analysisStatus === 'completed' || (!e.analysisStatus && e.importance > 0)).length}{t('건', '')}
+          {' · '}{t('간단 평가 완료', 'Quick-scored')} {events.filter(e => e.screening && e.analysisStatus !== 'completed').length}{t('건', '')}
+          {' · '}{t('미평가', 'Unscored')} {events.filter(e => !e.screening && (e.analysisStatus === 'pending' || e.analysisStatus === 'failed' || (!e.analysisStatus && !e.importance))).length}{t('건', '')}
+          {' · '}{t('상세 분석 대기', 'Awaiting analysis')} {events.filter(e => e.screening && e.analysisStatus === 'pending').length}{t('건', '')}
+          {' · '}{t('실패', 'Failed')} {events.filter(e => e.analysisStatus === 'failed').length}{t('건', '')}
+          <p className="mt-1 text-slate-500">{t('간단 평가 점수는 잠정치입니다. 미평가·상세 분석 대기는 낮은 중요도나 분석 제외를 뜻하지 않습니다.', 'Quick scores are provisional. Unscored or pending items are not necessarily low-importance or excluded.')}</p>
         </div>
 
         {/* Events Feed */}
@@ -563,10 +565,10 @@ export default function App() {
           <div className="py-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
             <Newspaper className="w-8 h-8 text-slate-500 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-slate-300">
-              선택한 기업 및 조건에 맞는 뉴스가 없습니다.
+              {t('선택한 기업 및 조건에 맞는 뉴스가 없습니다.', 'No news matches the selected company and filters.')}
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              다른 기업 탭을 선택하거나 [새로고침] 버튼을 눌러 저장된 최신 뉴스를 다시 불러오세요.
+              {t('다른 기업 탭을 선택하거나 [새로고침] 버튼을 눌러 저장된 최신 뉴스를 다시 불러오세요.', 'Pick another company tab or press Refresh to reload the latest saved news.')}
             </p>
           </div>
         ) : (
@@ -590,9 +592,9 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 text-xs text-slate-500 text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>미국주식 모니터링</span>
+          <span>{t('미국주식 모니터링', 'US Stock Monitor')}</span>
           <span className="text-[11px] text-slate-400">
-            감시 대상: SpaceX · Alphabet/Google · Tesla · Microsoft · NVIDIA & 주요 글로벌 경제지
+            {t('감시 대상', 'Tracking')}: SpaceX · Alphabet/Google · Tesla · Microsoft · NVIDIA & {t('주요 글로벌 경제지', 'major global business press')}
           </span>
         </div>
       </footer>

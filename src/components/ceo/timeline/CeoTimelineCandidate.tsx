@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { companyQuestions, displayText } from './companyQuestions.mjs';
 import './timeline.css';
+import { useLang, tr, getLang } from '../../../i18n';
 
 type Item = { statement: any; matchedTerms: string[]; date: { value: string | null; basis: string; label: string }; metrics: string[] };
 
-const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : '날짜 미확인');
+const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : tr('날짜 미확인', 'Date unconfirmed'));
+const DATE_BASIS_EN: Record<string, string> = { spoken: 'Spoken', released: 'Press release', written: 'Posted', reported: 'Reported', video: 'Video posted', unknown: 'Date unconfirmed' };
 const month = (d: string) => d.slice(0, 7).replace('-', '.');
 
 function Metrics({ values }: { values: string[] }) {
@@ -14,11 +16,21 @@ function Metrics({ values }: { values: string[] }) {
 
 function Source({ s }: { s: any }) {
   const e = (s.evidence || [])[0];
-  return e?.url ? <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{e.sourceName || '출처'} ↗</a> : null;
+  return e?.url ? <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{e.sourceName || tr('출처', 'Source')} ↗</a> : null;
 }
 
 function Body({ s, open = false }: { s: any; open?: boolean }) {
   const t = displayText(s);
+  if (getLang() === 'en' && s.kind !== 'reported_excerpt') {
+    // 영어 화면: 번역 대신 영어 원문을 그대로 보여 줍니다(추가 비용 없음)
+    const kind = s.kind === 'video_quote' ? `From video captions${s.videoTitle ? ` · ${s.videoTitle}` : ''}`
+      : s.kind === 'social_post' ? 'Own post on X'
+      : s.kind === 'reported_headline' ? `Press headline · not a direct quote${s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount} outlets` : ''}`
+      : 'Original quote';
+    const warn = s.kind === 'reported_headline';
+    return <><p className="tl-text tl-en" lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p><span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>
+      {warn && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>{s.relatedHeadlines.length} other headlines on this</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
+  }
   if (s.kind === 'video_quote') {
     return <>
       <p className="tl-text">{t.kind === 'ai_translation' ? t.text : <span lang="en">{t.text}</span>}</p>
@@ -35,7 +47,7 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
     </>;
   }
   if (s.kind === 'reported_excerpt') {
-    return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">기사 요약 속 인용 · 공식 원문 아님{s.context ? ` · 기사: ${s.context}` : ''}</span></>;
+    return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">{tr('기사 요약 속 인용 · 공식 원문 아님', 'Quote inside an article summary · not an official source')}{s.context ? ` · ${tr('기사', 'Article')}: ${s.context}` : ''}</span></>;
   }
   if (s.kind === 'reported_headline') {
     const ko = t.kind === 'ai_translation';
@@ -54,6 +66,8 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
 }
 
 export function CeoTimeline({ dataset }: { dataset: any }) {
+  const { t, lang } = useLang();
+  const qLabel = (x: any) => (lang === 'en' && x.labelEn ? x.labelEn : x.label);
   // 인물 단위로 묶음(머스크: Tesla·SpaceX를 한 화면에). 질문은 회사별로 나뉘어 표시됨
   const scopes = useMemo(() => {
     const seen = new Map<string, any>();
@@ -85,34 +99,34 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
   return <section className="ceo-tl">
     <header className="tl-head">
-      <div className="tl-scopes" role="tablist" aria-label="인물 · 회사">
+      <div className="tl-scopes" role="tablist" aria-label={t('인물 · 회사', 'Person · company')}>
         {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count}>
-          {s.name} · {s.company}<span>{s.count ? s.count + '건' : '자료 없음'}</span>
+          {s.name} · {s.company}<span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>
         </button>)}
       </div>
     </header>
 
-    {!result.questions.length ? <p className="tl-empty">이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.</p> :
+    {!result.questions.length ? <p className="tl-empty">{t('이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.', 'No classified statements for this person and company yet.')}</p> :
     <div className="tl-layout">
-      <nav className="tl-questions" aria-label="비교할 질문">
-        <h2>질문</h2>
+      <nav className="tl-questions" aria-label={t('비교할 질문', 'Questions to compare')}>
+        <h2>{t('질문', 'Questions')}</h2>
         {result.questions.map((x: any) => <button key={x.id} className={'tl-q' + (x.id === q?.id ? ' on' : '')} onClick={() => pickQuestion(x.id)} aria-pressed={x.id === q?.id}>
-          <strong>{x.label}</strong>
-          <small>{x.items.length}건{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
-          {!x.comparable && <em>변화 비교 자료 부족</em>}
+          <strong>{qLabel(x)}</strong>
+          <small>{x.items.length}{t('건', lang === 'en' && x.items.length === 1 ? ' item' : ' items')}{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
+          {!x.comparable && <em>{t('변화 비교 자료 부족', 'Not enough to compare change')}</em>}
         </button>)}
       </nav>
 
       <main className="tl-main">
-        <div className="tl-qhead"><h2>{q.label}</h2><p className="tl-muted">{q.hint} · 원문 단어로 분류 · {items.length}건 · 최신순</p></div>
+        <div className="tl-qhead"><h2>{qLabel(q)}</h2><p className="tl-muted">{lang === 'en' ? `${q.hintEn || q.hint} · matched on original wording · ${items.length} items · newest first` : `${q.hint} · 원문 단어로 분류 · ${items.length}건 · 최신순`}</p></div>
 
-        {!q.comparable && <p className="tl-notice">날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.</p>}
+        {!q.comparable && <p className="tl-notice">{t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}</p>}
 
         <ol className="tl-list">
           {newestFirst.map(x => {
             const s = x.statement;
             return <li key={s.statementId}>
-              <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{x.date.label}</small></div>
+              <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{lang === 'en' ? DATE_BASIS_EN[x.date.basis] || x.date.label : x.date.label}</small></div>
               <div className="tl-card">
                 <Body s={s} />
                 <Metrics values={x.metrics} />
@@ -126,8 +140,8 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
 
         {(result.other.length > 0 || result.excludedCount > 0) && <details className="tl-other">
-          <summary>질문에 분류되지 않은 발언 {result.other.length}건{result.excludedCount ? ` · 인사말·편집자 주 ${result.excludedCount}건 제외` : ''}</summary>
-          <ul>{result.other.map((s: any) => <li key={s.statementId}><span className="tl-muted">{fmt(s.referenceDate?.value || s.spokenAt?.value || null)}</span> {displayText(s).text}</li>)}</ul>
+          <summary>{lang === 'en' ? `${result.other.length} unclassified statements${result.excludedCount ? ` · ${result.excludedCount} greetings / editor notes excluded` : ''}` : `질문에 분류되지 않은 발언 ${result.other.length}건${result.excludedCount ? ` · 인사말·편집자 주 ${result.excludedCount}건 제외` : ''}`}</summary>
+          <ul>{result.other.map((s: any) => <li key={s.statementId}><span className="tl-muted">{fmt(s.referenceDate?.value || s.spokenAt?.value || null)}</span> {lang === 'en' ? s.quoteText : displayText(s).text}</li>)}</ul>
         </details>}
       </main>
     </div>}

@@ -6,6 +6,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { NewsEvent } from '../types';
+import { useLang, categoryLabel } from '../i18n';
 
 interface EventCardProps {
   event: NewsEvent;
@@ -53,18 +54,19 @@ export const EventCard: React.FC<EventCardProps> = ({
   event,
   onOpenDetail,
 }) => {
+  const { t, lang, locale } = useLang();
   // Importance rating styling - concise format
   const getImportanceBadge = (stars: number, status?: string) => {
     if ((status === 'screened' || status === 'pending' || status === 'failed') && event.screening) return (
       <span className="text-[11px] text-cyan-300 border border-cyan-900 rounded px-1.5 py-0.5">
-        간단 평가 {event.screening.score}★ · {status === 'screened' ? '평가 완료' : status === 'failed' ? '상세 분석 실패' : '상세 분석 대기'}
+        {t('간단 평가', 'Quick score')} {event.screening.score}★ · {status === 'screened' ? t('평가 완료', 'scored') : status === 'failed' ? t('상세 분석 실패', 'analysis failed') : t('상세 분석 대기', 'analysis pending')}
       </span>
     );
     if (status === 'failed') {
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-950/70 text-rose-300 border border-rose-700/60">
           <AlertTriangle className="w-3 h-3 mr-1 text-rose-400" />
-          분석 실패
+          {t('분석 실패', 'Analysis failed')}
         </span>
       );
     }
@@ -72,7 +74,7 @@ export const EventCard: React.FC<EventCardProps> = ({
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
           <Clock className="w-3 h-3 mr-1 text-slate-400" />
-          분석 제외
+          {t('분석 제외', 'Skipped')}
         </span>
       );
     }
@@ -80,14 +82,14 @@ export const EventCard: React.FC<EventCardProps> = ({
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-950/70 text-amber-300 border border-amber-700/60 animate-pulse">
           <Clock className="w-3 h-3 mr-1 text-amber-400" />
-          미평가
+          {t('미평가', 'Unscored')}
         </span>
       );
     }
     if (stars === 0) {
       return (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700">
-          미평가 (0★)
+          {t('미평가 (0★)', 'Unscored (0★)')}
         </span>
       );
     }
@@ -149,11 +151,11 @@ export const EventCard: React.FC<EventCardProps> = ({
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
-      if (diffMins < 1) return '방금 전';
-      if (diffMins < 60) return `${diffMins}분 전`;
+      if (diffMins < 1) return t('방금 전', 'just now');
+      if (diffMins < 60) return lang === 'ko' ? `${diffMins}분 전` : `${diffMins}m ago`;
       const diffHours = Math.floor(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}시간 전`;
-      return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+      if (diffHours < 24) return lang === 'ko' ? `${diffHours}시간 전` : `${diffHours}h ago`;
+      return d.toLocaleDateString(locale, { month: lang === 'ko' ? 'numeric' : 'short', day: 'numeric' });
     } catch {
       return '';
     }
@@ -188,7 +190,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             {/* Category Pill (Desktop / Tablet) */}
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-              {event.category}
+              {categoryLabel(event.category, lang)}
             </span>
           </div>
 
@@ -204,7 +206,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             onClick={() => onOpenDetail(event)}
             className="text-sm sm:text-base font-bold text-white leading-snug cursor-pointer hover:text-cyan-300 transition-colors"
           >
-            {event.titleKo || event.title}
+            {lang === 'en' ? (event.originalTitle || event.title) : (event.titleKo || event.title)}
           </h2>
         </div>
 
@@ -230,7 +232,7 @@ export const EventCard: React.FC<EventCardProps> = ({
               target="_blank"
               rel="noreferrer noopener"
               className="inline-flex items-center px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700/80 text-[11px] font-medium truncate transition-colors"
-              title="원문 기사 열기"
+              title={t('원문 기사 열기', 'Open original article')}
             >
               <span className="truncate">{event.primarySource.name}</span>
               <ExternalLink className="w-2.5 h-2.5 ml-1 opacity-70 shrink-0" />
@@ -241,7 +243,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 onClick={() => onOpenDetail(event)}
                 className="text-[10px] text-slate-400 hover:text-cyan-300 cursor-pointer hidden sm:inline"
               >
-                +{event.relatedSources.length}개 매체
+                +{event.relatedSources.length}{t('개 매체', ' more sources')}
               </span>
             )}
           </div>
@@ -251,7 +253,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             onClick={() => onOpenDetail(event)}
             className="flex items-center gap-0.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700 text-xs font-semibold transition-colors cursor-pointer"
           >
-            <span>자세히</span>
+            <span>{t('자세히', 'Details')}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
 

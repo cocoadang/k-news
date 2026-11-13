@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw, Play } from 'lucide-react';
+import { useLang } from '../i18n';
 
 /** 모든 메뉴가 같은 머리말 구조를 씁니다: 제목 · 설명 · 오른쪽 버튼(새로고침 / 관리자 지금 수집) · 상태 문구. */
 export function PageHeader({ title, description, actions, status }: { title: string; description?: React.ReactNode; actions?: React.ReactNode; status?: React.ReactNode }) {
@@ -25,15 +26,17 @@ export const buttonClass = {
 
 /** 모든 메뉴 공통: 화면의 저장된 결과를 다시 불러옵니다(누구나). */
 export function RefreshButton({ onClick, busy = false }: { onClick: () => void; busy?: boolean }) {
+  const { t } = useLang();
   return <button type="button" className={buttonClass.secondary} onClick={onClick} disabled={busy}>
-    <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} aria-hidden="true" />새로고침
+    <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} aria-hidden="true" />{t('새로고침', 'Refresh')}
   </button>;
 }
 
 /** 모든 메뉴 공통: 관리자만 보이는 수집 실행 버튼. */
-export function CollectButton({ onClick, busy = false, label = '지금 수집' }: { onClick: () => void; busy?: boolean; label?: string }) {
+export function CollectButton({ onClick, busy = false, label }: { onClick: () => void; busy?: boolean; label?: string }) {
+  const { t } = useLang();
   return <button type="button" className={buttonClass.primary} onClick={onClick} disabled={busy}>
-    <Play className="h-4 w-4" aria-hidden="true" />{busy ? '수집 중…' : label}
+    <Play className="h-4 w-4" aria-hidden="true" />{busy ? t('수집 중…', 'Collecting…') : label ?? t('지금 수집', 'Collect now')}
   </button>;
 }
 

@@ -1,3 +1,4 @@
+import { tr } from '../../i18n';
 import React, { useId, useMemo, useState } from 'react';
 import { CeoApiResponse, CeoDataset, CeoSourceReport, CeoStatement, KoSummaryInfo, StatementEvidence } from '../../ceo/types';
 import { buildCeoView, SortOrder, PersonSummary } from '../../ceo/view';
@@ -392,11 +393,11 @@ export function CeoStatementsView({ state, onRetry, isAdmin = false }: Props) {
     </div>
   );
 
-  if (state.status === 'loading') return <section className="break-keep" aria-busy="true" aria-labelledby="ceo-heading">{header}<StateBox title="발언 자료를 불러오는 중입니다…" /></section>;
+  if (state.status === 'loading') return <section className="break-keep" aria-busy="true" aria-labelledby="ceo-heading">{header}<StateBox title={tr('발언 자료를 불러오는 중입니다…', 'Loading statements…')} /></section>;
   if (state.status === 'not_loaded') {
     return (
       <section className="break-keep" aria-labelledby="ceo-heading">{header}
-        <StateBox title="공식 출처 원문을 아직 불러오지 않았습니다.">
+        <StateBox title={tr('공식 출처 원문을 아직 불러오지 않았습니다.', 'Official sources have not been loaded yet.')}>
           <p>{state.message}</p>
           {isAdmin ? (
             <p className="mt-1">관리자 영역의 '공식 원문 새로고침'을 실행하면 공식 출처 원문에서 확인된 발언만 표시됩니다. 예시 자료로 대신 채우지 않습니다.</p>
@@ -410,10 +411,10 @@ export function CeoStatementsView({ state, onRetry, isAdmin = false }: Props) {
   if (state.status === 'error') {
     return (
       <section className="break-keep" aria-labelledby="ceo-heading">{header}
-        <StateBox title="발언 자료를 불러오지 못했습니다." tone="error">
+        <StateBox title={tr('발언 자료를 불러오지 못했습니다.', 'Could not load statements.')} tone="error">
           <p>{state.message}</p>
           {isAdmin && state.sources && state.sources.length > 0 && <SourceList sources={state.sources} />}
-          {onRetry && <button type="button" onClick={onRetry} className={`mt-3 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 ${focusRing}`}>다시 시도</button>}
+          {onRetry && <button type="button" onClick={onRetry} className={`mt-3 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 ${focusRing}`}>{tr('다시 시도', 'Retry')}</button>}
         </StateBox>
       </section>
     );

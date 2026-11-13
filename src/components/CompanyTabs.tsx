@@ -2,6 +2,7 @@ import { chipClass, chipCountClass } from './ui';
 import React from 'react';
 import { CompanyProfile, NewsEvent } from '../types';
 import { Globe } from 'lucide-react';
+import { useLang } from '../i18n';
 
 interface CompanyTabsProps {
   companies: CompanyProfile[];
@@ -16,6 +17,7 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
   onSelectCompany,
   events,
 }) => {
+  const { t } = useLang();
   // Count events for each company
   const getEventCount = (companyId: string) => {
     if (companyId === 'all') return events.length;
@@ -47,7 +49,7 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
           className={chipClass(selectedCompany === 'all')}
         >
           <Globe className="w-3.5 h-3.5" />
-          <span>전체</span>
+          <span>{t('전체', 'All')}</span>
           <span
             className={chipCountClass}
           >

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Filter, X, Sparkles, Flame } from 'lucide-react';
 import { NewsCategory } from '../types';
+import { useLang, categoryLabel } from '../i18n';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -33,6 +34,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   totalResults,
   onResetFilters,
 }) => {
+  const { t, lang } = useLang();
   const isFiltered =
     searchQuery !== '' ||
     selectedCategory !== 'all' ||
@@ -51,7 +53,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="뉴스 제목, 기업, 키워드 검색..."
+            placeholder={t('뉴스 제목, 기업, 키워드 검색...', 'Search titles, companies, keywords...')}
             className="w-full pl-8 pr-7 py-1.5 bg-slate-950/70 border border-slate-700/80 rounded-lg text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors"
           />
           {searchQuery && (
@@ -75,24 +77,24 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 minImportance === 0 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              전체
+              {t('전체', 'All')}
             </button>
             <button
               onClick={() => setMinImportance(4)}
               className={`px-2 py-1 rounded transition-colors flex items-center gap-1 cursor-pointer ${
                 minImportance === 4 ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-amber-300'
               }`}
-              title="중요도 4★ 이상 필터"
+              title={t('중요도 4★ 이상 필터', 'Importance 4★ and up')}
             >
               <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>4★ 이상</span>
+              <span>{t('4★ 이상', '4★+')}</span>
             </button>
             <button
               onClick={() => setMinImportance(5)}
               className={`px-2 py-1 rounded transition-colors flex items-center gap-1 cursor-pointer ${
                 minImportance === 5 ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-rose-300'
               }`}
-              title="긴급 중요도 5★ 필터"
+              title={t('긴급 중요도 5★ 필터', 'Urgent 5★ only')}
             >
               <Flame className="w-3 h-3 text-rose-300" />
               <span>5★</span>
@@ -106,10 +108,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="appearance-none bg-slate-950/80 border border-slate-700/80 rounded-lg pl-2.5 pr-6 py-1 text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
             >
-              <option value="all">카테고리 전체</option>
+              <option value="all">{t('카테고리 전체', 'All categories')}</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
-                  {cat}
+                  {categoryLabel(cat, lang)}
                 </option>
               ))}
             </select>
@@ -121,16 +123,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               onClick={onResetFilters}
               className="flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-              title="필터 초기화"
+              title={t('필터 초기화', 'Reset filters')}
             >
               <X className="w-3 h-3 mr-0.5" />
-              초기화
+              {t('초기화', 'Reset')}
             </button>
           )}
 
           {/* Result Count Badge */}
           <span className="text-[11px] text-slate-400 ml-auto hidden sm:inline">
-            총 <strong className="text-cyan-400 font-semibold">{totalResults}</strong>건
+            {t('총', 'Total')} <strong className="text-cyan-400 font-semibold">{totalResults}</strong>{t('건', '')}
           </span>
 
         </div>

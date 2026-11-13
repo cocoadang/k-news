@@ -1,3 +1,4 @@
+import {tr} from '../i18n';
 import React from 'react';
 import {parseSummary} from './youtubeSummary.mjs';
 import './youtubeSummary.css';
@@ -7,7 +8,7 @@ export function YoutubeSummaryBody({text,videoId}:{text:string;videoId:string}) 
   const headings=blocks.filter(b=>b.kind==='heading');
   let topic=0;
   return <div className="youtube-reading">
-    {headings.length>1&&<nav className="youtube-toc" aria-label="요약 주제 바로가기"><details><summary>{headings.length}개 주제 바로가기</summary><ol>{headings.map((h,i)=><li key={i}><a href={`#topic-${videoId}-${i}`}><span>{h.number}</span>{h.text}</a></li>)}</ol></details></nav>}
+    {headings.length>1&&<nav className="youtube-toc" aria-label={tr('요약 주제 바로가기','Jump to topic')}><details><summary>{headings.length}{tr('개 주제 바로가기',' topics — jump to')}</summary><ol>{headings.map((h,i)=><li key={i}><a href={`#topic-${videoId}-${i}`}><span>{h.number}</span>{h.text}</a></li>)}</ol></details></nav>}
     <div className="youtube-prose">{blocks.map((block,i)=>{
       if(block.kind==='heading') return <h3 id={`topic-${videoId}-${topic++}`} key={i}><span>{block.number.padStart(2,'0')}</span><span className="youtube-h3-text">{block.text}{block.badge&&<em className="youtube-badge">{block.badge}</em>}</span></h3>;
       if(block.kind==='link') return <a className="youtube-time" key={i} href={block.url} target="_blank" rel="noopener noreferrer">{block.text} ↗</a>;

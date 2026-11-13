@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert';
 import { MemoryKoLedger, outstandingNano } from './koLedger';
-import { costFromUsage, KO_MAX_OUTPUT_TOKENS, KoClient, koContents, koJobKey, parseKoOutput, priceAt, runKoSummaries } from './koSummary';
+import { costFromUsage, KO_MAX_OUTPUT_TOKENS, KoClient, koContents, koJobKey, legacyKoJobKey, koSummaryFor, parseKoOutput, priceAt, runKoSummaries } from './koSummary';
 import { runKoLedgerContract } from './testing/koLedgerContract';
 import { CeoRuntime } from './runtime';
 import { MemoryStateBackend, MemoryStateStore } from './stateStore';
@@ -45,6 +45,25 @@ const run = (s: CeoStatement[], l: MemoryKoLedger, c: KoClient | null, extra: Pa
   runKoSummaries(s, { ledger: l, client: c, now: () => NOW, deadline: NOW + 120_000, ...extra });
 
 async function main() {
+  await test('K14 duplicate evidence removal preserves context and legacy results', async () => {
+    const a = stmt(); a.evidence[0].excerpt = a.quoteText!;
+    assert.ok(!koContents(a).includes('SENTENCE:'));
+    const b = stmt(); b.evidence[0].excerpt = a.quoteText! + ' if conditions allow.';
+    assert.ok(koContents(b).includes('SENTENCE:'));
+    const l = await enabled(), key = legacyKoJobKey(a)!;
+    assert.notStrictEqual(key, koJobKey(a));
+    await l.reserve({jobKey:key,statementId:a.statementId,costNano:1000,now:NOW,attemptId:'legacy'});
+    const pending = fakeClient(); await run([a],l,pending.c);
+    assert.deepStrictEqual(pending.calls,{count:0,gen:0});
+    assert.strictEqual(koSummaryFor(a,await l.read())?.status,'pending');
+    await l.settle({jobKey:key,attemptId:'legacy',costNano:100,now:NOW,usage:undefined,result:{title:'기존 제목',summary:'기존 요약',model:'legacy',generatedAt:new Date(NOW).toISOString()}});
+    const cached = fakeClient(); await run([a],l,cached.c);
+    assert.deepStrictEqual(cached.calls,{count:0,gen:0});
+    const summary = koSummaryFor(a,await l.read());
+    assert.ok(summary?.status === 'ready');
+    assert.strictEqual(summary.title,'기존 제목');
+    assert.strictEqual(koSummaryFor(b,await l.read()),undefined);
+  });
   await runKoLedgerContract(test, 'MEMORY(대역)', async () => {
     const shared = new MemoryKoLedger();
     // 같은 저장소를 여러 인스턴스가 쓰는 것 흉내: 같은 객체(직렬 트랜잭션). 실제 동시성은 PC 에뮬레이터 계약에서

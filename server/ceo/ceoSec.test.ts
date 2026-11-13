@@ -19,7 +19,7 @@ import { MemoryStateBackend, MemoryStateStore } from './stateStore';
 import { CEO_PERSONS, CEO_ROLES, CEO_TOPICS, FEED_COMPANY_IDS } from './registry';
 import { buildCeoDataset, emptyCeoCache, refreshCeoCache, SourceArticle } from './pipeline';
 import { MemoryKoLedger } from './koLedger';
-import { KoClient, koContents, koJobKey } from './koSummary';
+import { KoClient, koContents, koJobKey, legacyKoJobKey } from './koSummary';
 import { TRANSLATIONS } from './translations';
 import { CeoStatement } from '../../src/ceo/types';
 import { A_SYN, aEntry, aPages, B_SYN, bEntry, bPages, bytesOf, secHtml, sha } from './testing/secFixtures';
@@ -511,7 +511,8 @@ async function main() {
   });
 
   // ------------------------------------------------------------ 보존·한국어 요약
-  await test('K1 한국어 요약 입력·키 규칙 변경 없음: 기존 8개 원문 키·입력 해시 = ceo6m 골든, context 있는 피드 발언도 이전과 같음 / 문서 B는 기존 형식 그대로(근거 문장 칸에 질문+인용 연속 구간)', async () => {
+  await test('K1 기존 8개 캐시 키 호환 유지, 입력 변경은 중복 근거 생략만, 별도 문맥은 보존', async () => {
+    // Legacy cache keys remain compatible; new prompts have a distinct version.
     // ceo6m koJobKey·koContents로 계산해 둔 값 (harness/ceo7/golden_ko.json과 같음)
     const GOLDEN: Record<string, [string, string]> = {
       'msft-fy25-q2-nadella': ['939619d85800e421ec007f725ddd72886cedc26e8ff42279eb8cb169bf40f16c', '8eb1f3251c745dc9e341ec2c88f9b5acf1b9d63395c6e86316c19f00bd0a765f'],
@@ -526,9 +527,13 @@ async function main() {
     assert.strictEqual(TRANSLATIONS.length, 8);
     for (const t of TRANSLATIONS) {
       const s: CeoStatement = { ...PROD_REV1_STATEMENTS[0], statementId: 'g_' + t.id, quoteText: t.quote, evidence: [{ ...PROD_REV1_STATEMENTS[0].evidence[0], excerpt: t.excerpt }] };
-      assert.deepStrictEqual([koJobKey(s), crypto.createHash('sha256').update(koContents(s)).digest('hex')], GOLDEN[t.id], t.id);
+      const contents = koContents(s), hasSentence = contents.includes('\nSENTENCE:');
+      if (!hasSentence) assert.strictEqual(t.quote.slice(0,600).replace(/\s+/g,' ').trim(),t.excerpt.slice(0,600).replace(/\s+/g,' ').trim());
+      const legacyContents = hasSentence ? contents : contents + '\nSENTENCE: ' + JSON.stringify(t.excerpt.slice(0,600));
+      assert.deepStrictEqual([legacyKoJobKey(s), crypto.createHash('sha256').update(legacyContents).digest('hex')], GOLDEN[t.id], t.id);
+      assert.notStrictEqual(koJobKey(s),legacyKoJobKey(s));
     }
-    // 피드 발언처럼 context가 있어도 입력·키는 context와 무관(ceo6m과 같은 규칙 — koSummary.ts는 ceo6m과 바이트 동일)
+    // 피드 발언처럼 context가 있어도 입력·키는 context와 무관
     const base: CeoStatement = { ...PROD_REV1_STATEMENTS[0] };
     const withCtx: CeoStatement = { ...base, context: { text: '상황', sources: [{ articleId: base.evidence[0].articleId, excerpt: 'Invented context sentence.' }] } };
     assert.deepStrictEqual([koJobKey(withCtx), koContents(withCtx)], [koJobKey(base), koContents(base)]);

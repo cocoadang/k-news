@@ -61,6 +61,13 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   if (o.deadline - o.now() < 40_000) { r.stoppedReason = '시간 부족'; return r; }
   // 게시물은 길어서 한 번에 12건, 링크 제거 후 1200자까지 번역
   const batch = pending.slice(0, o.maxItems ?? (o.posts ? 12 : KH_MAX_ITEMS));
+  // 같은 묶음이 이미 정산됐는데 항목이 아직 남아 있으면(이전 코드에서 번역 거부된 항목) 한 번만 다른 키(':r2')로 재시도.
+  // 그것도 이미 있으면 같은 묶음을 다시 부르지 않고 조용히 넘김(원문 표시 유지, 경고 아님).
+  const baseKey = 'hlb:' + crypto.createHash('sha256').update(batch.map(([k]) => k).join('|')).digest('hex');
+  const prev = state.jobs[baseKey];
+  const jobKey = prev && prev.status === 'settled' ? baseKey + ':r2' : baseKey;
+  if (jobKey !== baseKey && state.jobs[jobKey]?.status === 'settled') return r;
+  if (state.jobs[jobKey]) { r.stoppedReason = '기존 작업 처리 완료 또는 결과 확인 대기'; return r; }
   const items = batch.map(([, text], i) => ({ i, text: o.posts ? text.replace(/https?:\/\/\S+/g, '').trim().slice(0, 1200) : text }));
   const contents = headlineContents(items, !!o.posts);
   let count: number;
@@ -69,12 +76,6 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   const reservedInput = Math.ceil(count * 1.1) + 32;
   const costNano = Math.ceil(reservedInput * price.inNano + KH_MAX_OUTPUT_TOKENS * price.outNano);
   if (availableNano(state, utcMonth(o.now())) < costNano) { r.stoppedReason = '월 한도 부족'; return r; }
-  // 같은 묶음이 이미 정산됐는데 항목이 아직 남아 있으면(이전 코드에서 번역 거부된 항목) 한 번만 다른 키(':r2')로 재시도.
-  // 그것도 이미 있으면 같은 묶음을 다시 부르지 않고 조용히 넘김(원문 표시 유지, 경고 아님).
-  const baseKey = 'hlb:' + crypto.createHash('sha256').update(batch.map(([k]) => k).join('|')).digest('hex');
-  const prev = state.jobs[baseKey];
-  const jobKey = prev && prev.status === 'settled' ? baseKey + ':r2' : baseKey;
-  if (jobKey !== baseKey && state.jobs[jobKey]?.status === 'settled') return r;
   const attemptId = crypto.randomUUID();
   const res = await o.ledger.reserve({ jobKey, statementId: 'headline-batch', costNano, now: o.now(), attemptId }).catch(() => null);
   if (!res || res.ok === false) { r.stoppedReason = `예약 실패(${res && res.ok === false ? res.reason : '원장 오류'})`; return r; }

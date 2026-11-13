@@ -19,4 +19,5 @@ test('no double premium charge, capped cover, zero risk and zero payout',()=>{
   assert.equal(calculate({...defaults,eligibility:0},30).cover,0);
   assert.equal(calculate({...defaults,lawyerCover:999999},10).cover,40000000);
   assert.equal(calculate({...defaults,probability:100},30,5).cumulative,1);
+  assert.equal(calculate({...defaults,probability:100},0,5).cumulative,0);
 });

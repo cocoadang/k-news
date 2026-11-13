@@ -13,5 +13,5 @@ export function calculate(input, years, multiplier = 1) {
   const insuredLoss = p * (cost - cover) * lossFactor;
   const insurance = -insuredLoss;
   const qqq = investment - uninsuredLoss;
-  return { p, cost, cover, investment, uninsuredLoss, insuredLoss, insurance, qqq, difference: qqq - insurance, cumulative: -Math.expm1(years * Math.log1p(-p)), premiums: input.premium * years * 12 };
+  return { p, cost, cover, investment, uninsuredLoss, insuredLoss, insurance, qqq, difference: qqq - insurance, cumulative: years === 0 ? 0 : -Math.expm1(years * Math.log1p(-p)), premiums: input.premium * years * 12 };
 }

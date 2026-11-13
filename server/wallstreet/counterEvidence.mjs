@@ -11,6 +11,9 @@ export function applyCounterEvidence(items,response){
  response.findings.forEach((finding,index)=>{
   const item=items[index],allowed=new Map((item.relatedBlocks||[]).map(b=>[b.id,b]));
   if(!finding||typeof finding!=='object')throw Error('counter_evidence_shape');
+  // 'clear' needs no explanation: long lists often come back with an empty reason for clear claims, which must not hold them.
+  if(finding.status==='clear'&&typeof finding.reason==='string'&&!finding.reason.trim())finding={...finding,reason:'clear'};
+  if(finding.status==='clear'&&finding.sourceIds==null)finding={...finding,sourceIds:[]};
   // A single malformed finding (bad index/ID/reason) holds only that claim as 'uncertain' instead of failing the whole summary.
   const malformed=finding.index!==index||!['clear','qualifies','uncertain'].includes(finding.status)||typeof finding.reason!=='string'||!finding.reason.trim()||finding.reason.length>200||!Array.isArray(finding.sourceIds)||finding.sourceIds.length>12||new Set(finding.sourceIds).size!==finding.sourceIds.length||finding.sourceIds.some(id=>!allowed.has(id))||(finding.status==='qualifies'&&!finding.sourceIds.length);
   if(malformed){held.push({index,originalIndex:item.originalIndex,review:{index,status:'uncertain',sourceIds:[],reason:'counter_evidence_malformed',sources:[]}});return;}

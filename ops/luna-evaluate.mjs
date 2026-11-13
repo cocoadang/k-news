@@ -3,6 +3,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {mkdir,readFile,writeFile,open,unlink,readdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
+import {homedir} from 'node:os';
 import {createLunaClient,lunaUsageCost,LUNA_CACHE_WRITE_RATE,LUNA_OUTPUT_RATE} from '../server/wallstreet/lunaClient.mjs';
 import {lunaSummarizer} from '../server/wallstreet/lunaSummary.mjs';
 
@@ -11,7 +12,7 @@ const database='ai-studio-spacexintelligen-5ece8bd2-4283-450c-8ff7-bbc38569174d'
 const root=`https://firestore.googleapis.com/v1/projects/${project}/databases/${database}/documents`;
 const run=process.argv.includes('--run');
 const saved=process.argv.includes('--saved');
-const folder=resolve(process.env.LUNA_EVAL_DIR||'/tmp/knews-luna-evaluation');
+const folder=resolve(process.env.LUNA_EVAL_DIR||resolve(homedir(),'.knews-luna-evaluation'));
 await mkdir(folder,{recursive:true,mode:0o700});
 let state;
 if(saved){

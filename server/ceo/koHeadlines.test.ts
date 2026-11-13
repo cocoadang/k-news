@@ -7,12 +7,12 @@ const now = Date.parse('2026-10-31T00:00:00Z');
 const usage = { promptTokenCount: 200, candidatesTokenCount: 100, thoughtsTokenCount: 0, totalTokenCount: 300 };
 function setup(answer: (contents: string) => string) {
   const ledger = new MemoryKoLedger();
-  let calls = 0;
+  let calls = 0, counts = 0;
   const client = {
-    countTokens: async () => ({ totalTokens: 200 }),
+    countTokens: async () => { counts++; return { totalTokens: 200 }; },
     generate: async ({ contents }: any) => { calls++; return { text: answer(contents), modelVersion: 'gemini-3.8-flash-001', usageMetadata: usage }; },
   };
-  return { ledger, client, calls: () => calls };
+  return { ledger, client, calls: () => calls, counts: () => counts };
 }
 
 test('headlines are translated in one batched call, cached by text, never re-translated', async () => {
@@ -63,4 +63,14 @@ test('a batch already settled (legacy, nothing marked) is retried once with a ne
   assert.equal(r2.stoppedReason, null); assert.equal(x.calls(), 2);
   const r3 = await translateHeadlines(texts, o);
   assert.equal(r3.stoppedReason, null); assert.equal(r3.sent, 0); assert.equal(x.calls(), 2);
+  assert.equal(x.counts(), 2);
+});
+
+test('a reserved batch skips token counting before generation', async () => {
+  const x = setup(() => '{}'); await x.ledger.configure({ enabled:true, now });
+  const crypto = await import('node:crypto');
+  const text = 'Musk says A', key = 'hlb:' + crypto.createHash('sha256').update(headlineKey(text)).digest('hex');
+  await x.ledger.reserve({jobKey:key,statementId:'headline-batch',costNano:1000,now,attemptId:'pending'});
+  await translateHeadlines([text], {ledger:x.ledger,client:x.client,now:()=>now,deadline:now+120_000});
+  assert.equal(x.counts(),0); assert.equal(x.calls(),0);
 });

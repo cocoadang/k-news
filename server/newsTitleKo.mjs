@@ -1,7 +1,10 @@
 // 뉴스 피드 제목 한국어 번역 (표시 전용). 상세 분석이 끝나지 않은 뉴스의 영어 제목을 Gemini Flash-Lite로 묶어 번역.
 // 분석·분류·중복 판정은 영어 원문을 그대로 쓰고, 화면에는 titleKo가 있으면 그것을 보여줌.
 // 비용: 월 상한(기본 USD 1)을 넘기지 않음 — 호출 전 최대 비용을 예약하고 실제 사용량으로 정산.
+import {createHash} from 'node:crypto';
+import {canTranslate} from './newsTitleKoStore.mjs';
 export const TITLE_KO_MODEL = 'gemini-3.5-flash-lite';
+export const titleKey=text=>createHash('sha256').update('title-ko-1\0'+TITLE_KO_MODEL+'\0'+text).digest('hex');
 export const IN_NANO = 300, OUT_NANO = 2500; // USD per 1M tokens × 1000 = 나노달러/토큰
 export const BATCH = 40, MAX_OUTPUT = 4096, MONTH_CAP_NANO = 1_000_000_000;
 
@@ -29,28 +32,38 @@ export function parseTitles(text, items) {
 }
 
 /**
- * events: 대상 후보, deps: { generate(prompt)->{text, usage:{in,out}}, budget:{read()->{month,nano}, add(nano)}, save(id,titleKo), now, deadline, maxBatches }
+ * events: 대상 후보, deps: { generate(prompt, timeoutMs)->{text, usage:{in,out}}, store:{read,reserve,settle,uncertain}, save(id,titleKo), now, deadline, maxBatches }
  */
 export async function translateTitles(events, deps) {
   const r = { pending: 0, translated: 0, calls: 0, stopped: null };
   const todo = events.filter(needsTitleKo).sort((a, b) => (Date.parse(b.firstSeenAt) || 0) - (Date.parse(a.firstSeenAt) || 0));
   r.pending = todo.length;
-  const month = new Date(deps.now()).toISOString().slice(0, 7);
-  for (let off = 0; off < todo.length && r.calls < (deps.maxBatches ?? 5); off += BATCH) {
+  if(!deps.store){r.stopped='store_required';return r;}
+  const grouped=new Map();
+  for(const e of todo){const text=String(e.originalTitle||e.title).slice(0,240),key=titleKey(text);if(!grouped.has(key))grouped.set(key,{key,text,events:[]});grouped.get(key).events.push(e);}
+  const groups=[...grouped.values()],jobs={};
+  for(let i=0;i<groups.length;i+=BATCH)Object.assign(jobs,await deps.store.read(groups.slice(i,i+BATCH).map(g=>g.key)));
+  for(const g of groups)if(jobs[g.key]?.status==='ready')for(const e of g.events)if(await deps.save(e.id,jobs[g.key].ko)!==false)r.translated++;
+  const pending=groups.filter(g=>canTranslate(jobs[g.key],deps.now()));
+  for (let off = 0; off < pending.length && r.calls < (deps.maxBatches ?? 5); off += BATCH) {
     if (deps.deadline - deps.now() < 25_000) { r.stopped = 'time'; break; }
-    const batch = todo.slice(off, off + BATCH), items = batch.map((e, i) => ({ i, t: String(e.originalTitle || e.title).slice(0, 240) }));
+    const batch = pending.slice(off, off + BATCH), items = batch.map((g, i) => ({ i, t:g.text }));
     const prompt = titlePrompt(items);
-    const reserve = Math.ceil((prompt.length / 2) * IN_NANO + MAX_OUTPUT * OUT_NANO); // 보수적: 2글자=1토큰
-    const b = await deps.budget.read();
-    const spent = b.month === month ? b.nano : 0;
-    if (spent + reserve > (deps.capNano ?? MONTH_CAP_NANO)) { r.stopped = 'month_cap'; break; }
-    await deps.budget.add(month, reserve); r.calls++;
+    const reserve = Math.ceil((Buffer.byteLength(prompt,'utf8')+2048)*IN_NANO+MAX_OUTPUT*OUT_NANO);
+    const month=new Date(deps.now()).toISOString().slice(0,7),keys=batch.map(g=>g.key);
+    const claim=await deps.store.reserve({keys,month,reserveNano:reserve,capNano:Math.min(deps.capNano??MONTH_CAP_NANO,MONTH_CAP_NANO),now:deps.now()});
+    if(!claim.ok){r.stopped=claim.reason;break;}
+    r.calls++;
     let res;
-    try { res = await deps.generate(prompt); }
-    catch { r.stopped = 'call_failed'; break; } // 예약은 유지(보수적)
-    const actual = Number.isFinite(res?.usage?.in) && Number.isFinite(res?.usage?.out) ? Math.ceil(res.usage.in * IN_NANO + res.usage.out * OUT_NANO) : reserve;
-    await deps.budget.add(month, actual - reserve);
-    for (const [i, ko] of parseTitles(res?.text, items)) { await deps.save(batch[i].id, ko); r.translated++; }
+    const job={keys,attemptId:claim.attemptId,month,reserveNano:reserve};
+    try { res = await deps.generate(prompt,Math.min(40000,deps.deadline-deps.now()-2000)); }
+    catch { await deps.store.uncertain({...job,now:deps.now()});r.stopped='call_failed';break; }
+    if(!Number.isSafeInteger(res?.usage?.in)||res.usage.in<0||!Number.isSafeInteger(res?.usage?.out)||res.usage.out<0){await deps.store.uncertain({...job,now:deps.now()});r.stopped='usage_unknown';break;}
+    const actual=Math.ceil(res.usage.in*IN_NANO+res.usage.out*OUT_NANO),parsed=parseTitles(res.text,items),results={};
+    for(const [i,ko] of parsed)results[batch[i].key]=ko;
+    await deps.store.settle({...job,actualNano:actual,results,now:deps.now()});
+    for (const [i, ko] of parsed)for(const e of batch[i].events)if(await deps.save(e.id,ko)!==false)r.translated++;
+    if(actual>reserve){r.stopped='usage_over_reservation';break;}
   }
   return r;
 }

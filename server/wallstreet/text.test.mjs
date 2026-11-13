@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createTextRuntime,renderBrief,parseUiTranscript,TEXT_PROJECT} from './textRuntime.mjs';
+import {createTextRuntime,renderBrief,parseUiTranscript,TEXT_PROJECT,SUMMARY_FIX_VERSION} from './textRuntime.mjs';
 import {PROGRAMMES} from './programmes.mjs';
 const now=Date.parse('2026-10-28T10:00:00Z');
 
@@ -153,7 +153,7 @@ test('finished videos drop their transcript and validation journal after 3 days,
 test('context-review shortfall gets exactly one more attempt at a later run within 24h',async()=>{
  const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('insufficient_context_reviewed_items');};
  const r=x.run();await r.importTranscript(source(video()));
- const hold=async(failedAgo)=>x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='insufficient_context_reviewed_items';v.summaryFailedAt=now-failedAgo;v.summaryRetried=true;v.summaryFixVersion=3;v.firstSeen=now-3*3600000;await save();});
+ const hold=async(failedAgo)=>x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='insufficient_context_reviewed_items';v.summaryFailedAt=now-failedAgo;v.summaryRetried=true;v.summaryFixVersion=SUMMARY_FIX_VERSION;v.firstSeen=now-3*3600000;await save();});
  await hold(30*60000);await r.run();assert.equal(calls,0); // same run window: no extra attempt
  await hold(2*3600000);await r.run();assert.equal(calls,1);
  assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_review_required');assert.equal(x.store.state.videos.Idn_d5ArZvA.summaryLaterRunRetried,true);

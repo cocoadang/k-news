@@ -94,11 +94,12 @@ test('detailed request still delivers when one of five points fails grounding (f
  await assert.rejects(b.s.summarize({segments:seg,maxCostMicros:20000}),/insufficient_source_grounded_items/);
 });
 
-test('long single-topic evidence (up to 16 blocks, ~10 min) is accepted; wider spans are rejected per item',async()=>{
+test('long single-topic evidence (up to ~15 min) is accepted; wider spans are rejected per item',async()=>{
  const {relatedContext,sourceRepairPrompt}=await import('./groundedSummary.mjs');
  const blocks=Array.from({length:200},(_,i)=>({id:`B${String(i).padStart(4,'0')}`,start:i*6,text:'방송 내용 '+i}));
  assert.ok(relatedContext([0,50],blocks).length>0); // 300s span
- assert.throws(()=>relatedContext([0,150],blocks),/evidence_topic_span/); // 900s span
+ assert.ok(relatedContext([0,150],blocks).length>0); // 900s span (긴 방송의 한 주제)
+ assert.throws(()=>relatedContext([0,160],blocks),/evidence_topic_span/); // 960s span
  const ids=Array.from({length:12},(_,i)=>blocks[i*2].id);
  const [item]=groundCandidate({items:[{text:'방송 내용을 요약한 문장입니다.',kind:'reported',evidenceIds:ids}]},blocks,{minimum:1});
  assert.equal(item.evidenceIds.length,12);

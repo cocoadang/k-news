@@ -1,0 +1,105 @@
+import {createHash} from 'node:crypto';
+import {evidenceBlocks,segmentWindows,filterGroundedCandidates,conservativeClassification,acceptVerification} from './groundedSummary.mjs';
+import {LUNA_MODEL,LUNA_INPUT_RATE,LUNA_OUTPUT_RATE,lunaUsageCost} from './lunaClient.mjs';
+
+export const LUNA_PIPELINE_VERSION=1;
+const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
+const str={type:'string'},kind={type:'string',enum:['reported','outlook']},ids={type:'array',items:str,minItems:1,maxItems:12};
+const item=object({title:str,text:str,kind,evidenceIds:ids});
+const candidatesSchema=object({items:{type:'array',items:item,maxItems:32}});
+const check=object({index:{type:'integer'},supported:{type:'boolean'},classificationCorrect:{type:'boolean'},recommendedKind:kind,
+ counterStatus:{type:'string',enum:['clear','qualifies','uncertain']},sourceIds:{type:'array',items:str,maxItems:12},duplicateOf:{type:['integer','null']},reason:str});
+const auditSchema=object({checks:{type:'array',items:check,maxItems:32}});
+export const EXTRACT_INSTRUCTION='Extract every distinct important news item in this supplied segment of a briefing about the previous US market session. Keep companies, indicators and policy events separate; do not force a topic count, merge unrelated news or pad with chatter/ads. Write concise Korean titles and 2-4 sentence summaries. kind=reported for what the broadcast reports, outlook for interpretation/prediction. Preserve attribution, conditions, uncertainty and conflicting views. Use only supplied evidenceIds (at most 12, within 12 consecutive IDs); include enough evidence for the actor and caveats. Do not guess unclear names/numbers or add outside facts. Title is a hint, not evidence. Empty items is allowed for chatter. Return the required JSON.';
+export const REVIEW_INSTRUCTION='Audit EVERY draft against its coreIds and relatedIds. Read later blocks for corrections, disagreement, missing conditions and attribution changes. A literal name nearby is not proof of attribution. Reject unsupported implications, names/numbers, ads, contextless claims or lost uncertainty. Check reported/outlook classification; recommend outlook for interpretation or forecasts. counterStatus=clear only after checking supplied context, qualifies for a material missing caveat (cite sourceIds), uncertain when evidence is insufficient. This is broadcast-grounding, not external fact checking. Mark a semantic duplicate with duplicateOf=an earlier draft index; otherwise null. Do not rewrite or add facts. Return one check per draft in order; reason at most 40 Korean characters.';
+const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const compactBlocks=blocks=>blocks.map(({id,text})=>({id,text}));
+function reviewPayload(items){
+ const blocks=[...new Map(items.flatMap(x=>x.relatedBlocks).map(x=>[x.id,x])).values()].sort((a,b)=>a.start-b.start);
+ return {drafts:items.map((x,index)=>({index,title:x.title||'',text:x.text,kind:x.kind,coreIds:x.contextIds,relatedIds:x.relatedBlocks.map(b=>b.id)})),blocks:compactBlocks(blocks)};
+}
+export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
+ const floor=Math.max(3,acceptMinimumItems);
+ return {async summarize({segments,video,maxCostMicros,checkpoint={},saveCheckpoint=async()=>{}}){
+  if(!approved||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>50000)throw Error('grounded_budget_config');
+  const blocks=evidenceBlocks(segments),windows=(blocks.at(-1)?.start>1800)?segmentWindows(blocks):[blocks];
+  if(!blocks.length||windows.length>30)throw Error('luna_transcript_limit');
+  const identity=digest({version:LUNA_PIPELINE_VERSION,model:LUNA_MODEL,segments,title:video?.title||''});
+  if(checkpoint.identity!==identity){for(const k of Object.keys(checkpoint))delete checkpoint[k];Object.assign(checkpoint,{identity,entries:{}});await saveCheckpoint();}
+  const journal={protocol:'evidence_ids_v1',provider:'openai',model:LUNA_MODEL,pipelineVersion:LUNA_PIPELINE_VERSION,segments:windows.length,calls:[],cacheHits:0};
+  let reserved=0;
+  async function call(stage,instruction,payload,schema,cap){
+   const args={contents:instruction+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
+   const key=digest(args),entry=checkpoint.entries[key];
+   if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
+   // A timeout/crash may have incurred a charge. Never repeat it automatically.
+   if(entry)throw Error('luna_previous_call_uncertain');
+   if(Object.keys(checkpoint.entries).length>=windows.length+2)throw Error('luna_call_limit');
+   const input=client.estimateInputTokens(args);
+   if(!Number.isSafeInteger(input)||input<1||input>250000)throw Error('luna_input_limit');
+   const ceiling=Math.ceil(input*LUNA_INPUT_RATE+cap*LUNA_OUTPUT_RATE);
+   if(reserved+ceiling>maxCostMicros)throw Error('grounded_budget_exceeded');
+   reserved+=ceiling;
+   const record={stage,ceiling,status:'inflight'};journal.calls.push(record);
+   checkpoint.entries[key]={status:'inflight',ceiling};await saveCheckpoint();
+   try{
+    const output=await client.generate(args),spent=lunaUsageCost(output.usage);
+    if(spent!==null&&spent<=ceiling){record.spentMicros=spent;record.usage=output.usage;}
+    record.status='completed';
+    const result=JSON.parse(output.text);
+    checkpoint.entries[key]={status:'completed',result};await saveCheckpoint();return result;
+   }catch(error){
+    const spent=lunaUsageCost(error?.usage);
+    if(spent!==null&&spent<=ceiling){record.spentMicros=spent;record.usage=error.usage;record.status='completed';}
+    throw error;
+   }
+  }
+  try{
+   const candidates=[],rejected=[];
+   for(let k=0;k<windows.length;k++){
+    const window=windows[k];
+    const part=await call('extract_'+k,EXTRACT_INSTRUCTION,{title:video?.title||'',segment:k+1,segments:windows.length,blocks:compactBlocks(window)},candidatesSchema,windows.length>1?2400:4200);
+    if(!Array.isArray(part?.items)||part.items.length>32)throw Error('grounded_shape');
+    // Reject cross-window IDs before global grounding. Empty segments are valid.
+    const allowed=new Set(window.map(b=>b.id));
+    for(const x of part.items){
+     if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!allowed.has(id)))throw Error('grounded_ids');
+     candidates.push(x);
+    }
+   }
+   // No arbitrary three-per-segment cap or dropping short news in favor of long prose.
+   const items=[],seen=new Set();
+   for(const x of candidates){
+    if(seen.has(x.text))continue;seen.add(x.text);
+    const s=filterGroundedCandidates({items:[x]},blocks,{minimum:1,contextRadius:1,topicContext:true});
+    if(s.items.length)items.push(...s.items);else rejected.push({item:x,reason:s.rejected[0]?.reason});
+   }
+   if(rejected.length){
+    const selected=new Set();for(const {item:x} of rejected){const indexes=x.evidenceIds.map(id=>blocks.findIndex(b=>b.id===id));for(const i of indexes)for(let j=Math.max(0,i-2);j<=Math.min(blocks.length-1,i+2);j++)selected.add(j);}
+    const repair=await call('repair','Repair only these rejected draft news items using supplied evidence. Keep the original topic; no new facts or ASR guesses. Preserve caveats and attribution. Return title,text,kind,evidenceIds for each supportable correction; omit unfixable items.',{rejected,blocks:compactBlocks([...selected].sort((a,b)=>a-b).map(i=>blocks[i]))},candidatesSchema,3000);
+    for(const x of repair.items||[]){
+     // Repair cannot use evidence outside the supplied repair set.
+     if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!selected.has(blocks.findIndex(b=>b.id===id))))continue;
+     const s=filterGroundedCandidates({items:[x]},blocks,{minimum:1,contextRadius:1,topicContext:true});
+     for(const g of s.items)if(!items.some(m=>m.text===g.text))items.push(g);
+    }
+   }
+   if(items.length<floor)throw Error('insufficient_source_grounded_items');
+   if(items.length>32)throw Error('luna_item_limit');
+   items.sort((a,b)=>a.start-b.start);
+   let audit=await call('audit',REVIEW_INSTRUCTION,reviewPayload(items),auditSchema,Math.min(6000,1000+items.length*140));
+   if(!Array.isArray(audit?.checks)||audit.checks.length!==items.length||audit.checks.some((x,i)=>x.index!==i))throw Error('semantic_verification_failed');
+   let classified=conservativeClassification(items,audit);audit=classified.audit;
+   const kept=[];
+   for(let i=0;i<items.length;i++){
+    const c=audit.checks[i],allowed=new Set(items[i].relatedBlocks.map(b=>b.id));
+    if(c.supported===true&&c.classificationCorrect===true&&c.counterStatus==='clear'&&c.duplicateOf===null&&typeof c.reason==='string'&&c.reason.trim()&&c.reason.length<=200&&Array.isArray(c.sourceIds)&&c.sourceIds.every(id=>allowed.has(id))&&['reported','outlook'].includes(c.recommendedKind))kept.push({item:classified.items[i],check:c});
+   }
+   if(kept.length<floor)throw Error('insufficient_context_reviewed_items');
+   const result=acceptVerification(kept.map(x=>x.item),{checks:kept.map((x,index)=>({...x.check,index}))});
+   journal.candidateCount=candidates.length;journal.repairedCount=rejected.length;journal.omittedCount=items.length-kept.length;
+   result.validationJournal=journal;return result;
+  }catch(error){error.candidate=journal;throw error;}
+ }};
+}
+

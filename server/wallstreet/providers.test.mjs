@@ -44,6 +44,13 @@ test('factory enforces explicit private recipient and all credential names',asyn
   await assert.rejects(createProviders({config:{enabled:true},env}),/private_recipient/);
   await assert.rejects(createProviders({config:{enabled:true},env:{}}),/missing_VIDIQ_API_KEY/);
 });
+
+test('Luna wiring requires OpenAI server secret, exposes readiness without reading/loading Gemini',async()=>{
+ const config={enabled:true,mode:'caption_text',projectId:'gen-lang-client-0064554427',paidFallback:false,model:'gpt-6-luna',summaryApproved:true,combinedTokenCapVerified:true};
+ const runtime=createConfiguredWallstreetRuntime({config,env:{},getFirestore:()=>({}),loadGemini:()=>{throw Error('must_not_load_Gemini');}});
+ assert.equal(runtime.status().summaryCredentialReady,false);assert.equal(runtime.status().summaryModel,'gpt-6-luna');
+ await assert.rejects(runtime.run(),/openai_server_credential_required/);
+});
 test('Gemini request contract forbids retries/tools and rejects truncation',async()=>{
   const seen=[];
   class SDK {constructor(opts){seen.push(opts);this.models={countTokens:async args=>{seen.push(args);return {totalTokens:12};},generateContent:async args=>{seen.push(args);return {text:'{}',candidates:[{finishReason:'MAX_TOKENS'}]};}};}}
@@ -69,3 +76,5 @@ test('caption retry requires explicit provider processing and retry instruction'
   assert.equal(classifyVidiqCaptionError(error('YouTube is still generating captions. Please retry in a few minutes.')).status,'processing');
   for(const text of ['No captions; retry later','Insufficient credits','Video private','Captions are processing']) assert.equal(classifyVidiqCaptionError(error(text)).status,'unavailable');
 });
+
+

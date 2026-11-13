@@ -5,6 +5,8 @@ import {rssDiscovery} from './rssDiscovery.mjs';
 import {uploadsDiscovery} from './uploadsDiscovery.mjs';
 import {boundedSummarizer} from './summaryClient.mjs';
 import {groundedSummarizer} from './groundedSummary.mjs';
+import {createLunaClient} from './lunaClient.mjs';
+import {lunaSummarizer} from './lunaSummary.mjs';
 import {createWallstreetRuntime} from './runtime.mjs';
 import {wallstreetConfig} from './config.mjs';
 import {createFreeVideoProvider} from './freeVideo.mjs';
@@ -95,9 +97,13 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
       dependencies.discovery=config.discoverySource==='youtube_uploads_api'?uploadsDiscovery({approved:true,apiKey:env.YOUTUBE_API_KEY,activatedAt:config.activatedAt,fetcher}):rssDiscovery({approved:true,fetcher});
     }
     if(!dependencies.summarizer&&config.summaryApproved===true&&config.combinedTokenCapVerified===true){
-      if(!env.GEMINI_API_KEY)throw Error('text_credentials_not_configured');
-      const {GoogleGenAI}=await (loadGemini||(()=>import('@google/genai')))();
-      dependencies.summarizer=groundedSummarizer({...config,approved:true,client:createGeminiTextSdkClient({GoogleGenAI,apiKey:env.GEMINI_API_KEY})});
+      if(config.model==='gpt-6-luna'){
+        dependencies.summarizer=lunaSummarizer({...config,approved:true,client:createLunaClient({apiKey:env.OPENAI_API_KEY,fetcher})});
+      }else{
+        if(!env.GEMINI_API_KEY)throw Error('text_credentials_not_configured');
+        const {GoogleGenAI}=await (loadGemini||(()=>import('@google/genai')))();
+        dependencies.summarizer=groundedSummarizer({...config,approved:true,client:createGeminiTextSdkClient({GoogleGenAI,apiKey:env.GEMINI_API_KEY})});
+      }
     }
     if(!dependencies.telegram&&config.deliveryApproved===true){
       if(!env.TELEGRAM_BOT_TOKEN||! /^[1-9]\d*$/.test(config.recipient||''))throw Error('private_delivery_configuration_required');
@@ -116,6 +122,7 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
   return {
     status:()=>({status:config.enabled===true?'configured_pending_first_run':'disabled',intervalMs:config.dailyCheckTimes?null:600000,dailyCheckTimes:config.dailyCheckTimes||null,timeZone:config.scheduleTimeZone||'Asia/Seoul',mode:config.mode,
       acquisition:config.mode==='caption_text'?'routed_native_captions_and_ui_import':config.mode,
+      summaryModel:config.model,summaryCredentialReady:config.model==='gpt-6-luna'?Boolean(env.OPENAI_API_KEY?.trim()):Boolean(env.GEMINI_API_KEY?.trim()),
       captionProviders:{wallstreet:config.vidiqApproved===true?'vidiq':'disabled',bullbear:config.supadataApproved===true?'supadata_native':'disabled',crypto:config.supadataApproved===true?'supadata_native':'disabled'},automaticCaptionsReady:false}),
     async library(){const db=getFirestore();if(!db)throw Error("store_unavailable");return summaryLibrary(await new FirestoreWallstreetStore(db).read());},
     async publicLibrary(){const db=getFirestore();if(!db)throw Error('store_unavailable');return publicSummaryLibrary(await new FirestoreWallstreetStore(db).read());},
@@ -137,3 +144,5 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
     }
   };
 }
+
+

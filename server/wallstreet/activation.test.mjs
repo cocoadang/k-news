@@ -7,6 +7,7 @@ test('deployment switch enables approved nonzero limits and preserves exclusions
  assert.equal(config().enabled,false);
  const c=config({KNEWS_YOUTUBE_ENABLED:'true',KNEWS_YOUTUBE_ACTIVATED_AT:'2026-10-29T00:00:00Z',KNEWS_SUPADATA_WINDOW_START:'2026-10-29T00:00:00Z',KNEWS_SUPADATA_WINDOW_END:'2026-11-27T00:00:00Z',TELEGRAM_CHAT_ID:'123'});
  assert.equal(c.enabled,true);assert.equal(c.summaryReservationMicros,30000);assert.equal(c.dailySummaryMicros,260000);assert.equal(c.monthlySummaryMicros,2000000);
+ assert.equal(c.model,'gpt-6-luna');assert.equal(c.automaticSummaryRetries,false);
  assert.equal(c.supadataDailyLimit,6);assert.equal(c.supadataCycleLimit,90);assert.equal(c.paidFallback,false);assert.equal(c.counterEvidenceRequired,true);
  assert.ok(c.vidiqApproved&&c.supadataApproved&&c.discoveryApproved&&c.summaryApproved&&c.deliveryApproved);
  assert.deepEqual(c.dailyCheckTimes,['09:00','15:00']);assert.equal(c.recipient,'123');assert.equal(c.excludedVideoIds.length,4);
@@ -19,3 +20,5 @@ test('activation floor lets collection look back to 10/29 00:00 KST, never later
  assert.equal(activationFloor('2026-10-20T00:00:00Z'),Date.parse('2026-10-20T00:00:00Z'));
  assert.equal(activationFloor(undefined),null);
 });
+
+

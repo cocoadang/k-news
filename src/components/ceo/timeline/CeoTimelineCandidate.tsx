@@ -73,7 +73,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
     const seen = new Map<string, any>();
     for (const r of dataset.roles || []) {
       const person = (dataset.persons || []).find((p: any) => p.personId === r.personId);
-      const cur = seen.get(r.personId) || { key: r.personId, personId: r.personId, companyIds: [] as string[], companies: [] as string[], name: person?.displayName || r.personId, count: 0 };
+      const cur = seen.get(r.personId) || { key: r.personId, personId: r.personId, companyIds: [] as string[], companies: [] as string[], name: (lang === 'en' ? person?.nameVariants?.[0] : null) || person?.displayName || r.personId, count: 0 };
       if (!cur.companyIds.includes(r.companyId)) { cur.companyIds.push(r.companyId); cur.companies.push(r.companyName); }
       seen.set(r.personId, cur);
     }
@@ -82,7 +82,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       s.count = (dataset.statements || []).filter((x: any) => x.personId === s.personId && s.companyIds.includes(x.companyId)).length;
     }
     return [...seen.values()].sort((a, b) => b.count - a.count);
-  }, [dataset]);
+  }, [dataset, lang]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);

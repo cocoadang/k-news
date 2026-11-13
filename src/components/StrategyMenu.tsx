@@ -151,8 +151,8 @@ function LiveSection({live}: {live: Live}) {
       <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
       <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
       <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
-      <Kpi title={t('3/25 구간', '3/25 bucket')} value={bucketName(nb?.bucket) || '—'} sub={nb?.deployLeft ? t(`SGOV 이동 남은 횟수 ${nb.deployLeft}회`, `${nb.deployLeft} SGOV moves left`) : t('3% 미만 SGOV · 3~25% QQQ · 25%↑ TQQQ', '<3% SGOV · 3–25% QQQ · 25%+ TQQQ')}/>
-      <Kpi title={t('5/10/20 구간', '5/10/20 bucket')} value={bucketName(no?.bucket) || '—'} sub={t('5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20%↑ TQQQ', '<5% SGOV · 5–10% SCHD · 10–20% QQQ · 20%+ TQQQ')}/>
+      <Kpi title={t('3/25 구간', '3/25 bucket')} value={bucketName(nb?.bucket) || '—'} sub={nb?.deployLeft ? t(`SGOV 이동 남은 횟수 ${nb.deployLeft}회`, `${nb.deployLeft} SGOV moves left`) : t('3% 미만 SGOV · 3~25% QQQ · 25% 이상 TQQQ', '<3% SGOV · 3–25% QQQ · 25%+ TQQQ')}/>
+      <Kpi title={t('5/10/20 구간', '5/10/20 bucket')} value={bucketName(no?.bucket) || '—'} sub={t('5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20% 이상 TQQQ', '<5% SGOV · 5–10% SCHD · 10–20% QQQ · 20%+ TQQQ')}/>
     </div>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>

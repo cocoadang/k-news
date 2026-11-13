@@ -16,7 +16,7 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   // Supplement these already-sent summaries once per version bump, web only (no Telegram), reusing the stored result.
   resummarize:Object.freeze({version:2,ids:Object.freeze([])}),
   // 사용자 요청(2026-11-10): 긴 영상 주제 수 확대 → 자막이 아직 남아 있는 최근 영상만 웹 전용 전체 재요약(텔레그램 없음, 주제가 늘 때만 교체)
-  fullResummarize:Object.freeze({version:1,ids:Object.freeze(['l4HDm8507sY','ZAFOuEKr_Tw','JHzBtIHrVVo','RiSRrA1bLTw','JHHu3baK_d4'])}), // 웹 전용 보완 대상(완료된 10/29·10/30 건은 제거). 필요할 때만 id 추가
+  fullResummarize:Object.freeze({version:2,ids:Object.freeze(['eScBBegrUtM','Sa7ZwiJc2jY'])}), // 2026-11-13: 월가 뉴스레터 11/11·11/13(3개 주제)을 구간별 요약으로 다시 // 웹 전용 보완 대상(완료된 10/29·10/30 건은 제거). 필요할 때만 id 추가
   // CEO 발언 영상(Supadata 무료 한도 공유): 하루 1편·월 15편, Gemini 영상당 2센트·하루 4센트·월 40센트 상한
   ceoVideo:Object.freeze({enabled,dailyVideos:1,monthlyVideos:15,reservationMicros:20000,dailyMicros:40000,monthlyMicros:400000}),
   excludedVideoIds:Object.freeze(['Idn_d5ArZvA','annR-E8m5WQ','IggP39LRnT8','LtT_k6wCOek']),

@@ -214,9 +214,9 @@ test('a candidate rejected by the source screen gets one repair; passed points s
 });
 
 test('a content-rich video can deliver more than eight grounded points', async () => {
- const seg = Array.from({ length: 900 }, (_, i) => ({ start: i * 3, text: `방송 구간 ${i}의 조건부 전망입니다.` }));
+ const seg = Array.from({ length: 590 }, (_, i) => ({ start: i * 3, text: `방송 구간 ${i}의 조건부 전망입니다.` })); // 30분 미만: 전체 한 번에 생성
  const bl = evidenceBlocks(seg);
- const pick = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 299];
+ const pick = [0, 18, 36, 54, 72, 90, 108, 126, 144, 162, 180];
  const first = { items: pick.map(i => ({ title: `구간 ${i}`, text: `출연자는 방송 구간 ${i * 3}에 관해 조건부로 전망했습니다.`, kind: 'outlook', evidenceIds: [bl[i].id] })) };
  const findings = n => ({ findings: Array.from({ length: n }, (_, index) => ({ index, status: 'clear', sourceIds: [], reason: '추가 단서 없음' })) });
  const checks = n => ({ checks: Array.from({ length: n }, (_, index) => ({ index, supported: true, classificationCorrect: true, recommendedKind: 'outlook', reason: '근거 일치' })) });
@@ -227,4 +227,27 @@ test('a content-rich video can deliver more than eight grounded points', async (
  assert.equal(result.items.length, 11);
  assert.ok(caps[0] > 2500 && caps[1] > 700 && caps[2] > 700, JSON.stringify(caps));
  assert.equal(result.validationJournal.candidateCount, 11);
+});
+
+test('long briefing (>30 min) is generated segment by segment and keeps more separate points', async () => {
+ const { segmentWindows, SEGMENT_SECONDS } = await import('./groundedSummary.mjs');
+ const seg = Array.from({ length: 170 }, (_, i) => ({ start: i * 16, text: `뉴스 ${i} 관련 조건부 전망입니다.` }));
+ const bl = evidenceBlocks(seg), wins = segmentWindows(bl);
+ assert.ok(wins.length >= 4 && wins.length <= 6, String(wins.length));
+ assert.ok(wins.every(w => w.at(-1).start - w[0].start < SEGMENT_SECONDS * 1.4));
+ const perWindow = wins.map((w, k) => ({ items: w.slice(0, 2).map((b, j) => ({ title: `뉴스 ${k}-${j}`, text: `출연자는 뉴스 ${b.text.match(/\d+/)[0]} 관련 조건부 전망을 소개했습니다.`, kind: 'outlook', evidenceIds: [b.id] })) }));
+ const n = perWindow.reduce((a, p) => a + p.items.length, 0);
+ let seg_k = 0; const prompts = [];
+ const count = c => JSON.parse(c.slice(c.indexOf('\n{') + 1)); 
+ const reply = c => c.startsWith('This is segment') ? perWindow[seg_k++]
+  : c.startsWith('Find counter-evidence') ? { findings: count(c).claims.map((_, index) => ({ index, status: 'clear', sourceIds: [], reason: '' })) }
+  : c.startsWith('Act as a strict') ? { checks: count(c).items.map((_, index) => ({ index, supported: true, classificationCorrect: true, recommendedKind: 'outlook', reason: '근거 일치' })) }
+  : { items: [] };
+ const client = { countTokens: async () => ({ totalTokens: 1500 }), generate: async ({ contents }) => { prompts.push(contents); return { text: JSON.stringify(reply(contents)) }; } };
+ const s = groundedSummarizer({ client, model: 'gemini-3.5-flash-lite', inputMicrosPerToken: .3, outputMicrosPerToken: 2.5, approved: true, allowSourceRepair: true, minimumSummaryItems: 5, acceptMinimumItems: 3, counterEvidenceRequired: true });
+ const result = await s.summarize({ segments: seg, maxCostMicros: 50000 });
+ assert.equal(result.validationJournal.segments, wins.length);
+ assert.equal(result.validationJournal.candidateCount, n);
+ assert.ok(result.items.length >= 8, JSON.stringify(result.validationJournal.sourceScreen.rejected)+result.items.length); // clear findings with an empty reason are not held
+ assert.match(prompts[0], /segment 1 of/); assert.match(prompts[0], /Return only JSON \{items:\[\{title,text,kind,evidenceIds\}\]\}/);
 });

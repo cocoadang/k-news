@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {evidenceBlocks,segmentWindows,filterGroundedCandidates,conservativeClassification,acceptVerification} from './groundedSummary.mjs';
-import {LUNA_MODEL,LUNA_INPUT_RATE,LUNA_OUTPUT_RATE,lunaUsageCost} from './lunaClient.mjs';
+import {LUNA_MODEL,LUNA_CACHE_WRITE_RATE,LUNA_OUTPUT_RATE,lunaUsageCost} from './lunaClient.mjs';
 
 export const LUNA_PIPELINE_VERSION=1;
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
@@ -9,7 +9,10 @@ const item=object({title:str,text:str,kind,evidenceIds:ids});
 const candidatesSchema=object({items:{type:'array',items:item,maxItems:32}});
 const check=object({index:{type:'integer'},supported:{type:'boolean'},classificationCorrect:{type:'boolean'},recommendedKind:kind,
  counterStatus:{type:'string',enum:['clear','qualifies','uncertain']},sourceIds:{type:'array',items:str,maxItems:12},duplicateOf:{type:['integer','null']},reason:str});
-const auditSchema=object({checks:{type:'array',items:check,maxItems:32}});
+const MAX_AUDIT_ITEMS=64;
+const auditSchema=object({checks:{type:'array',items:check,maxItems:MAX_AUDIT_ITEMS}});
+// Preserve the exact existing schema/cache key for smaller completed audits.
+const smallAuditSchema=object({checks:{type:'array',items:check,maxItems:32}});
 export const EXTRACT_INSTRUCTION='Extract every distinct important news item in this supplied segment of a briefing about the previous US market session. Keep companies, indicators and policy events separate; do not force a topic count, merge unrelated news or pad with chatter/ads. Write concise Korean titles and 2-4 sentence summaries. kind=reported for what the broadcast reports, outlook for interpretation/prediction. Preserve attribution, conditions, uncertainty and conflicting views. Use only supplied evidenceIds (at most 12, within 12 consecutive IDs); include enough evidence for the actor and caveats. Do not guess unclear names/numbers or add outside facts. Title is a hint, not evidence. Empty items is allowed for chatter. Return the required JSON.';
 export const REVIEW_INSTRUCTION='Audit EVERY draft against its coreIds and relatedIds. Read later blocks for corrections, disagreement, missing conditions and attribution changes. A literal name nearby is not proof of attribution. Reject unsupported implications, names/numbers, ads, contextless claims or lost uncertainty. Check reported/outlook classification; recommend outlook for interpretation or forecasts. counterStatus=clear only after checking supplied context, qualifies for a material missing caveat (cite sourceIds), uncertain when evidence is insufficient. This is broadcast-grounding, not external fact checking. Mark a semantic duplicate with duplicateOf=an earlier draft index; otherwise null. Do not rewrite or add facts. Return one check per draft in order; reason at most 40 Korean characters.';
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -37,7 +40,8 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    if(Object.keys(checkpoint.entries).length>=windows.length+2)throw Error('luna_call_limit');
    const input=client.estimateInputTokens(args);
    if(!Number.isSafeInteger(input)||input<1||input>250000)throw Error('luna_input_limit');
-   const ceiling=Math.ceil(input*LUNA_INPUT_RATE+cap*LUNA_OUTPUT_RATE);
+   // A fresh request may be billed at the cache-write rate for its input.
+   const ceiling=Math.ceil(input*LUNA_CACHE_WRITE_RATE+cap*LUNA_OUTPUT_RATE);
    if(reserved+ceiling>maxCostMicros)throw Error('grounded_budget_exceeded');
    reserved+=ceiling;
    const record={stage,ceiling,status:'inflight'};journal.calls.push(record);
@@ -85,9 +89,9 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
     }
    }
    if(items.length<floor)throw Error('insufficient_source_grounded_items');
-   if(items.length>32)throw Error('luna_item_limit');
+   if(items.length>MAX_AUDIT_ITEMS)throw Error('luna_item_limit');
    items.sort((a,b)=>a.start-b.start);
-   let audit=await call('audit',REVIEW_INSTRUCTION,reviewPayload(items),auditSchema,Math.min(6000,1000+items.length*140));
+   let audit=await call('audit',REVIEW_INSTRUCTION,reviewPayload(items),items.length<=32?smallAuditSchema:auditSchema,Math.min(6000,1000+items.length*140));
    if(!Array.isArray(audit?.checks)||audit.checks.length!==items.length||audit.checks.some((x,i)=>x.index!==i))throw Error('semantic_verification_failed');
    let classified=conservativeClassification(items,audit);audit=classified.audit;
    const kept=[];

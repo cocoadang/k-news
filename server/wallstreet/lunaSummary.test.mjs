@@ -79,7 +79,17 @@ test('incomplete/refusal/HTTP outcomes are held without automatic HTTP retry',as
 test('actual usage includes cached input discount and counts reasoning once; unknown keeps ceiling',()=>{
  assert.equal(lunaUsageCost({input_tokens:1000,input_tokens_details:{cached_tokens:500},output_tokens:300,output_tokens_details:{reasoning_tokens:100}}),205);
  assert.equal(lunaUsageCost({input_tokens:1}),null);
+ assert.equal(lunaUsageCost({input_tokens:1000,input_tokens_details:{cache_write_tokens:800,cached_tokens:100},output_tokens:300}),261);
+ assert.equal(lunaUsageCost({input_tokens:100,input_tokens_details:{cache_write_tokens:101},output_tokens:1}),null);
  const s={budgets:{day:10000}},held={keys:['day'],amount:10000};
  assert.equal(settleReservation(s,held,{calls:[{ceiling:2000,status:'completed',spentMicros:205},{ceiling:3000,status:'inflight',spentMicros:0}]}),6795);assert.equal(s.budgets.day,3205);
+});
+
+test('long briefing audits more than 32 grounded drafts together without truncating topics',async()=>{
+ const f=fake({extract:p=>p.blocks.slice(0,7).map(point)});
+ const result=await lunaSummarizer({client:f.client,approved:true}).summarize({segments:segments(170),video,maxCostMicros:30000});
+ assert.equal(result.items.length,35);
+ assert.equal(f.calls.filter(c=>c.name==='audit').length,1);
+ assert.equal(f.calls.at(-1).schema.properties.checks.maxItems,64);
 });
 

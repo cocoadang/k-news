@@ -1,12 +1,14 @@
 // Native fetch keeps the provider stateless and disables SDK/HTTP automatic retries.
 export const LUNA_MODEL='gpt-6-luna';
-export const LUNA_INPUT_RATE=.1, LUNA_OUTPUT_RATE=.5;
+export const LUNA_INPUT_RATE=.1, LUNA_OUTPUT_RATE=.5, LUNA_CACHE_WRITE_RATE=.125;
 export function lunaUsageCost(usage){
  if(!Number.isSafeInteger(usage?.input_tokens)||usage.input_tokens<0||!Number.isSafeInteger(usage?.output_tokens)||usage.output_tokens<0)return null;
  const cached=usage.input_tokens_details?.cached_tokens??0;
  if(!Number.isSafeInteger(cached)||cached<0||cached>usage.input_tokens)return null;
+ const written=usage.input_tokens_details?.cache_write_tokens??0;
+ if(!Number.isSafeInteger(written)||written<0||written+cached>usage.input_tokens)return null;
  // output_tokens already includes reasoning tokens: never add them twice.
- return Math.ceil((usage.input_tokens-cached)*LUNA_INPUT_RATE+cached*.01+usage.output_tokens*LUNA_OUTPUT_RATE);
+ return Math.ceil((usage.input_tokens-cached-written)*LUNA_INPUT_RATE+cached*.01+written*LUNA_CACHE_WRITE_RATE+usage.output_tokens*LUNA_OUTPUT_RATE);
 }
 export function createLunaClient({apiKey,fetcher=fetch}){
  if(typeof apiKey!=='string'||!apiKey.trim())throw Error('openai_server_credential_required');

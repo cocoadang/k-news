@@ -22,3 +22,10 @@ SUMMARY_FIX_VERSION 7 permits one attempt for recent previously-held videos. Ful
 
 Offline validation covers short/long call counts, >3 topics per window, evidence guards, counter-evidence, duplicates, cached resume, unknown outcomes, request shape, billing settlement and retry policy. Real saved-caption quality/cost evaluation is still required after the secret is configured: compare missing news, names/numbers, conditions, duplicate rate, usage and held reasons on representative three broadcasts. Mocks do not establish model quality.
 
+## Live validation — 2026-11-13
+
+- Existing Secret Manager reference was already bound to `OPENAI_API_KEY`; the restricted key completed a Luna Responses request. Model-list read permission is unnecessary and was not expanded.
+- Saved-caption checks passed for `OH47euDCvso` (6 minutes, 3 verified items), `sMDmcmBsx-g` (45 minutes, 32 verified items), and `swA8vs2OHuw` (8 minutes, 6 verified items). Source comparison checked attribution, numeric anchors, conditional language, duplicate topics and the supported main title claim. The initial long sample exposed the 32-draft guard; the replacement exposed source repair dropping a supported main claim together with a rejected detail. Both issues were fixed before rollout. These are source-grounding checks, not a blinded A/B quality ranking against Gemini.
+- Measured calls in the persistent comparison ledger total $0.020923. A $0.061 conservative reserve covers the earlier Cloud Shell session, whose temporary files were lost; the combined upper bound is $0.081923, below the user's $0.15 approval. An uncertain earlier long-video audit was not repeated: a different retained broadcast was selected. Checkpoints, raw reports and the budget ledger are private in `~/knews-luna-evaluation-20261113`; no captions or credentials are committed.
+- Final local checks: 165 Wall Street/related tests, TypeScript check and production build passed. GitHub CI must pass the exact final head before merge. No manual collection, historical backfill or Telegram delivery was triggered by the evaluator.
+

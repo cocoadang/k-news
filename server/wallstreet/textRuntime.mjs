@@ -8,7 +8,7 @@ import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
 // Bump when summary validation is fixed so recently failed videos are re-attempted once.
-export const SUMMARY_FIX_VERSION=4; // 3: evidence-ID normalization + tolerant source repair (2026-11-02) · 4: long-show sub-topic split + 15-min evidence span (2026-11-13)
+export const SUMMARY_FIX_VERSION=5; // 3: evidence-ID normalization + tolerant source repair (2026-11-02) · 4: long-show sub-topic split + 15-min evidence span (2026-11-13) · 5: one more attempt for 11/12 held video (2026-11-13)
 const LATER_RUN_RETRY_FAILURES=['insufficient_context_reviewed_items','insufficient_source_grounded_items'];
 export const TRANSCRIPT_KEEP_MS=3*86400000;
 const TRANSCRIPT_DONE_STAGES=['sent','historical_complete','text_review_required','text_caption_expired'];

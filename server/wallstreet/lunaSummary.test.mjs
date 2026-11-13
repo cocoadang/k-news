@@ -93,3 +93,16 @@ test('long briefing audits more than 32 grounded drafts together without truncat
  assert.equal(f.calls.at(-1).schema.properties.checks.maxItems,64);
 });
 
+test('completed stages from an older prompt do not exhaust the new run call allowance',async()=>{
+ const checkpoint={},seg=segments(35),f=fake();
+ const s=lunaSummarizer({client:f.client,approved:true});
+ await s.summarize({segments:seg,video,maxCostMicros:10000,checkpoint});
+ for(const key of Object.keys(checkpoint.entries))checkpoint.entries['old_'+key]=checkpoint.entries[key];
+ // Invalidate only the audit: extraction remains reusable and no unknown call is removed.
+ const auditKey=Object.keys(checkpoint.entries).find(k=>checkpoint.entries[k].result?.checks&&!k.startsWith('old_'));
+ delete checkpoint.entries[auditKey];
+ const before=f.calls.length;
+ await s.summarize({segments:seg,video,maxCostMicros:10000,checkpoint});
+ assert.equal(f.calls.length-before,1);
+});
+

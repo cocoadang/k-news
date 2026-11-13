@@ -37,7 +37,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
    // A timeout/crash may have incurred a charge. Never repeat it automatically.
    if(entry)throw Error('luna_previous_call_uncertain');
-   if(Object.keys(checkpoint.entries).length>=windows.length+2)throw Error('luna_call_limit');
+   if(journal.calls.length>=windows.length+2)throw Error('luna_call_limit');
+   // Completed stages with older prompts may coexist with their replacements.
+   // Keep that history bounded without charging cache hits against this run's call limit.
+   if(Object.keys(checkpoint.entries).length>=2*(windows.length+2))throw Error('luna_checkpoint_limit');
    const input=client.estimateInputTokens(args);
    if(!Number.isSafeInteger(input)||input<1||input>250000)throw Error('luna_input_limit');
    // A fresh request may be billed at the cache-write rate for its input.
@@ -80,7 +83,7 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    }
    if(rejected.length){
     const selected=new Set();for(const {item:x} of rejected){const indexes=x.evidenceIds.map(id=>blocks.findIndex(b=>b.id===id));for(const i of indexes)for(let j=Math.max(0,i-2);j<=Math.min(blocks.length-1,i+2);j++)selected.add(j);}
-    const repair=await call('repair','Repair only these rejected draft news items using supplied evidence. Keep the original topic; no new facts or ASR guesses. Preserve caveats and attribution. Return title,text,kind,evidenceIds for each supportable correction; omit unfixable items.',{rejected,blocks:compactBlocks([...selected].sort((a,b)=>a-b).map(i=>blocks[i]))},candidatesSchema,3000);
+    const repair=await call('repair','Repair each rejected draft news item using only supplied evidence. Keep its supported core claim and original topic. If a peripheral name, number, date, interpretation or clause is unsupported, REMOVE THAT DETAIL rather than discarding the supported topic. Especially retain a supported main topic hinted by the video title. Do not guess ASR corrections or add facts. Preserve attribution, uncertainty and financing/forecast conditions. Return at least one concise corrected item for every draft whose core claim is supported, with title,text,kind,evidenceIds. Omit an item only when its core claim cannot be supported.',{title:video?.title||'',rejected,blocks:compactBlocks([...selected].sort((a,b)=>a-b).map(i=>blocks[i]))},candidatesSchema,3000);
     for(const x of repair.items||[]){
      // Repair cannot use evidence outside the supplied repair set.
      if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!selected.has(blocks.findIndex(b=>b.id===id))))continue;

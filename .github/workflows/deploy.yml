@@ -26,7 +26,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run lint
-      - run: node --test src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs server/statusReport.test.mjs server/opsHealth.test.mjs server/newsTitleKo.test.mjs server/wallstreet/*.test.mjs
+      - run: node --test src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs src/components/driverModel.test.mjs server/statusReport.test.mjs server/opsHealth.test.mjs server/newsTitleKo.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts server/httpDelivery.test.ts
       - name: CEO server tests
         shell: bash

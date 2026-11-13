@@ -8,7 +8,7 @@ import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
 // Bump when summary validation is fixed so recently failed videos are re-attempted once.
-export const SUMMARY_FIX_VERSION=6; // 3: evidence-ID normalization + tolerant source repair (2026-11-02) · 4: long-show sub-topic split + 15-min evidence span (2026-11-13) · 5: one more attempt for 11/12 held video (2026-11-13) · 6: segment-by-segment summaries for long briefings (2026-11-13)
+export const SUMMARY_FIX_VERSION=7; // 7: Luna combined review; one migration attempt, no whole-video retries.
 const LATER_RUN_RETRY_FAILURES=['insufficient_context_reviewed_items','insufficient_source_grounded_items'];
 export const TRANSCRIPT_KEEP_MS=3*86400000;
 const TRANSCRIPT_DONE_STAGES=['sent','historical_complete','text_review_required','text_caption_expired'];
@@ -70,7 +70,7 @@ export function summaryReservation(c,transcript){
 // input tokens plus the maximum output, so the kept amount is still an upper bound. Unknown outcomes keep the full reservation.
 export function settleReservation(s,held,journal){
   if(!held||!Array.isArray(journal?.calls)||journal.calls.some(x=>!Number.isSafeInteger(x?.ceiling)||x.ceiling<0))return 0;
-  const used=journal.calls.reduce((a,x)=>a+x.ceiling,0),back=held.amount-used;
+  const used=journal.calls.reduce((a,x)=>a+(x.status==='completed'&&Number.isSafeInteger(x.spentMicros)&&x.spentMicros>=0&&x.spentMicros<=x.ceiling?x.spentMicros:x.ceiling),0),back=held.amount-used;
   if(!(back>0))return 0;
   held.keys.forEach(k=>s.budgets[k]=Math.max(0,(s.budgets[k]||0)-back));return back;
 }
@@ -116,7 +116,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         // 저장 용량 관리: 처리가 끝난 영상은 3일 뒤 자막 원문과 검증 작업 기록을 지우고 요약만 남김
         // (3일 동안은 보완·재확인에 자막을 다시 받지 않고 재사용 — Supadata 무료 한도 절약)
         for(const r of Object.values(s.videos))if(TRANSCRIPT_DONE_STAGES.includes(r.stage)&&now-(r.firstSeen||0)>=TRANSCRIPT_KEEP_MS&&(r.transcript||r.summaryCandidate?.validationJournal)){
-          delete r.transcript;if(r.summaryCandidate?.validationJournal)delete r.summaryCandidate.validationJournal;r.transcriptPrunedAt=now;
+          delete r.transcript;delete r.summaryCheckpoint;if(r.summaryCandidate?.validationJournal)delete r.summaryCandidate.validationJournal;r.transcriptPrunedAt=now;
         }
         for(const r of Object.values(s.videos)){
           if(c.excludedVideoIds?.includes(r.video.id))continue;
@@ -168,12 +168,12 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(r.stage==='text_review_required'&&validationRejected(r)&&(r.summaryFixVersion||0)<SUMMARY_FIX_VERSION&&now-(r.firstSeen||0)<259200000){
             r.summaryFixVersion=SUMMARY_FIX_VERSION;r.summaryRetried=false;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }
-          if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
+          if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
             r.summaryRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }
           // Context-review shortfalls (too few claims left after counter-evidence) vary run to run; the same validators get
           // one more single attempt at a later scheduled run (>=1h after the failure, within 24h of discovery). No caption credits.
-          if(r.stage==='text_review_required'&&r.summaryRetried&&!r.summaryLaterRunRetried&&validationRejected(r)&&LATER_RUN_RETRY_FAILURES.includes(r.summaryFailure)&&r.summaryFailedAt&&now-r.summaryFailedAt>=3600000&&now-(r.firstSeen||0)<86400000){
+          if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&r.summaryRetried&&!r.summaryLaterRunRetried&&validationRejected(r)&&LATER_RUN_RETRY_FAILURES.includes(r.summaryFailure)&&r.summaryFailedAt&&now-r.summaryFailedAt>=3600000&&now-(r.firstSeen||0)<86400000){
             r.summaryLaterRunRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
           }
           if(r.stage==='text_summary'){
@@ -182,7 +182,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             const amount=summaryReservation(c,r.transcript);let held=null;
             const attempt=async()=>{
               r.stage='text_summary_inflight';delete r.hold;await save();
-              try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount});
+              try{r.summaryCheckpoint ||= {};const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount,checkpoint:r.summaryCheckpoint,saveCheckpoint:save});
                 settleReservation(s,held,result?.validationJournal);
                 r.summaryCandidate=result;await save();
                 const message=c.summaryProtocol==='evidence_ids_v1'?renderGroundedBrief(r.video,result):renderBrief(r.video,r.transcript,result);
@@ -191,7 +191,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             };
             if(!(held=reserve(s,now,c,amount))){r.hold='text_budget';continue;}
             await attempt();
-            if(r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)){
+            if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)){
               r.summaryRetried=true;
               if((held=reserve(s,now,c,amount)))await attempt();else{r.hold='text_budget';await save();}
             }
@@ -227,7 +227,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(!(r.stage==='sent'&&f?.ids?.includes(r.video.id)&&(r.fullResummaryVersion||0)<f.version&&Array.isArray(r.transcript)&&r.transcript.length&&c.summaryApproved===true&&c.summaryProtocol==='evidence_ids_v1'))continue;
           const amount=summaryReservation(c,r.transcript),held=reserve(s,now,c,amount);if(!held)break;
           r.fullResummaryVersion=f.version;await save();
-          try{const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount});
+          try{r.summaryCheckpoint ||= {};const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount,checkpoint:r.summaryCheckpoint,saveCheckpoint:save});
             settleReservation(s,held,result?.validationJournal);
             const before=Array.isArray(r.summaryCandidate?.items)?r.summaryCandidate.items.length:(r.parts||[]).reduce((n,p)=>n+((p.text||'').match(/^• /gm)||[]).length,0);
             if(result.items.length>before){
@@ -244,3 +244,5 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
       });}
   };
 }
+
+

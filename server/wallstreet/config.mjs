@@ -10,13 +10,15 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   acceptMinimumItems:3,
   allowSourceRepair:true,
   counterEvidenceRequired:true,
+  // Luna combines counter-evidence and semantic review in one call; do not rerun whole videos on rejection/timeouts.
+  automaticSummaryRetries:false,
   dailyCheckTimes:Object.freeze(['09:00','15:00']),scheduleTimeZone:'Asia/Seoul',
   // 사용자 요청(2026-10-30): 크립토 PLUS 수집 제외
   disabledProgrammes:Object.freeze(['crypto']),
   // Supplement these already-sent summaries once per version bump, web only (no Telegram), reusing the stored result.
   resummarize:Object.freeze({version:2,ids:Object.freeze([])}),
   // 사용자 요청(2026-11-10): 긴 영상 주제 수 확대 → 자막이 아직 남아 있는 최근 영상만 웹 전용 전체 재요약(텔레그램 없음, 주제가 늘 때만 교체)
-  fullResummarize:Object.freeze({version:2,ids:Object.freeze(['eScBBegrUtM','Sa7ZwiJc2jY'])}), // 2026-11-13: 월가 뉴스레터 11/11·11/13(3개 주제)을 구간별 요약으로 다시 // 웹 전용 보완 대상(완료된 10/29·10/30 건은 제거). 필요할 때만 id 추가
+  fullResummarize:Object.freeze({version:3,ids:Object.freeze(['eScBBegrUtM','Sa7ZwiJc2jY'])}), // Luna migration: existing targets once, web only, only if more points survive.
   // CEO 발언 영상(Supadata 무료 한도 공유): 하루 1편·월 15편, Gemini 영상당 2센트·하루 4센트·월 40센트 상한
   ceoVideo:Object.freeze({enabled,dailyVideos:1,monthlyVideos:15,reservationMicros:20000,dailyMicros:40000,monthlyMicros:400000}),
   excludedVideoIds:Object.freeze(['Idn_d5ArZvA','annR-E8m5WQ','IggP39LRnT8','LtT_k6wCOek']),
@@ -25,4 +27,6 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   discoverySource:process.env.KNEWS_YOUTUBE_DISCOVERY_SOURCE||'official_rss',
   discoveryApproved:enabled,summaryApproved:enabled,deliveryApproved:enabled,combinedTokenCapVerified:true,deliveryMode:'immediate',deliveryTime:null,recipient:process.env.TELEGRAM_CHAT_ID||null,
   dailyCredits:5,monthlyCredits:110,dailySummaryMicros:260000,monthlySummaryMicros:2000000,
-  summaryReservationMicros:30000,longSummaryReservationMicros:50000,longSummaryMinutes:30,model:'gemini-3.5-flash-lite',inputMicrosPerToken:.3,outputMicrosPerToken:2.5,maxOutputTokens:2500});
+  summaryReservationMicros:30000,longSummaryReservationMicros:50000,longSummaryMinutes:30,model:'gpt-6-luna',inputMicrosPerToken:.1,outputMicrosPerToken:.5,maxOutputTokens:4200});
+
+

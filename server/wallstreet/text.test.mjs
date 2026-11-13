@@ -36,6 +36,15 @@ test('discovery without authorized caption collector waits, no title summary',as
 test('reject transcript mismatch, unsupported number and unverified cap',async()=>{assert.throws(()=>parseUiTranscript(source(video()).text,video('annR-E8m5WQ')));assert.throws(()=>renderBrief(video(),[{start:0,text:'수요 증가'}],{items:result.items.map(x=>({...x,text:'수요 99% 증가'}))}));const x=setup({combinedTokenCapVerified:false}),r=x.run();await r.importTranscript(source(video()));await r.run();assert.equal(x.sent.length,0);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_summary');});
 test('summary timeout reserves budget for each attempt and retries only once',async()=>{const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('timeout');};const r=x.run();await r.importTranscript(source(video()));await r.run();await r.run();assert.equal(calls,2);assert.equal(Object.values(x.store.state.budgets)[0],200);});
 
+test('Luna retry policy persists checkpoint, disables immediate and later full-video retries',async()=>{
+ const x=setup({automaticSummaryRetries:false});let calls=0;
+ x.deps.summarizer.summarize=async({checkpoint,saveCheckpoint})=>{calls++;checkpoint.completedWindow={items:[]};await saveCheckpoint();throw Error('timeout');};
+ const r=x.run();await r.importTranscript(source(video()));await r.run();await x.run().run();
+ assert.equal(calls,1);assert.deepEqual(x.store.state.videos.Idn_d5ArZvA.summaryCheckpoint.completedWindow,{items:[]});
+ const held=x.store.state.videos.Idn_d5ArZvA;held.summaryRetried=true;held.summaryFailedAt=now-3600000;held.summaryFailure='insufficient_context_reviewed_items';
+ await x.run().run();assert.equal(calls,1);
+});
+
 test('split outbox persists confirmed prefix and never repeats uncertain suffix',async()=>{
   const x=setup();let calls=0;
   x.deps.summarizer.summarize=async()=>({items:Array.from({length:5},()=>({text:'a'.repeat(690),kind:'fact',speaker:'host',segment:0,quote:'a'.repeat(690)}))});
@@ -198,3 +207,5 @@ test('web-only full re-summary: replaces the web view only with more points, nev
  assert.equal(a.previousParts[0].text, 'old'); assert.deepEqual(a.fullResummary, { before: 3, after: 6 });
  assert.equal(b.parts[0].text, 'old'); assert.equal(b.fullResummary.kept, 'previous');
 });
+
+

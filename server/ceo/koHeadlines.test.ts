@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MemoryKoLedger } from './koLedger';
 import { translateHeadlines, headlineKey, parseHeadlineOutput } from './koHeadlines';
+import { parseKoOutput,summaryEvidenceText } from './koSummary';
 
 const now = Date.parse('2026-10-31T00:00:00Z');
 const usage = { promptTokenCount: 200, candidatesTokenCount: 100, thoughtsTokenCount: 0, totalTokenCount: 300 };
@@ -40,6 +41,12 @@ test('disabled ledger makes no call', async () => {
   assert.equal(r.stoppedReason, '꺼짐'); assert.equal(x.calls(), 0);
 });
 
+test('links and emoji without language text are preserved without paid translation',async()=>{
+ const x=setup(()=>'{}');await x.ledger.configure({enabled:true,now});
+ const r=await translateHeadlines(['https://t.co/example','🤔🤔 https://t.co/test'],{ledger:x.ledger,client:x.client,now:()=>now,deadline:now+120000,posts:true});
+ assert.equal(r.pending,0);assert.equal(x.calls(),0);
+});
+
 test('long posts shrink before reservation instead of blocking the entire queue',async()=>{
  const x=setup(contents=>JSON.stringify({items:JSON.parse(contents.slice(contents.lastIndexOf('\n')+1)).items.map((it:any)=>({i:it.i,ko:'원문 게시물 번역'}))}));
  await x.ledger.configure({enabled:true,now});
@@ -55,6 +62,19 @@ test('same monetary value and standalone month pass headline validation',()=>{
  const items=[{i:0,text:'$7 billion merger in December'}];
  assert.equal(parseHeadlineOutput('{"items":[{"i":0,"ko":"12월 70억 달러 합병"}]}',items).size,1);
  assert.equal(parseHeadlineOutput('{"items":[{"i":0,"ko":"12월 80억 달러 합병"}]}',items).size,0);
+});
+
+test('summary ignores list and HTML footnote labels while retaining real financial numbers',()=>{
+ const parse=(quote:string,summary:string)=>parseKoOutput(JSON.stringify({title:'발언 요약',summary}),quote);
+ assert.ok(parse('6) The model has benefits and risks.','모델에는 장점과 위험이 있다.'));
+ const evidence='Transparency requirements, 27 27 Obviously SB 53 addresses this.';
+ assert.ok(parse(evidence,'투명성 요건과 SB 53이 이 문제를 다룬다.'));
+ assert.equal(parse(evidence,'투명성 요건이 문제를 다룬다.'),null);
+ const finance='Gains were $5.3 billion in 2022.18 These were hedging gains.19';
+ assert.equal(summaryEvidenceText(finance),'Gains were $5.3 billion in 2022 These were hedging gains.');
+ assert.ok(parse(finance,'2022년 헤지 수익은 53억 달러였다.'));
+ assert.equal(parse(finance,'2022년 헤지 수익은 54억 달러였다.'),null);
+ assert.equal(parse(finance,'헤지 수익은 53억 달러였다.'),null);
 });
 
 test('a corrected translation replaces a legacy empty cache result and is not billed again',async()=>{

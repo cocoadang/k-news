@@ -42,6 +42,8 @@ test('equivalent Korean amounts, dates and fiscal years pass; changed values sti
   ['Pledge to triple 2027 revenue','2027년 매출 3배 목표','2027년 매출 4배 목표'],
   ['Prices double Dec. 1','12월 1일 가격 2배 인상','12월 1일 가격 3배 인상'],
   ['Microsoft may have proved its point','마이크로소프트가 입증했을 가능성','마이크로소프트, 5월 입증'],
+  ['Covid-19 alone cannot explain it','코로나19만으로 설명할 수 없다','코로나20만으로 설명할 수 없다'],
+  ['$19 cost','비용은 19달러','비용은 19만 달러'],
   ['$9007199254740993 cost','9007199254740993달러 비용','9007199254740992달러 비용'],
  ];
  for(const [t,good,bad] of cases){

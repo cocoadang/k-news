@@ -83,7 +83,7 @@ test('disabled runtime and registered authenticated routes perform zero external
   let touched=0;const runtime=createWallstreetRuntime({getFirestore:()=>{touched++;throw Error('forbidden');}});
   assert.equal((await runtime.run()).status,'disabled');assert.equal(touched,0);
   const routes=[];const app={get:(...a)=>routes.push(a),post:(...a)=>routes.push(a)};const auth=()=>{};
-  registerWallstreetRoutes(app,{runtime,verifyAdmin:auth});assert.equal(routes.length,5);
+  registerWallstreetRoutes(app,{runtime,verifyAdmin:auth});assert.equal(routes.length,6);
   assert.ok(routes.filter(r=>r[0].startsWith('/api/admin/')).every(r=>r[1]===auth));
   assert.equal(routes.filter(r=>!r[0].startsWith('/api/admin/')).length,1);
   const res={setHeader(){},json(value){assert.equal(value.status,'disabled');},status(){return this;}};

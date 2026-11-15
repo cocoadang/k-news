@@ -28,11 +28,11 @@ test('reading absent state performs no writes and uses read-only transaction',as
  const db={collection:()=>({doc:id=>id}),runTransaction:async(fn,opts)=>{assert.deepEqual(opts,{readOnly:true});return fn({get:async()=>({exists:false}),set:()=>assert.fail('write'),delete:()=>assert.fail('delete')});}};
  assert.deepEqual((await new FirestoreWallstreetStore(db).read()).videos,{});
 });
-test('menu retains both existing views, hides manual collection in new view, and fetches only library',()=>{
+test('menu retains existing views, reads library and allows explicit admin channel test only',()=>{
  const app=readFileSync(new URL('../../src/App.tsx',import.meta.url),'utf8');
  assert.match(app,/\['news',/);assert.match(app,/\['ceo',/);assert.match(app,/\['youtube',/);assert.match(app,/\['strategy',/);assert.match(app,/useState<'news' \| 'ceo' \| 'youtube' \| 'strategy' \| 'driver'>\('youtube'\)/);assert.ok(app.indexOf("['youtube',")<app.indexOf("['news',"));
  const ui=readFileSync(new URL('../../src/components/YoutubeMenu.tsx',import.meta.url),'utf8');
- assert.equal((ui.match(/fetch\(/g)||[]).length,1);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);
+ assert.equal((ui.match(/fetch\(/g)||[]).length,2);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);assert.match(ui,/fetch\('\/api\/admin\/wallstreet\/channel-test'/);assert.match(ui,/isAdmin&&video.status==='ready'/);
  assert.ok(!/dangerouslySetInnerHTML|line-clamp|truncate|\/run|\/poll/.test(ui));
  assert.match(ui,/isAdmin&&<WallstreetRunButton/);assert.ok(!/crypto/.test(ui));
 });

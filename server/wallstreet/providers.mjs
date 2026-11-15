@@ -1,4 +1,5 @@
 import {summaryLibrary,publicSummaryLibrary} from './library.mjs';
+import {sendStoredChannelTest} from './channelTest.mjs';
 import {isApprovedDeliveryRecipient} from './publicChannel.mjs';
 import {createVidiqMcpClient} from './mcpClient.mjs';
 import {youtubeDiscovery,vidiqCaptions,telegramTransport} from './adapters.mjs';
@@ -130,6 +131,11 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
       captionProviders:{wallstreet:config.vidiqApproved===true?'vidiq':'disabled',bullbear:config.supadataApproved===true?'supadata_native':'disabled',crypto:config.supadataApproved===true?'supadata_native':'disabled'},automaticCaptionsReady:false}),
     async library(){const db=getFirestore();if(!db)throw Error("store_unavailable");return summaryLibrary(await new FirestoreWallstreetStore(db).read());},
     async publicLibrary(){const db=getFirestore();if(!db)throw Error('store_unavailable');return publicSummaryLibrary(await new FirestoreWallstreetStore(db).read());},
+    async sendChannelTest(videoId){
+      if(!config.enabled||!config.deliveryApproved||!env.TELEGRAM_BOT_TOKEN)return {status:'disabled'};
+      const db=getFirestore();if(!db)throw Error('store_unavailable');
+      return sendStoredChannelTest({store:new FirestoreWallstreetStore(db),telegram:telegramTransport({token:env.TELEGRAM_BOT_TOKEN,approved:true,fetcher}),videoId});
+    },
     async importTranscript(input){if(!config.enabled)return {status:'disabled'};runtime ||= textRuntime();return (await runtime).importTranscript(input);},
     async run(options={}) {
       if(config.enabled!==true) return {status:'disabled'};

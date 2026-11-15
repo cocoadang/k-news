@@ -88,7 +88,7 @@ async function runMonitoringAndDedupTests() {
       });
     }
 
-    if (url.includes('generativelanguage.googleapis.com')) {
+    if (url.includes('api.openai.com/v1/responses')) {
       geminiFetchCalls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : {} });
       if (mockGeminiRateLimit) {
         return new Response(JSON.stringify({
@@ -142,6 +142,9 @@ async function runMonitoringAndDedupTests() {
       }
 
       return new Response(JSON.stringify({
+        status: 'completed', model: 'gpt-6-luna',
+        output: [{type:'message',content:[{type:'output_text',text:responseText}]}],
+        usage: {input_tokens:150,output_tokens:35},
         candidates: [
           {
             content: {
@@ -1029,7 +1032,7 @@ async function runMonitoringAndDedupTests() {
     // TEST 19: 토큰 절감 및 사이클 호출 예산 가드레일 종합 검증 (Semantic<=4, Analysis<=8, Retry<=3, 429중단)
     // -----------------------------------------------------------------
     console.log('--- TEST 19: 토큰 절감 및 사이클 호출 예산 가드레일 종합 검증 ---');
-    process.env.GEMINI_API_KEY = 'test-token-gemini-budget-guard';
+    process.env.OPENAI_API_KEY = 'test-token-gemini-budget-guard';
     geminiFetchCalls = [];
     geminiDedupCallCount = 0;
     geminiAnalysisCallCount = 0;
@@ -1285,7 +1288,7 @@ async function runMonitoringAndDedupTests() {
     assert.strictEqual(abortedRetry.retriedCount, 0, 'Rate limited cycle must skip retries entirely');
     assert.strictEqual(abortedRetry.isRateLimited, true, 'Retry result must reflect rate limit status');
 
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
     mockGeminiRateLimit = false;
     console.log('✅ TEST 19 Passed: 토큰 절감 및 사이클 호출 예산(Dedup<=4, Analysis<=8, Retry<=3, 429중단) 검증 완료\n');
 
@@ -2299,7 +2302,7 @@ async function runMonitoringAndDedupTests() {
     db._setEventsForTesting([]);
     geminiAnalysisCallCount = 0;
     mockGeminiRateLimit = false;
-    process.env.GEMINI_API_KEY = 'test-token-gemini-budget-guard';
+    process.env.OPENAI_API_KEY = 'test-token-gemini-budget-guard';
 
     // 5개의 적격 pending 기사 생성 (1시간 전, 2시간 전, 3시간 전, 4시간 전, 5시간 전)
     const baseHour = Date.now();
@@ -2497,7 +2500,7 @@ async function runMonitoringAndDedupTests() {
       db._setEventsForTesting([]);
       geminiAnalysisCallCount = 0;
       mockGeminiRateLimit = false;
-      process.env.GEMINI_API_KEY = 'test-token-gemini-budget-guard';
+      process.env.OPENAI_API_KEY = 'test-token-gemini-budget-guard';
 
       const legacyEligibleUndef: NewsEvent = {
         ...legacyStalePending,

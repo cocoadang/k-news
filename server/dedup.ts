@@ -1,6 +1,6 @@
 import { RawArticle, NewsEvent } from './types';
 import { computeNormalizedTitle } from './firestore';
-import { GoogleGenAI } from '@google/genai';
+import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
 import { db } from './db';
 
 // 0. Compute normalized URL
@@ -457,7 +457,7 @@ export function isCandidateForGeminiClustering(
 
 // 5. Gemini-Powered Ambiguity Resolver focused on Core Investment Fact
 export async function verifySameEventWithGemini(
-  ai: GoogleGenAI | null,
+  ai: Pick<GoogleGenAI, 'models'> | null,
   articleTitle: string,
   articleSnippet: string,
   existingEventTitle: string,
@@ -469,7 +469,7 @@ export async function verifySameEventWithGemini(
 ): Promise<boolean> {
   if (!ai) return false;
 
-  const modelId = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  const modelId = resolveOpenAIModel();
 
   // Truncate snippet and summary to save tokens
   const cleanSnippet = (articleSnippet || '').slice(0, 300);

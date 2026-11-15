@@ -113,8 +113,11 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
     if(config.ceoVideo?.enabled===true&&dependencies.supadata&&!dependencies.ceoDiscovery){
       try{
         dependencies.ceoDiscovery=ceoVideoDiscovery({apiKey:env.YOUTUBE_API_KEY,fetcher});
-        const {GoogleGenAI}=await (loadGemini||(()=>import('@google/genai')))();
-        dependencies.ceoExtractor=createCeoQuoteExtractor({client:createGeminiTextSdkClient({GoogleGenAI,apiKey:env.GEMINI_API_KEY})});
+        const luna=createLunaClient({apiKey:env.OPENAI_API_KEY,fetcher});
+        dependencies.ceoExtractor=createCeoQuoteExtractor({model:'gpt-6-luna',inputMicrosPerToken:.125,outputMicrosPerToken:.5,client:{
+          countTokens:async args=>({totalTokens:luna.estimateInputTokens({...args,maxOutputTokens:2500})}),
+          generate:async args=>{const r=await luna.generate(args);return {text:r.text};},
+        }});
       }catch{delete dependencies.ceoDiscovery;delete dependencies.ceoExtractor;}
     }
     return createTextRuntime({...dependencies,store:new FirestoreWallstreetStore(db),config});

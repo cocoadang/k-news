@@ -99,7 +99,7 @@ function world(o: { sec?: CuratedSecExhibit[]; cap?: number; pages?: CuratedPage
   const ko = { count: 0, gen: 0, contents: [] as string[] };
   const client: KoClient = {
     countTokens: async ({ contents }) => { ko.count++; ko.contents.push(contents); return { totalTokens: 200 }; },
-    generate: async () => { ko.gen++; return { text: JSON.stringify({ title: '합성 제목', summary: '합성 요약 문장입니다.' }), modelVersion: 'gemini-3.8-flash-001',
+    generate: async () => { ko.gen++; return { text: JSON.stringify({ title: '합성 제목', summary: '합성 요약 문장입니다.' }), modelVersion: 'gpt-6-luna-001',
       usageMetadata: { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 10, totalTokenCount: 260 } }; },
   };
   const mk = (over: { sec?: CuratedSecExhibit[]; pages?: CuratedPage[]; withKo?: boolean } = {}) => new CeoRuntime({
@@ -574,7 +574,7 @@ async function main() {
     const ls = await w.ledger.read();
     assert.strictEqual(Object.keys(ls.results).length, n);
     // 정산 = 실제 usage(prompt 210, 출력 total-prompt 50) × 2026년 단가(750/3750 나노달러) × n건, 예약 잔액 0
-    assert.strictEqual(ls.months['2026-10'].spentNano, n * (210 * 750 + 50 * 3750));
+    assert.strictEqual(ls.months['2026-10'].spentNano, n * (210 * 125 + 50 * 500));
     assert.ok(paid.every(s => ls.results[koJobKey(s)!]));
     w.clock.t += 86_400_000;
     const rt3 = w.mk({ pages: allExcludingNasa, withKo: true });

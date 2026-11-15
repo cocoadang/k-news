@@ -1,3 +1,4 @@
+import { resolveOpenAIModel } from './server/openaiClient';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -284,10 +285,13 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       totalEvents: events.length,
       highPriorityEvents: events.filter(e => e.importance >= 4).length,
       telegramSentCount: settings.totalTelegramAlertsSent,
-      hasGeminiKey: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY' && process.env.GEMINI_API_KEY.trim() !== ''),
+      hasGeminiKey: Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'MY_GEMINI_API_KEY' && process.env.OPENAI_API_KEY.trim() !== ''),
       hasTelegramConfig: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
       isFirestoreConnected: getIsFirestoreAvailable(),
-      geminiModel: process.env.GEMINI_MODEL || 'gemini-3.7-flash',
+      geminiModel: resolveOpenAIModel(),
+      aiProvider: 'openai',
+      aiModel: resolveOpenAIModel(),
+      hasOpenAIKey: Boolean(process.env.OPENAI_API_KEY?.trim()),
       activeKeywordsCount: settings.customKeywords.length,
       activeCompaniesCount: companies.filter(c => c.enabled).length,
       uptimeSeconds: Math.floor((Date.now() - serverStartTime) / 1000),

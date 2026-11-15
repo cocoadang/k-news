@@ -7,12 +7,12 @@ import { getSeoulDateString, getIsFirestoreAvailable, initFirestore } from './fi
 import { runWeeklyCompanyRenewalsBatch } from './companyRenewal';
 import { CeoRuntime } from './ceo/runtime';
 import { createCeoRuntime } from './ceo/routes';
-import { GoogleGenAI } from '@google/genai';
+import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
 import { firestoreRepo } from './firestore';
 
 /** 뉴스 제목 한국어 번역(표시 전용, Flash-Lite, 월 USD 1 상한). 분석만 하는 사이클 시작 때 최대 30초 */
 export async function runNewsTitleTranslation(deadline: number) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   const fs = getIsFirestoreAvailable() ? initFirestore() : null;
   if (!apiKey || !fs) return { skipped: true };
   const { translateTitles, TITLE_KO_MODEL, MAX_OUTPUT } = await import('./newsTitleKo.mjs');

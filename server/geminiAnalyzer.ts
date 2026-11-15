@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
+import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
 import { RawArticle, NewsEvent, NewsCategory, InvestmentImpact, ArticleSource, CompanyImpactItem, ArticleContentType } from './types';
 import { db, DEFAULT_CATEGORIES } from './db';
 import { 
@@ -18,8 +19,8 @@ import { firestoreRepo, getIsFirestoreAvailable } from './firestore';
 import { checkArticleAnalysisEligibility, getEffectiveEventTime } from './newsNoiseFilter';
 
 function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey === 'MY_OPENAI_API_KEY' || apiKey.trim() === '') {
     return null;
   }
   return new GoogleGenAI({
@@ -33,7 +34,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  return resolveOpenAIModel();
 }
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -252,8 +253,8 @@ export async function analyzeArticleWithGemini(article: RawArticle, onUsage?: (t
   );
 
   if (!ai) {
-    db.addLog('Gemini', 'info', 'GEMINI_API_KEY is not configured or default. Setting article to pending analysis status.');
-    return createUnanalyzedEvent(article, 'GEMINI_API_KEY 미설정으로 분석 대기 중');
+    db.addLog('Gemini', 'info', 'OPENAI_API_KEY is not configured or default. Setting article to pending analysis status.');
+    return createUnanalyzedEvent(article, 'OPENAI_API_KEY 미설정으로 분석 대기 중');
   }
 
   // De-duplicate snippet and content to minimize token payload
@@ -1258,7 +1259,7 @@ export async function suggestCompanyKeywords(
   const modelId = getGeminiModel();
 
   if (!ai) {
-    db.addLog('Gemini', 'info', `GEMINI_API_KEY is not configured. Returning high-quality default keywords for ${companyName}.`);
+    db.addLog('Gemini', 'info', `OPENAI_API_KEY is not configured. Returning high-quality default keywords for ${companyName}.`);
     return {
       coreBusinesses: [
         `${companyName} 주력사업`,

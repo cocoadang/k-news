@@ -1,39 +1,21 @@
-/**
- * 검증된 새 CEO 발언의 한국어 제목·짧은 요약 생성 (기존 서버 Gemini 키·SDK 재사용, 별도 서비스·새 키 없음).
- * 인물·발언일·작성일·게시일·직책·인용 검증은 파서가 확정하며 모델 출력은 이를 바꾸지 못합니다(제목·요약 문자열만 저장).
- * 화면 표시는 'AI 한국어 요약 · 원문 대조 필요', 인용부호 없이. 정적 검토 번역이 있는 발언은 호출하지 않습니다.
- *
- * 모델·요금 (2026-10-18 확인, 출처: https://ai.google.dev/gemini-api/docs/pricing#gemini-3.8-flash ,
- *   https://ai.google.dev/gemini-api/docs/deprecations — gemini-3.7-flash는 gemini-3.8-flash로 자동 라우팅되므로 환경변수 GEMINI_MODEL을 쓰지 않고
- *   이 기능은 gemini-3.8-flash로 고정):
- *   Standard: 입력 $0.75/1M, 출력(사고 포함) $3.75/1M — 2026-12-31까지 / 2027-01-01부터 $1.50, $7.50.
- *   확인 유효기간(KO_PRICE_CONFIRMED_UNTIL) 이후에는 다시 확인하기 전까지 호출하지 않음.
- * 입력 상한: 생성 요청과 똑같은 contents(지시·출력 형식·자료를 한 문자열로, systemInstruction·responseSchema 없음)를
- *   countTokens로 먼저 셉니다(추가 요청 1회, 캐시 hit면 생략). 공식 예시도 count 10 / 생성 prompt 11처럼 차이가 있어
- *   예약 입력 = ceil(count × 1.10) + 32. 실제 usage.promptTokenCount가 이를 넘으면 비용을 기록하고 추가 호출을 중지합니다.
- *   (이 여유는 실측 검증 전의 문서 근거 가정이며 '정확한 $1 보장'이 아닙니다. 정산은 실제 usage 기준)
- * 출력 상한: maxOutputTokens(사고+최종 출력 합산, Gemini API thinking 문서) = 512, 사고 수준 low, 후보 1개, JSON 텍스트만.
- * 단일 요청: httpOptions.retryOptions.attempts = 1, 도구·MCP·스트리밍 없는 generateContent(SDK 자동 함수 호출 루프 미진입, PC SDK 2.19.0 확인), 그라운딩·캐시·배치 없음.
- * countTokens 과금: billing 문서는 'GetTokens API 요청은 비과금·추론 할당량 제외'라고만 쓰며 countTokens를 이름으로 명시하지 않음
- *   → 원장에 비용으로 넣지 않되 '비과금 명시 미확인'으로 문서화.
- */
+/** CEO Korean summaries: OpenAI Luna, original evidence/validation and monthly ledger retained. */
 import crypto from 'node:crypto';
 import { CeoStatement, KoSummaryInfo, StatementKoSummary } from '../../src/ceo/types';
 import { normalizeForMatch } from '../../src/ceo/text';
 import { KoLedger, KoLedgerState, KoResult, availableNano, outstandingNano, utcMonth } from './koLedger';
 
-export const KO_MODEL = 'gemini-3.8-flash';
+export const KO_MODEL = 'gpt-6-luna';
 export const KO_PROMPT_VERSION = 'ko-sum-2';
-export const KO_CONFIG_VERSION = 'c1:json:t-low:max512:cand1:noretry';
+export const KO_CONFIG_VERSION = 'c2:openai:json:none:max512:noretry';
 export const KO_MAX_OUTPUT_TOKENS = 512;
-export const KO_MAX_INPUT_TOKENS = 1200;
+export const KO_MAX_INPUT_TOKENS = 6000;
 export const KO_MAX_PER_RUN = 20; // 한 번 갱신에 최대 20건(시간·월 한도 안에서). 6년치 백필을 월 USD 1 안에서 차례로
-export const KO_PRICE_CONFIRMED_ON = '2026-10-18';
+export const KO_PRICE_CONFIRMED_ON = '2026-11-15';
 export const KO_PRICE_CONFIRMED_UNTIL = '2027-03-31T23:59:59.999Z';
 /** 1 토큰당 나노달러 (= USD/1M 토큰 × 1000) */
 const PRICES = [
-  { until: '2026-12-31T23:59:59.999Z', inNano: 750, outNano: 3750 },
-  { until: KO_PRICE_CONFIRMED_UNTIL, inNano: 1500, outNano: 7500 },
+  // Luna ceiling applies to new calls; legacy records retain their settled costs.
+  { until: KO_PRICE_CONFIRMED_UNTIL, inNano: 125, outNano: 500 },
 ];
 export function priceAt(nowMs: number): { inNano: number; outNano: number } | null {
   const p = PRICES.find(x => nowMs <= Date.parse(x.until));
@@ -58,7 +40,11 @@ function versionedKoJobKey(s: CeoStatement, version: string): string | null {
 }
 
 export const koJobKey = (s: CeoStatement) => versionedKoJobKey(s, KO_PROMPT_VERSION);
-export const legacyKoJobKey = (s: CeoStatement) => versionedKoJobKey(s, 'ko-sum-1');
+export function legacyKoJobKey(s: CeoStatement, version = 'ko-sum-1'): string | null {
+  const ex = primaryExcerpt(s);
+  if (s.kind !== 'direct_quote' || !s.quoteText || !ex) return null;
+  return crypto.createHash('sha256').update([version, 'c1:json:t-low:max512:cand1:noretry', 'gemini-3.8-flash', 'ko', normalizeForMatch(s.quoteText), normalizeForMatch(ex)].join('\u0000'), 'utf8').digest('hex');
+}
 
 /** 최소 입력: 지시 + 출력 JSON 형식 + 인용 원문 + 그 인용이 든 근거 문장(각 600자 이하). 인물·날짜·직책은 넣지 않음(모델이 바꿀 수 없게) */
 export function koContents(s: CeoStatement): string {
@@ -142,11 +128,11 @@ export async function runKoSummaries(statements: CeoStatement[], o: KoRunOptions
     if (!key || s.quoteLanguage === 'ko') continue;
     r.considered++;
     if (s.translationKo?.status === 'reviewed' && !o.overrideReviewed) { r.skippedReviewed++; continue; }
-    const legacy = legacyKoJobKey(s);
+    const legacy = [legacyKoJobKey(s), legacyKoJobKey(s, 'ko-sum-2')].find(k => k && (state.results[k] || state.jobs[k]));
     if (state.results[key] || state.jobs[key] || (legacy && (state.results[legacy] || state.jobs[legacy]))) { r.cacheHits++; continue; } // 캐시 hit: count 요청도 없음
     if (!state.enabled) { stop('꺼짐'); break; }
     if (state.halted) { stop(`중지됨: ${state.halted}`); break; }
-    if (!o.client) { stop('Gemini 키 미설정'); break; }
+    if (!o.client) { stop('OpenAI 키 미설정'); break; }
     const price = priceAt(o.now());
     if (!price) { stop('요금 확인 유효기간 경과(재확인 전 호출 금지)'); break; }
     if (o.deadline - o.now() < MIN_TIME_MS) { stop('refresh 기한 안에 호출을 끝낼 시간이 부족'); break; }
@@ -222,7 +208,7 @@ export function koSummaryFor(s: CeoStatement, state: KoLedgerState | null): Stat
   if (!state) return undefined;
   const key = koJobKey(s);
   if (!key) return undefined;
-  const legacy = legacyKoJobKey(s);
+  const legacy = [legacyKoJobKey(s), legacyKoJobKey(s, 'ko-sum-2')].find(k => k && (state.results[k] || state.jobs[k]));
   const res = state.results[key] || (legacy ? state.results[legacy] : undefined);
   if (res) return { status: 'ready', title: res.title, summary: res.summary, model: res.model, generatedAt: res.generatedAt };
   const j = state.jobs[key] || (legacy ? state.jobs[legacy] : undefined);

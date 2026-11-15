@@ -15,7 +15,8 @@ export const KH_MAX_OUTPUT_TOKENS = 4096;
 export const KH_MAX_INPUT_TOKENS = 6000;
 
 export const headlineKey = (text: string) =>
-  'hl:' + crypto.createHash('sha256').update([KH_VERSION, KO_MODEL, normalizeForMatch(text)].join('\u0000'), 'utf8').digest('hex');
+  // Preserve existing translations across the provider change; provenance stays on each result.
+  'hl:' + crypto.createHash('sha256').update([KH_VERSION, 'gemini-3.8-flash', normalizeForMatch(text)].join('\u0000'), 'utf8').digest('hex');
 
 export function headlineContents(items: { i: number; text: string }[], posts = false): string {
   return [
@@ -55,7 +56,7 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   if (!pending.length) return r;
   if (!state.enabled) { r.stoppedReason = '꺼짐'; return r; }
   if (state.halted) { r.stoppedReason = `중지됨: ${state.halted}`; return r; }
-  if (!o.client) { r.stoppedReason = 'Gemini 키 미설정'; return r; }
+  if (!o.client) { r.stoppedReason = 'OpenAI 키 미설정'; return r; }
   const price = priceAt(o.now());
   if (!price) { r.stoppedReason = '요금 확인 유효기간 경과'; return r; }
   if (o.deadline - o.now() < 40_000) { r.stoppedReason = '시간 부족'; return r; }

@@ -18,7 +18,7 @@ test('untranslated, not-completed English titles are translated in batches; usag
  const events=[...Array.from({length:45},(_,i)=>ev('e'+i,'SpaceX news '+i)),ev('done','Done',{analysisStatus:'completed'}),ev('ko','이미 한국어'),ev('has','X',{titleKo:'있음'})];
  const r=await translateTitles(events,x.d);
  assert.equal(r.pending,45);assert.equal(r.calls,2);assert.equal(Object.keys(x.saved).length,45);assert.equal(r.translated,45);
- assert.equal(x.b.nano,2*(500*300+800*2500));
+ assert.equal(x.b.nano,2*(500*125+800*500));
  assert.ok(!('done' in x.saved)&&!('ko' in x.saved)&&!('has' in x.saved));
 });
 test('numbers not in the source drop that translation',()=>{
@@ -58,7 +58,7 @@ test('ambiguous response and missing usage are not automatically sent again',asy
 test('two workers cannot reserve or generate the same title twice',async()=>{
  const x=deps(it=>({i:it.i,ko:'회사 성장'}));
  await Promise.all([translateTitles([ev('a','Company growth')],x.d),translateTitles([ev('a','Company growth')],x.d)]);
- assert.equal(x.calls(),1);assert.equal(x.b.nano,500*300+800*2500);
+ assert.equal(x.calls(),1);assert.equal(x.b.nano,500*125+800*500);
 });
 
 test('invalid reservations fail closed and a late settlement never refunds into a new month',async()=>{

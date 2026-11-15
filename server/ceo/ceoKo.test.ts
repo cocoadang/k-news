@@ -31,7 +31,7 @@ function fakeClient(o: { count?: number | (() => Promise<number>); gen?: (n: num
   const calls = { count: 0, gen: 0 };
   const c: KoClient = {
     countTokens: async () => { calls.count++; const v = typeof o.count === 'function' ? await o.count() : (o.count ?? 200); return { totalTokens: v }; },
-    generate: async () => { calls.gen++; return o.gen ? o.gen(calls.gen) : { text: OK_TEXT, modelVersion: 'gemini-3.8-flash-001', usageMetadata: { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 100, totalTokenCount: 350 } }; },
+    generate: async () => { calls.gen++; return o.gen ? o.gen(calls.gen) : { text: OK_TEXT, modelVersion: 'gpt-6-luna-001', usageMetadata: { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 100, totalTokenCount: 350 } }; },
   };
   return { c, calls };
 }
@@ -75,8 +75,8 @@ async function main() {
     const r = await run([stmt()], l, c);
     assert.deepStrictEqual([calls.count, calls.gen, r.settled], [1, 1, 1]);
     const s = await l.read(); const j = Object.values(s.jobs)[0];
-    assert.strictEqual(j.reservedNano, Math.ceil((Math.ceil(200 * 1.1) + 32) * 750 + KO_MAX_OUTPUT_TOKENS * 3750));
-    assert.strictEqual(j.costNano, 210 * 750 + (40 + 100) * 3750);
+    assert.strictEqual(j.reservedNano, Math.ceil((Math.ceil(200 * 1.1) + 32) * 125 + KO_MAX_OUTPUT_TOKENS * 500));
+    assert.strictEqual(j.costNano, 210 * 125 + (40 + 100) * 500);
     assert.strictEqual(s.months['2026-10'].spentNano, j.costNano); assert.strictEqual(outstandingNano(s), 0);
     assert.strictEqual(Object.values(s.results)[0].title, '새 지표 강조');
     assert.strictEqual(s.halted, null);
@@ -97,14 +97,14 @@ async function main() {
   await test('K3 꺼짐·키 없음·요금 확인 만료·기한 부족·원장 읽기/예약 실패·count 실패/이상값(0, NaN, 상한 초과) → 생성 호출 0', async () => {
     const off = new MemoryKoLedger(); const f0 = fakeClient();
     assert.strictEqual((await run([stmt()], off, f0.c)).stoppedReason, '꺼짐');
-    assert.strictEqual((await run([stmt()], await enabled(), null)).stoppedReason, 'Gemini 키 미설정');
+    assert.strictEqual((await run([stmt()], await enabled(), null)).stoppedReason, 'OpenAI 키 미설정');
     const late = await run([stmt()], await enabled(), f0.c, { now: () => Date.parse('2027-04-01T00:00:00Z'), deadline: Date.parse('2027-04-01T00:02:00Z') });
     assert.match(late.stoppedReason!, /요금 확인 유효기간/);
     assert.match((await run([stmt()], await enabled(), f0.c, { deadline: NOW + 10_000 })).stoppedReason!, /기한/);
     const lf = await enabled(); lf.failNext = 'reserve';
     assert.match((await run([stmt()], lf, f0.c)).stoppedReason!, /예약 결과 불확실/);
     assert.strictEqual(outstandingNano(await lf.read()), 0);
-    for (const bad of [0, NaN, 1201, 12.5]) {
+    for (const bad of [0, NaN, 6001, 12.5]) {
       const l = await enabled(); const f = fakeClient({ count: bad });
       const r = await run([stmt()], l, f.c);
       assert.match(r.stoppedReason!, /countTokens 값 이상/); assert.strictEqual(f.calls.gen, 0); assert.strictEqual(Object.keys((await l.read()).jobs).length, 0);
@@ -128,14 +128,14 @@ async function main() {
 
   await test('K5 usage 누락 → 예약 유지·중지 / usage 합계 불일치 → 큰 쪽으로 비용 기록·중지 / 사고 토큰이 커서 예약 초과 → 그대로 기록·중지', async () => {
     const a = await enabled();
-    await run([stmt()], a, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gemini-3.8-flash-001' }) }).c);
+    await run([stmt()], a, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gpt-6-luna-001' }) }).c);
     const sa = await a.read(); assert.strictEqual(Object.values(sa.jobs)[0].status, 'uncertain'); assert.ok(sa.halted);
     const b = await enabled();
-    await run([stmt()], b, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gemini-3.8-flash-001', usageMetadata: { promptTokenCount: 200, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 400 } }) }).c);
+    await run([stmt()], b, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gpt-6-luna-001', usageMetadata: { promptTokenCount: 200, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 400 } }) }).c);
     const sb = await b.read(); const jb = Object.values(sb.jobs)[0];
-    assert.strictEqual(jb.costNano, 200 * 750 + 200 * 3750); assert.match(sb.halted!, /불일치/);
+    assert.strictEqual(jb.costNano, 200 * 125 + 200 * 500); assert.match(sb.halted!, /불일치/);
     const c = await enabled();
-    await run([stmt()], c, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gemini-3.8-flash-001', usageMetadata: { promptTokenCount: 200, candidatesTokenCount: 40, thoughtsTokenCount: 2000, totalTokenCount: 2240 } }) }).c);
+    await run([stmt()], c, fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gpt-6-luna-001', usageMetadata: { promptTokenCount: 200, candidatesTokenCount: 40, thoughtsTokenCount: 2000, totalTokenCount: 2240 } }) }).c);
     const sc = await c.read(); const jc = Object.values(sc.jobs)[0];
     assert.ok(jc.costNano! > jc.reservedNano); assert.strictEqual(sc.months['2026-10'].spentNano, jc.costNano); assert.match(sc.halted!, /넘음/);
   });
@@ -144,9 +144,9 @@ async function main() {
     for (const text of ['not json', '', '{"title":"","summary":""}', '{"title":"Title","summary":"English only"}', JSON.stringify({ title: '목표', summary: '수치 없이 요약' })]) {
       const l = await enabled();
       const q = 'We expect 25 percent growth in 2027';
-      await run([stmt(q)], l, fakeClient({ gen: async () => ({ text, modelVersion: 'gemini-3.8-flash-001', usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 5, thoughtsTokenCount: 0, totalTokenCount: 105 } }) }).c);
+      await run([stmt(q)], l, fakeClient({ gen: async () => ({ text, modelVersion: 'gpt-6-luna-001', usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 5, thoughtsTokenCount: 0, totalTokenCount: 105 } }) }).c);
       const s = await l.read();
-      assert.strictEqual(Object.keys(s.results).length, 0, text); assert.strictEqual(s.months['2026-10'].spentNano, 100 * 750 + 5 * 3750); assert.strictEqual(s.halted, null);
+      assert.strictEqual(Object.keys(s.results).length, 0, text); assert.strictEqual(s.months['2026-10'].spentNano, 100 * 125 + 5 * 500); assert.strictEqual(s.halted, null);
     }
     assert.ok(parseKoOutput(JSON.stringify({ title: '성장 전망', summary: '2027년 25 퍼센트 성장을 예상한다는 발언' }), 'We expect 25 percent growth in 2027'));
   });
@@ -156,7 +156,7 @@ async function main() {
     const r = await run([stmt('a b c d e f'), stmt('g h i j k l', 'st2')], l, f.c);
     assert.strictEqual(f.calls.gen, 1); assert.match(r.stoppedReason!, /예상 밖 모델/);
     assert.strictEqual(Object.keys((await l.read()).results).length, 0);
-    const u = await enabled(); const fu = fakeClient({ count: 300, gen: async () => ({ text: OK_TEXT, modelVersion: 'gemini-3.8-flash-002', usageMetadata: { promptTokenCount: 500, candidatesTokenCount: 10, thoughtsTokenCount: 0, totalTokenCount: 510 } }) });
+    const u = await enabled(); const fu = fakeClient({ count: 300, gen: async () => ({ text: OK_TEXT, modelVersion: 'gpt-6-luna-002', usageMetadata: { promptTokenCount: 500, candidatesTokenCount: 10, thoughtsTokenCount: 0, totalTokenCount: 510 } }) });
     const ru = await run([stmt('😀 한국어 ✓ 𝔘𝔫𝔦𝔠𝔬𝔡𝔢 test quote here'), stmt('another quote here please', 'st3')], u, fu.c);
     assert.match(ru.stoppedReason!, /예약 입력/); assert.strictEqual(fu.calls.gen, 1);
   });
@@ -165,8 +165,8 @@ async function main() {
     const small = await enabled(100_000); const f = fakeClient();
     const r = await run([stmt()], small, f.c);
     assert.strictEqual(f.calls.gen, 0); assert.match(r.stoppedReason!, /한도/);
-    assert.deepStrictEqual(priceAt(Date.parse('2027-01-01T00:00:00Z')), { inNano: 1500, outNano: 7500 });
-    assert.deepStrictEqual(priceAt(Date.parse('2026-12-31T23:59:59Z')), { inNano: 750, outNano: 3750 });
+    assert.deepStrictEqual(priceAt(Date.parse('2027-01-01T00:00:00Z')), { inNano: 125, outNano: 500 });
+    assert.deepStrictEqual(priceAt(Date.parse('2026-12-31T23:59:59Z')), { inNano: 125, outNano: 500 });
     const zero = await enabled(0);
     assert.match((await run([stmt()], zero, fakeClient().c)).stoppedReason!, /한도/);
   });
@@ -180,7 +180,7 @@ async function main() {
   });
 
   await test('K13 usage 부분 누락(PC 재현: prompt만 210)·불완전·이상값 → 정산하지 않고 uncertain(예약 유지·중지·ready 캐시 없음) / total 기준 정상·명시 0·사고 생략 대조군은 정산', async () => {
-    const P = { inNano: 750, outNano: 3750 };
+    const P = { inNano: 125, outNano: 500 };
     const uncertain: [string, any][] = [
       ['prompt만', { promptTokenCount: 210 }],
       ['prompt+후보(사고·합계 없음)', { promptTokenCount: 210, candidatesTokenCount: 40 }],
@@ -194,18 +194,18 @@ async function main() {
     ];
     for (const [name, u] of uncertain) assert.strictEqual(costFromUsage(u, P), null, name);
     const settle: [string, any, number, boolean][] = [
-      ['정상(사고 생략, total 기준)', { promptTokenCount: 210, candidatesTokenCount: 40, totalTokenCount: 250 }, 210 * 750 + 40 * 3750, false],
-      ['명시 0 사고', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 250 }, 210 * 750 + 40 * 3750, false],
-      ['total만', { promptTokenCount: 210, totalTokenCount: 350 }, 210 * 750 + 140 * 3750, false],
-      ['total 없음·후보·사고 명시', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 100 }, 210 * 750 + 140 * 3750, false],
-      ['합계 불일치(큰 쪽·중지)', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 400 }, 210 * 750 + 190 * 3750, true],
+      ['정상(사고 생략, total 기준)', { promptTokenCount: 210, candidatesTokenCount: 40, totalTokenCount: 250 }, 210 * 125 + 40 * 500, false],
+      ['명시 0 사고', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 250 }, 210 * 125 + 40 * 500, false],
+      ['total만', { promptTokenCount: 210, totalTokenCount: 350 }, 210 * 125 + 140 * 500, false],
+      ['total 없음·후보·사고 명시', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 100 }, 210 * 125 + 140 * 500, false],
+      ['합계 불일치(큰 쪽·중지)', { promptTokenCount: 210, candidatesTokenCount: 40, thoughtsTokenCount: 0, totalTokenCount: 400 }, 210 * 125 + 190 * 500, true],
     ];
     for (const [name, u, cost, mismatch] of settle) {
       const c = costFromUsage(u, P)!;
       assert.ok(c, name); assert.strictEqual(c.costNano, cost, name); assert.strictEqual(c.mismatch, mismatch, name);
     }
     // 런타임 경로: prompt만 → uncertain, 예약 전액 유지, 결과 캐시 없음, 추가 생성 중지
-    const l = await enabled(); const f = fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gemini-3.8-flash-001', usageMetadata: { promptTokenCount: 210 } }) });
+    const l = await enabled(); const f = fakeClient({ gen: async () => ({ text: OK_TEXT, modelVersion: 'gpt-6-luna-001', usageMetadata: { promptTokenCount: 210 } }) });
     const r = await run([stmt(), stmt('another new quote here please', 'st9')], l, f.c);
     const s = await l.read(); const j = Object.values(s.jobs)[0];
     assert.strictEqual(j.status, 'uncertain'); assert.strictEqual(outstandingNano(s), j.reservedNano); assert.strictEqual(s.months['2026-10'], undefined);

@@ -191,6 +191,9 @@ export interface MonitorSettings {
 }
 
 export interface SystemStatus {
+  aiProvider?: string;
+  aiModel?: string;
+  hasOpenAIKey?: boolean;
   status: 'idle' | 'polling' | 'analyzing' | 'error';
   lastPollTime?: string;
   nextPollTime?: string;

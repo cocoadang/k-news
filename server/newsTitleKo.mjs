@@ -1,11 +1,11 @@
-// 뉴스 피드 제목 한국어 번역 (표시 전용). 상세 분석이 끝나지 않은 뉴스의 영어 제목을 Gemini Flash-Lite로 묶어 번역.
+// 뉴스 피드 제목 한국어 번역 (표시 전용). 상세 분석이 끝나지 않은 뉴스의 영어 제목을 OpenAI Luna로 묶어 번역.
 // 분석·분류·중복 판정은 영어 원문을 그대로 쓰고, 화면에는 titleKo가 있으면 그것을 보여줌.
 // 비용: 월 상한(기본 USD 1)을 넘기지 않음 — 호출 전 최대 비용을 예약하고 실제 사용량으로 정산.
 import {createHash} from 'node:crypto';
 import {canTranslate} from './newsTitleKoStore.mjs';
-export const TITLE_KO_MODEL = 'gemini-3.5-flash-lite';
+export const TITLE_KO_MODEL = 'gpt-6-luna';
 export const titleKey=text=>createHash('sha256').update('title-ko-1\0'+TITLE_KO_MODEL+'\0'+text).digest('hex');
-export const IN_NANO = 300, OUT_NANO = 2500; // USD per 1M tokens × 1000 = 나노달러/토큰
+export const IN_NANO = 125, OUT_NANO = 500; // USD per 1M tokens × 1000 = 나노달러/토큰
 export const BATCH = 40, MAX_OUTPUT = 4096, MONTH_CAP_NANO = 1_000_000_000;
 
 const nums = s => (String(s).match(/\d+(?:[.,]\d+)*/g) || []).map(n => n.replace(/,/g, ''));

@@ -10,7 +10,7 @@ function setup(answer: (contents: string) => string) {
   let calls = 0, counts = 0;
   const client = {
     countTokens: async () => { counts++; return { totalTokens: 200 }; },
-    generate: async ({ contents }: any) => { calls++; return { text: answer(contents), modelVersion: 'gemini-3.8-flash-001', usageMetadata: usage }; },
+    generate: async ({ contents }: any) => { calls++; return { text: answer(contents), modelVersion: 'gpt-6-luna-001', usageMetadata: usage }; },
   };
   return { ledger, client, calls: () => calls, counts: () => counts };
 }

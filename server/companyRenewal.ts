@@ -1,11 +1,12 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
+import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
 import { db } from './db';
 import { CompanyProfile, CompanyRenewalHistoryEntry, NewsEvent } from './types';
 import { firestoreRepo, getIsFirestoreAvailable, getSeoulWeekString } from './firestore';
 
 function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey === 'MY_OPENAI_API_KEY' || apiKey.trim() === '') {
     return null;
   }
   return new GoogleGenAI({
@@ -19,7 +20,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  return resolveOpenAIModel();
 }
 
 const cleanTag = (tag: unknown, maxLen: number): string => {
@@ -175,7 +176,7 @@ export async function executeWeeklyCompanyRenewal(
     expectedVersion?: number;
     lockToken?: string;
     preFilteredArticles?: { id: string; title: string; snippet: string }[];
-    mockClient?: GoogleGenAI | null;
+    mockClient?: Pick<GoogleGenAI, 'models'> | null;
   }
 ): Promise<CompanyRenewalResult> {
   const now = options?.now || new Date();
@@ -282,7 +283,7 @@ ${articleListText}
     return {
       companyId: company.id,
       status: 'skipped',
-      reason: 'GEMINI_API_KEY_UNAVAILABLE',
+      reason: 'OPENAI_API_KEY_UNAVAILABLE',
     };
   }
 
@@ -686,7 +687,7 @@ ${articleListText}
 export async function runWeeklyCompanyRenewalsBatch(options?: {
   force?: boolean;
   now?: Date;
-  mockClient?: GoogleGenAI | null;
+  mockClient?: Pick<GoogleGenAI, 'models'> | null;
 }): Promise<WeeklyRenewalBatchResult> {
   // Requirement 6: Skip if Firestore is absent (no local fallback for automated batch)
   if (!getIsFirestoreAvailable()) {

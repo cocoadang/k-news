@@ -10,12 +10,30 @@ body,button,input,select,textarea{font-family:inherit;}
 .admin-input{display:block;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px 12px;font-size:14px;color:#e2e8f0;}
 .admin-input:focus{outline:2px solid #22d3ee;outline-offset:2px;}
 .admin-card input[type=checkbox]{accent-color:#06b6d4;width:18px;height:18px;flex-shrink:0;}
+.news-filters input,.news-filters select{min-height:40px;}
+.news-importance button{min-height:34px;justify-content:center;}
+.news-filter-options>button{min-height:40px;}
+.news-search-clear{width:40px;min-height:40px;}
+.news-filters input{padding-right:44px;}
+.news-card-actions>a,.news-card-actions>button,.news-card-actions>div>a{min-height:36px;}
+.news-card-actions>div{flex:1;}
+.news-card-actions>div>a{max-width:100%;}
+.news-card-actions>button{flex-shrink:0;}
+.news-filters button:focus-visible,.news-card-actions button:focus-visible,.news-card-actions a:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;}
 /* Keep mobile controls easy to tap; reclaim space from framing and gaps. */
 @media(max-width:639px){
+  .page-header{margin-bottom:12px;}
+  .news-filters input,.news-filters select{min-height:44px;font-size:16px;}
+  .news-filter-options{display:grid;grid-template-columns:minmax(0,1fr) auto;}
+  .news-importance{grid-column:1/-1;}
+  .news-importance button{flex:1;min-height:44px;}
+  .news-category select{width:100%;}
+  .news-filter-options>button,.news-search-clear{min-height:44px;}
+  .news-search-clear{width:44px;}
+  .news-card-actions>button,.news-card-actions>div>a{min-height:44px;}
   .strategy-menu{overflow-wrap:anywhere;}
   .strategy-menu .strategy-card,.strategy-menu .strategy-kpi{padding:12px;}
   .strategy-menu .strategy-card>h2{line-height:1.5;}
-  .strategy-menu>.mb-5{margin-bottom:12px;}
   .strategy-menu .mt-4{margin-top:12px;}
   .strategy-menu summary{min-height:44px;align-content:center;line-height:1.5;}
   .strategy-menu details{padding:8px 12px;}

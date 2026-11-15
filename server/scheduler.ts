@@ -4,7 +4,7 @@ import { clusterAndProcessArticles, runTwoStageAnalysis } from './geminiAnalyzer
 import { sendPublicEventToTelegram as sendEventToTelegram, isEventQualifiedForTelegramAutoDispatch } from './telegram';
 import { NewsEvent } from './types';
 import { getSeoulDateString, getIsFirestoreAvailable, initFirestore } from './firestore';
-import { runWeeklyCompanyRenewalsBatch } from './companyRenewal';
+import { maintainCompanyKeywords } from './keywordMaintenance';
 import { CeoRuntime } from './ceo/runtime';
 import { createCeoRuntime } from './ceo/routes';
 import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
@@ -72,6 +72,7 @@ export async function runAnalysisOnlyCycle(deadlineMs = 150_000): Promise<{ skip
   let telegramAlertsSentCount = 0;
   try {
     const settings = db.getSettings();
+    await maintainCompanyKeywords({settings});
     if (settings.autoAnalyzeWithGemini === false) return { skipped: true, telegramAlertsSentCount: 0 };
     // 제목 번역을 먼저 짧게(최대 30초) 처리: 분석이 시간을 다 써서 번역이 밀리지 않게
     try { await runNewsTitleTranslation(startTime + 30_000); } catch (e) { db.addLog('Gemini', 'warn', `[TitleKo] failed: ${String(e).slice(0, 120)}`); }
@@ -201,20 +202,7 @@ export async function runMonitoringCycle(isManual: boolean = false): Promise<{
     if (Date.now() - startTime > RENEWAL_START_LIMIT_MS) {
       db.addLog('Scheduler', 'info', '[TimeBudget] 사이클 시간 한도로 주간 키워드 갱신은 다음 사이클로 미룹니다.');
     } else if (settings.weeklyCompanyRenewalEnabled !== false && getIsFirestoreAvailable()) {
-      try {
-        const weeklyResult = await runWeeklyCompanyRenewalsBatch();
-        if (weeklyResult.processedCount > 0) {
-          db.addLog(
-            'Scheduler',
-            'info',
-            `[Weekly Renewal] Processed ${weeklyResult.processedCount} companies (Updated: ${weeklyResult.updatedCount}, Skipped: ${weeklyResult.skippedCount}, Weekly Model Calls: ${weeklyResult.modelCallsCount}/5).`
-          );
-        }
-      } catch (weeklyErr: unknown) {
-        // CRITICAL: Do NOT propagate to daily poll failure
-        const wMsg = weeklyErr instanceof Error ? weeklyErr.message : String(weeklyErr);
-        db.addLog('Scheduler', 'warn', `[Weekly Renewal] Weekly renewal encountered a non-fatal error: ${wMsg}`);
-      }
+      await maintainCompanyKeywords({settings});
     }
 
     // 6. Daily CEO Official Sources Collection (Connected to existing server schedule path)

@@ -30,9 +30,10 @@ test('reading absent state performs no writes and uses read-only transaction',as
 });
 test('menu retains existing views, reads library and allows explicit admin channel test only',()=>{
  const app=readFileSync(new URL('../../src/App.tsx',import.meta.url),'utf8');
- assert.match(app,/\['news',/);assert.match(app,/\['ceo',/);assert.match(app,/\['youtube',/);assert.match(app,/\['strategy',/);assert.match(app,/useState<'news' \| 'ceo' \| 'youtube' \| 'strategy' \| 'driver'>\('youtube'\)/);assert.ok(app.indexOf("['youtube',")<app.indexOf("['news',"));
+ assert.match(app,/\['news',/);assert.match(app,/\['ceo',/);assert.match(app,/\['youtube',/);assert.match(app,/\['strategy',/);assert.match(app,/useState<'news' \| 'ceo' \| 'youtube' \| 'strategy'>\('youtube'\)/);assert.ok(app.indexOf("['youtube',")<app.indexOf("['news',"));
  const ui=readFileSync(new URL('../../src/components/YoutubeMenu.tsx',import.meta.url),'utf8');
- assert.equal((ui.match(/fetch\(/g)||[]).length,2);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);assert.match(ui,/fetch\('\/api\/admin\/wallstreet\/channel-test'/);assert.match(ui,/isAdmin&&video.status==='ready'/);
+ assert.equal((ui.match(/fetch\(/g)||[]).length,1);assert.match(ui,/fetch\('\/api\/youtube\/summaries'/);assert.ok(!ui.includes('channel-test'));
  assert.ok(!/dangerouslySetInnerHTML|line-clamp|truncate|\/run|\/poll/.test(ui));
- assert.match(ui,/isAdmin&&<WallstreetRunButton/);assert.ok(!/crypto/.test(ui));
+ assert.ok(!ui.includes('WallstreetRunButton'));assert.ok(!/crypto/.test(ui));
+ const ops=readFileSync(new URL('../../src/components/AdminOperations.tsx',import.meta.url),'utf8');assert.match(ops,/channel-test/);assert.match(app,/isSettingsOpen && authStatus\?\.isAuthenticated/);
 });

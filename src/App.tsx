@@ -1,4 +1,5 @@
-import { PageHeader, RefreshButton, CollectButton } from './components/ui';
+import { PageHeader } from './components/ui';
+import { AdminOperations } from './components/AdminOperations';
 import { YoutubeMenu } from './components/YoutubeMenu';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
@@ -7,11 +8,10 @@ import { FilterBar } from './components/FilterBar';
 import { EventCard } from './components/EventCard';
 import { EventDetailModal } from './components/EventDetailModal';
 import { TelegramPreviewModal } from './components/TelegramPreviewModal';
-import { SettingsModal } from './components/SettingsModal';
+import { AdminSettings as SettingsModal } from './components/AdminSettings';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { CeoMenu } from './components/ceo/CeoMenu';
 import { StrategyMenu } from './components/StrategyMenu';
-import { DriverInsuranceMenu } from './components/DriverInsuranceMenu';
 import { useLang } from './i18n';
 import { NewsEvent, SystemStatus, MonitorSettings, NewsCategory, CompanyProfile, AuthStatus } from './types';
 import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -39,11 +39,12 @@ export default function App() {
   const [detailEvent, setDetailEvent] = useState<NewsEvent | null>(null);
   const [previewTelegramEvent, setPreviewTelegramEvent] = useState<NewsEvent | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [viewVersion,setViewVersion]=useState(0);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Toast Notification
   // 상단 메뉴: 뉴스 피드 / CEO 발언 (CEO 발언은 읽기 전용 API /api/ceo/dataset, 예시 데이터 대체 없음)
-  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube' | 'strategy' | 'driver'>('youtube');
+  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube' | 'strategy'>('youtube');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -177,6 +178,7 @@ export default function App() {
         credentials: 'include' 
       });
       setAuthStatus({ requiresAuth: true, isAuthenticated: false });
+      setIsSettingsOpen(false);setSettings(null);
       showToast('로그아웃되었습니다.', 'info');
     } catch {
       // ignore
@@ -293,7 +295,7 @@ export default function App() {
         body: JSON.stringify(updated),
       });
       if (res.status === 401 || handlePotentialAuthError(res)) {
-        return;
+        throw new Error('관리자 인증이 필요합니다.');
       }
       const contentType = res.headers.get('content-type');
       if (res.ok && contentType && contentType.includes('application/json')) {
@@ -301,10 +303,13 @@ export default function App() {
         setSettings(saved);
         showToast('설정이 성공적으로 저장되었습니다!');
         await fetchStatus();
+      } else {
+        throw new Error('설정을 저장하지 못했습니다. 다시 확인해 주세요.');
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       showToast(errorMsg, 'error');
+      throw err;
     }
   };
 
@@ -486,6 +491,7 @@ export default function App() {
       <Header
         authStatus={authStatus}
         onOpenSettings={() => {
+            if(!authStatus?.isAuthenticated){setIsLoginModalOpen(true);return;}
           setIsSettingsOpen(true);
           if (authStatus.isAuthenticated) {
             fetchSettings();
@@ -498,7 +504,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
-        <nav className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+        <nav className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
           {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')]] as const).map(([key, label]) => (
             <button
               key={key}
@@ -514,23 +520,20 @@ export default function App() {
         </nav>
 
         {(mainView === 'youtube' || mainView === 'news') && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-800/60 bg-sky-950/30 px-4 py-3">
-            <p className="text-sm text-slate-300">{t('주요 뉴스와 유튜브 요약을 텔레그램에서 받아보세요.', 'Receive key news and YouTube summaries on Telegram.')}</p>
-            <a href="https://t.me/dsoom_news" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-sky-800/50 bg-sky-950/20 px-3 py-2">
+            <p className="text-xs text-slate-400">{t('뉴스·유튜브 요약 알림', 'News & video alerts')}</p>
+            <a href="https://t.me/dsoom_news" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] shrink-0 items-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
               {t('텔레그램으로 받기 ↗', 'Join Telegram ↗')}
             </a>
           </div>
         )}
 
-        {mainView === 'youtube' ? (<YoutubeMenu isAdmin={!!authStatus?.isAuthenticated} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
-          <CeoMenu isAdmin={!!authStatus?.isAuthenticated} />
+        {mainView === 'youtube' ? (<YoutubeMenu key={viewVersion} isAdmin={false} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
+          <CeoMenu key={viewVersion} isAdmin={false} />
         ) : mainView === 'strategy' ? (
-          <StrategyMenu />
-        ) : mainView === 'driver' ? (
-          <DriverInsuranceMenu />
+          <StrategyMenu key={viewVersion} />
         ) : (<>
-        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('감시 기업 관련 주요 뉴스와 AI 분석 결과입니다. 날짜는 한국시간 기준입니다.', 'Key news on tracked companies with AI analysis. Times are in Korea time (KST). Summaries are in Korean; titles show the original.')}
-          actions={<>{authStatus?.isAuthenticated && <CollectButton onClick={handleManualPoll} busy={isPolling} />}<RefreshButton onClick={() => { fetchEvents(true); fetchStatus(); }} /></>} />
+        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}
         <CompanyTabs
           companies={companies}
@@ -563,14 +566,7 @@ export default function App() {
           }}
         />
 
-        <div className="mb-4 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-xs text-slate-300" role="status">
-          {t('현재 불러온', 'Loaded')} {events.length}{t('건 기준', '')} · {t('상세 분석 완료', 'Fully analyzed')} {events.filter(e => e.analysisStatus === 'completed' || (!e.analysisStatus && e.importance > 0)).length}{t('건', '')}
-          {' · '}{t('간단 평가 완료', 'Quick-scored')} {events.filter(e => e.screening && e.analysisStatus !== 'completed').length}{t('건', '')}
-          {' · '}{t('미평가', 'Unscored')} {events.filter(e => !e.screening && (e.analysisStatus === 'pending' || e.analysisStatus === 'failed' || (!e.analysisStatus && !e.importance))).length}{t('건', '')}
-          {' · '}{t('상세 분석 대기', 'Awaiting analysis')} {events.filter(e => e.screening && e.analysisStatus === 'pending').length}{t('건', '')}
-          {' · '}{t('실패', 'Failed')} {events.filter(e => e.analysisStatus === 'failed').length}{t('건', '')}
-          <p className="mt-1 text-slate-500">{t('간단 평가 점수는 잠정치입니다. 미평가·상세 분석 대기는 낮은 중요도나 분석 제외를 뜻하지 않습니다.', 'Quick scores are provisional. Unscored or pending items are not necessarily low-importance or excluded.')}</p>
-        </div>
+
 
         {/* Events Feed */}
         {sortedAndFilteredEvents.length === 0 ? (
@@ -580,7 +576,7 @@ export default function App() {
               {t('선택한 기업 및 조건에 맞는 뉴스가 없습니다.', 'No news matches the selected company and filters.')}
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              {t('다른 기업 탭을 선택하거나 [새로고침] 버튼을 눌러 저장된 최신 뉴스를 다시 불러오세요.', 'Pick another company tab or press Refresh to reload the latest saved news.')}
+              {t('다른 기업이나 검색 조건을 선택해 보세요.', 'Try another company or search filter.')}
             </p>
           </div>
         ) : (
@@ -630,7 +626,7 @@ export default function App() {
         />
       )}
 
-      {isSettingsOpen && (
+      {isSettingsOpen && authStatus?.isAuthenticated && (
         <SettingsModal
           settings={settings}
           companies={companies}
@@ -639,6 +635,7 @@ export default function App() {
           onSaveCompany={handleSaveCompany}
           onDeleteCompany={handleDeleteCompany}
           onCompaniesUpdated={(newCompanies) => setCompanies(newCompanies)}
+          operations={<AdminOperations onPoll={handleManualPoll} polling={isPolling} onRefresh={()=>{setViewVersion(v=>v+1);fetchEvents(true);fetchStatus();fetchCompanies();}} onLogout={handleLogout} events={events} onSendNews={handleSendTelegram} onReanalyze={handleReanalyze}/>}
         />
       )}
 

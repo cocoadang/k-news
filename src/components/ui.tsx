@@ -2,7 +2,7 @@ import React from 'react';
 import { RefreshCw, Play } from 'lucide-react';
 import { useLang } from '../i18n';
 
-/** 모든 메뉴가 같은 머리말 구조를 씁니다: 제목 · 설명 · 오른쪽 버튼(새로고침 / 관리자 지금 수집) · 상태 문구. */
+/** 콘텐츠 머리말: 제목 · 설명 · 상태 문구. 운영 도구는 관리자 설정에 둡니다. */
 export function PageHeader({ title, description, actions, status }: { title: string; description?: React.ReactNode; actions?: React.ReactNode; status?: React.ReactNode }) {
   return (
     <div className="mb-5">
@@ -24,7 +24,7 @@ export const buttonClass = {
   primary: `${base} border border-cyan-600 bg-cyan-700 text-white hover:bg-cyan-600`,
 };
 
-/** 모든 메뉴 공통: 화면의 저장된 결과를 다시 불러옵니다(누구나). */
+/** 관리자 설정에서 저장된 결과를 다시 불러옵니다. */
 export function RefreshButton({ onClick, busy = false }: { onClick: () => void; busy?: boolean }) {
   const { t } = useLang();
   return <button type="button" className={buttonClass.secondary} onClick={onClick} disabled={busy}>

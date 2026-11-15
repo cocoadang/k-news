@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runApprovedKeywordTest,APPROVED_TEST_ID} from './approvedKeywordTest.mjs';
+import {runApprovedKeywordTest,APPROVED_TEST_ID,APPROVED_NVIDIA_TEST_ID} from './approvedKeywordTest.mjs';
 import {executeWeeklyCompanyRenewal} from './companyRenewal';
 import {db} from './db';
 import {_setIsFirestoreAvailableForTesting} from './firestore';
@@ -28,4 +28,24 @@ test('real renewal merge preserves pins and scheduled attempt time on a successf
  const mockClient:any={models:{generateContent:async()=>({text:JSON.stringify({proposedSearchKeywords:[{keyword:'SpaceX satellite contracts',evidenceId:'e1',reason:'Confirmed contract'}],proposedCoreBusinesses:[{business:'Satellite Services',evidenceId:'e1',reason:'Contract'}],summaryRationale:'Synthetic test evidence'}),usageMetadata:{promptTokenCount:10,candidatesTokenCount:20,totalTokenCount:30}})}};
  const result=await executeWeeklyCompanyRenewal(c,{now,lockToken:'approved-test-lock',preserveScheduledAttemptAt:scheduled,preFilteredArticles:articles,mockClient});
  assert.equal(result.status,'success');assert.equal(result.updatedProfile?.lastKeywordRenewalAttemptAt,scheduled);assert.ok(result.updatedProfile?.searchKeywords.includes('SpaceX Starship'));assert.ok(result.updatedProfile?.searchKeywords.includes('SpaceX satellite contracts'));assert.equal(result.historyEntry?.timestamp,now.toISOString());
+});
+
+test('NVIDIA has one separate approval; no other company can bypass the weekly guard',async()=>{
+ const x=memory();x.data.set('companies/nvda',{...company,id:'nvda',lastRenewalStatus:'failed'});let calls=0;
+ const opts={...x,companyId:'nvda',now,getArticles:()=>articles,sync:()=>{},execute:async(c:any,o:any)=>{calls++;assert.equal(c.id,'nvda');assert.equal(o.preserveScheduledAttemptAt,scheduled);return {status:'success',updatedProfile:{...c,lastRenewalStatus:'success',renewalLock:null}};}};
+ assert.equal((await runApprovedKeywordTest({...opts,companyId:'tsla'})).status,'not_approved');
+ const results=await Promise.all([runApprovedKeywordTest(opts),runApprovedKeywordTest(opts)]);
+ assert.deepEqual(results.map(x=>x.status).sort(),['already_attempted','success']);assert.equal(calls,1);
+ assert.equal(x.data.get('approved_keyword_tests/'+APPROVED_NVIDIA_TEST_ID).callsReserved,1);
+ assert.equal(x.data.get('weekly_renewal_budgets/current').callsCount,5);
+ assert.equal(x.data.get('companies/spacex').version,company.version);
+});
+
+test('valid-looking but truncated or wrong-shape renewal output is never saved',async()=>{
+ _setIsFirestoreAvailableForTesting(false);
+ for(const [text,finishReason] of [['[]','STOP'],['{}','STOP'],[JSON.stringify({proposedSearchKeywords:[],proposedCoreBusinesses:[]}),'MAX_TOKENS']]){
+  let calls=0;
+  const result=await executeWeeklyCompanyRenewal(company,{now,force:true,preFilteredArticles:articles,mockClient:{models:{generateContent:async()=>{calls++;return {text,candidates:[{finishReason}]};}}} as any});
+  assert.equal(result.status,'failed');assert.equal(result.reason,'malformed_json_response');assert.equal(calls,1);
+ }
 });

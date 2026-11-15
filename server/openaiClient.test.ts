@@ -9,6 +9,11 @@ test('strict schema retains enums and allows absent evidence as null', () => {
   assert.deepEqual(s.properties.status.enum,['relevant','irrelevant']);
   assert.deepEqual(s.properties.evidence.anyOf[1],{type:'null'});
 });
+
+test('bounded keyword output reaches the strict provider schema',()=>{
+ const s=responseSchema({type:'ARRAY',maxItems:3,items:{type:'OBJECT',properties:{reason:{type:'STRING',maxLength:80}},required:['reason']}});
+ assert.equal(s.maxItems,3);assert.equal(s.items.properties.reason.maxLength,80);
+});
 test('one Responses request, no storage/tools/retries, reasoning counted once',async()=>{
   let sent:any,calls=0;
   const fetcher:any=async (_url:any,options:any)=>{

@@ -6,6 +6,9 @@ export function responseSchema(schema: any): any {
   if (!schema || typeof schema !== 'object') throw Error('AI_SCHEMA_INVALID');
   const type = String(schema.type || 'object').toLowerCase();
   const out: any = { type };
+  // Retain supported output bounds instead of silently dropping them.
+  const bounds = type === 'array' ? ['minItems', 'maxItems'] : type === 'string' ? ['minLength', 'maxLength'] : [];
+  for (const key of bounds) if (Number.isSafeInteger(schema[key]) && schema[key] >= 0) out[key] = schema[key];
   if (schema.description) out.description = schema.description;
   if (schema.enum) out.enum = schema.enum;
   if (type === 'array') out.items = responseSchema(schema.items);

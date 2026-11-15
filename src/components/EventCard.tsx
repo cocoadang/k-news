@@ -223,7 +223,7 @@ export const EventCard: React.FC<EventCardProps> = ({
         )}
 
         {/* Source & Single Action Row */}
-        <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+        <div className="news-card-actions flex items-center justify-between gap-2 pt-1 text-xs">
           
           {/* Primary Source Name */}
           <div className="flex items-center gap-1.5 min-w-0">

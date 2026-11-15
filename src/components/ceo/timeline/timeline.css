@@ -17,7 +17,7 @@
 .tl-chip:disabled{opacity:.45;cursor:not-allowed}
 
 .tl-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
-.tl-questions{position:sticky;top:16px;display:flex;flex-direction:column;gap:8px}
+.tl-questions{position:sticky;top:72px;display:flex;flex-direction:column;gap:8px}
 .tl-questions h2{font-size:14px;color:var(--tl-muted);margin-bottom:4px}
 .tl-q{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--tl-line);background:var(--tl-card);border-radius:12px;padding:12px 14px}
 .tl-q strong{font-size:15px;font-weight:600;line-height:1.5}
@@ -50,12 +50,12 @@
 .tl-tag{display:inline-block;margin-top:6px;color:var(--tl-muted);font-size:11px}
 .tl-warn{color:#d8c39b}
 .tl-original{margin-top:6px}
-.tl-original summary{cursor:pointer;color:var(--tl-muted);font-size:12px}
+.tl-original summary{cursor:pointer;color:var(--tl-muted);font-size:12px;min-height:32px;align-content:center}
 .tl-original blockquote,.tl-cols blockquote{margin:8px 0 0;padding-left:12px;border-left:2px solid var(--tl-accent);color:#cfd8e6;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
 .tl-metrics{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .tl-metrics span{background:#13314a;color:#9fe3ff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
 .tl-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;font-size:13px}
-.tl-source{overflow-wrap:anywhere}
+.tl-source{overflow-wrap:anywhere;display:inline-flex;align-items:center;min-height:32px}
 .tl-pick{border:1px solid var(--tl-line);background:transparent;border-radius:8px;padding:6px 10px;font-size:12px;white-space:nowrap}
 .tl-pick.on{border-color:var(--tl-accent);color:var(--tl-accent)}
 
@@ -88,6 +88,7 @@
 @media(max-width:639px){
  .ceo-tl{padding-bottom:16px;min-width:0;overflow-wrap:anywhere;}
  .ceo-tl .tl-scopes{flex-wrap:nowrap;overflow-x:auto;padding:2px 0 6px;max-width:100%;}
+ .tl-scopes,.tl-questions{scrollbar-width:thin;scrollbar-color:#475569 transparent;}
  .ceo-tl .tl-chip{flex-shrink:0;min-height:44px;font-size:13px;padding:8px 12px;}
  .tl-head{margin-bottom:12px;}
  .tl-layout{min-width:0;gap:12px;}

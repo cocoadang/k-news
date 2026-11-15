@@ -43,7 +43,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     onlyTelegramSent !== null;
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3.5 mb-3 sm:mb-4 backdrop-blur-sm">
+    <div className="news-filters bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3.5 mb-3 sm:mb-4 backdrop-blur-sm">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
         
         {/* Search Input - Compact */}
@@ -51,6 +51,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            aria-label={t('뉴스 검색', 'Search news')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('뉴스 제목, 기업, 키워드 검색...', 'Search titles, companies, keywords...')}
@@ -59,7 +60,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              aria-label={t('검색어 지우기', 'Clear search')}
+              className="news-search-clear absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center justify-center text-slate-400 hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -67,10 +69,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         {/* Filters Row */}
-        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+        <div className="news-filter-options flex items-center flex-wrap gap-1.5 sm:gap-2">
           
           {/* Importance Filter: 전체, 4★ 이상, 5★ */}
-          <div className="flex items-center bg-slate-950/80 border border-slate-700/80 rounded-lg p-0.5 text-xs font-semibold">
+          <div className="news-importance flex items-center bg-slate-950/80 border border-slate-700/80 rounded-lg p-0.5 text-xs font-semibold">
             <button
               onClick={() => setMinImportance(0)}
               className={`px-2 py-1 rounded transition-colors cursor-pointer ${
@@ -102,8 +104,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
 
           {/* Category Dropdown (Compact) */}
-          <div className="relative">
+          <div className="news-category relative">
             <select
+              aria-label={t('뉴스 카테고리', 'News category')}
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="appearance-none bg-slate-950/80 border border-slate-700/80 rounded-lg pl-2.5 pr-6 py-1 text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"

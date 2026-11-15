@@ -23,6 +23,11 @@ export function createWallstreetRuntime({getFirestore,config={enabled:false},pro
 }
 // Register against the existing Express app without importing its startup side effects.
 export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob,publicSummaries,onRunFinished}) {
+  app.post('/api/admin/wallstreet/channel-test',verifyAdmin,async(req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    try{const result=await runtime.sendChannelTest(req.body?.videoId);res.status(['sent','already_sent'].includes(result.status)?200:409).json(result);}
+    catch{res.status(503).json({status:'review_required'});}
+  });
   // publicSummaries: 서버가 넘겨주는 캐시·압축 응답기(없으면 매번 저장 상태를 읽음)
   app.get('/api/youtube/summaries',async(req,res)=>{
     try{if(publicSummaries)return await publicSummaries(req,res);res.setHeader('Cache-Control','no-store');res.json(await runtime.publicLibrary());}

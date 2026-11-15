@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   ExternalLink, 
@@ -33,6 +33,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   const { t, lang, locale } = useLang();
   const [isSending, setIsSending] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!event) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', escape);
+    return () => { document.body.style.overflow = previous; document.removeEventListener('keydown', escape); };
+  }, [event?.id, onClose]);
 
   if (!event) return null;
 
@@ -151,12 +160,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/80 backdrop-blur-sm">
+      <div role="dialog" aria-modal="true" aria-labelledby="news-detail-title" className="news-detail bg-slate-900 border border-slate-700/80 sm:rounded-2xl max-w-2xl w-full h-[100dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="news-detail-toolbar flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-2 sm:px-6 bg-slate-950/80">
+          <span className="text-sm font-semibold text-slate-200">{t('뉴스 상세', 'News details')}</span>
+          <button autoFocus onClick={onClose} aria-label={t('뉴스 상세 닫기', 'Close news details')} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-400"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="news-detail-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
         
         {/* Header */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 flex items-start justify-between bg-slate-950/80">
-          <div className="space-y-1.5 pr-3 min-w-0">
+        <div className="news-detail-heading px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/80">
+          <div className="space-y-1.5 min-w-0">
             <div className="flex items-center flex-wrap gap-1.5">
               {/* Companies */}
               {event.relatedCompanies && event.relatedCompanies.map((c, idx) => (
@@ -204,7 +218,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               )}
             </div>
 
-            <h2 className="text-sm sm:text-lg font-bold text-white leading-snug pt-1">
+            <h2 id="news-detail-title" className="text-base sm:text-lg font-bold text-white leading-relaxed pt-1 break-words">
               {lang === 'en' ? (event.originalTitle || event.title) : (event.titleKo || event.title)}
             </h2>
             {lang === 'ko' && (event.originalTitle || event.title) !== (event.titleKo || event.title) && (
@@ -213,16 +227,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-sm text-slate-200">
+        <div className="news-detail-sections p-3 sm:p-6 space-y-3 sm:space-y-4 text-sm text-slate-200">
           
           {event.screening && event.analysisStatus !== 'completed' && (
             <div className="bg-cyan-950/40 p-4 rounded-xl border border-cyan-900">
@@ -371,6 +379,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 </div>
                 <a
                   href={event.primarySource.url}
+                  aria-label={t(`${event.primarySource.name} 원문 보기`, `Read ${event.primarySource.name} source`)}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white transition-colors shrink-0"
@@ -398,6 +407,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   </div>
                   <a
                     href={rel.url}
+                    aria-label={t(`${rel.name} 원문 보기`, `Read ${rel.name} source`)}
                     target="_blank"
                     rel="noreferrer noopener"
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
@@ -410,14 +420,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           </div>
 
           {/* Model info metadata */}
-          <div className="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+          <div className="text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
             <span>{t('최초 발견', 'First seen')}: {new Date(event.firstSeenAt).toLocaleString(locale)}</span>
             <span>{t('분석 모델', 'Model')}: {event.geminiModelUsed || 'gemini-3.7-flash'}</span>
           </div>
 
         </div>
+        </div>
 
-        <div className="flex justify-end border-t border-slate-800 px-4 py-3"><button onClick={onClose} className="min-h-[40px] rounded-lg border border-slate-700 px-4 text-sm text-slate-300">{t('닫기','Close')}</button></div>
+        <div className="news-detail-footer flex shrink-0 justify-end border-t border-slate-800 px-3 py-2 sm:px-6"><button onClick={onClose} className="min-h-[44px] w-full sm:w-auto rounded-lg border border-slate-700 px-4 text-sm text-slate-300 focus-visible:ring-2 focus-visible:ring-cyan-400">{t('닫기','Close')}</button></div>
 
       </div>
     </div>

@@ -82,7 +82,7 @@ function LineChart({lines, yFormat, height = 240, ariaLabel}: {lines: Line[]; yF
   return <div className="min-w-0" ref={box}>
     <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">{lines.map(l => <span key={l.key} className="inline-flex items-center">
       <span className="mr-1.5 inline-block w-4" style={{borderTop: `2px ${l.dashed ? 'dashed' : 'solid'} ${l.color}`, opacity: l.dashed && !l.width ? 0.6 : 1}}/>{l.label}</span>)}</div>
-    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full max-w-full touch-none select-none" role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto w-full max-w-full touch-pan-y select-none" role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
       {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#1e293b"/><text x={L - 6} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#94a3b8">{yFormat(v)}</text></g>)}
       {xt.map((t, i) => <text key={i} x={x(t)} y={H - 6} textAnchor={i === 0 ? 'start' : i === xt.length - 1 ? 'end' : 'middle'} fontSize="11" fill="#94a3b8">{fmtT(t)}</text>)}
       {lines.map(l => <polyline key={l.key} fill="none" stroke={l.color} strokeWidth={l.width ?? (l.dashed ? 1 : 2)} strokeDasharray={l.dashed ? (l.width ? '6 5' : '4 4') : undefined} strokeLinejoin="round"
@@ -94,18 +94,18 @@ function LineChart({lines, yFormat, height = 240, ariaLabel}: {lines: Line[]; yF
 }
 
 function Table({head, children, mobileHide = []}: {head: string[]; children: React.ReactNode; mobileHide?: number[]}) {
-  return <div className="-mx-1 overflow-x-auto px-1"><table className="w-full border-collapse text-[13px] sm:text-sm">
+  return <div role="region" aria-label={tr('전략 비교 표 · 좌우로 이동', 'Strategy comparison table · scroll horizontally')} tabIndex={0} className="strategy-table -mx-1 overflow-x-auto px-1 focus-visible:outline-2 focus-visible:outline-cyan-400"><table className="w-full border-collapse text-[13px] sm:text-sm">
     <thead><tr>{head.map((h, i) => <th key={h} className={`border-b border-slate-800 px-1.5 sm:px-2 py-2 text-xs font-medium text-slate-400 ${i ? 'text-right' : 'text-left'} ${mobileHide.includes(i) ? 'hidden sm:table-cell' : ''}`}>{h}</th>)}</tr></thead>
     <tbody>{children}</tbody></table></div>;
 }
 const td = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-right tabular-nums whitespace-nowrap';
 const tdL = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-left whitespace-nowrap';
 const mh = 'hidden sm:table-cell';
-const card = 'min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
+const card = 'strategy-card min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
 
 function Kpi({title, value, sub, tone}: {title: string; value: string; sub?: string; tone?: 'ok' | 'warn' | 'bad'}) {
   const c = tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-300' : tone === 'ok' ? 'text-emerald-300' : 'text-white';
-  return <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
+  return <div className="strategy-kpi min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
     <p className="text-xs text-slate-400">{title}</p><p className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-0.5 text-xs leading-5 text-slate-400">{sub}</p>}
   </div>;
 }
@@ -125,7 +125,7 @@ export function StrategyMenu() {
     return () => c.abort();
   }, []);
 
-  return <section aria-label={t('나스닥 전략', 'Nasdaq strategy')} className="min-w-0 space-y-4 text-slate-200">
+  return <section aria-label={t('나스닥 전략', 'Nasdaq strategy')} className="strategy-menu min-w-0 space-y-4 text-slate-200">
     <PageHeader title={t('나스닥 전략', 'Nasdaq Strategy')} description={t('나스닥 하락폭에 따른 매수 규칙을 비교합니다. 투자 권유가 아닌 기록용 계산입니다.', 'Compares drawdown-based buying rules for the Nasdaq-100 (3/25, 5/10/20) with Infinite Buying and plain QQQ DCA. A record-keeping calculation, not investment advice.')}
       />
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}

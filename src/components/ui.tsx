@@ -6,16 +6,21 @@ import { useLang } from '../i18n';
 export function PageHeader({ title, description, actions, status }: { title: string; description?: React.ReactNode; actions?: React.ReactNode; status?: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-white">{title}</h1>
-          {description && <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>}
-        </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="min-w-0 text-xl font-bold text-white">{title}</h1>
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
+      {description && <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>}
       {status && <p role="status" className="mt-2 text-sm text-cyan-300">{status}</p>}
     </div>
   );
+}
+
+export function TelegramSubscribeButton() {
+  const { t } = useLang();
+  return <a href="https://t.me/dsoom_news" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] shrink-0 items-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
+    {t('텔레그램으로 받기 ↗', 'Join Telegram ↗')}
+  </a>;
 }
 
 const base = 'inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50';

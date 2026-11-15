@@ -1,5 +1,7 @@
 .youtube-detail {max-width:1060px;margin-inline:auto;}
 .youtube-detail-header {max-width:760px;margin-inline:auto;}
+.youtube-detail-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.youtube-detail-actions>a {text-decoration:none;color:#67e8f9;}
 .youtube-reading {max-width:760px;margin:24px auto 0;}
 .youtube-toc {padding:18px 20px;border:1px solid #334155;border-radius:12px;margin-bottom:32px;background:#0f172a;}
 .youtube-toc summary {cursor:pointer;min-height:24px;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:.08em;margin-bottom:10px;}
@@ -16,4 +18,18 @@
 .youtube-prose a {color:#67e8f9;text-decoration:underline;text-underline-offset:4px;}
 .youtube-prose .youtube-time {display:inline-flex;align-items:center;min-height:44px;margin:0 8px 8px 0;padding:6px 12px;border:1px solid #334155;border-radius:8px;font-size:13px;line-height:1.5;text-decoration:none;background:#111c2e;}
 .youtube-reading a:focus-visible {outline:2px solid #22d3ee;outline-offset:4px;}
-@media(max-width:640px){.youtube-prose{font-size:16px;line-height:1.9}.youtube-prose h3{font-size:17px;gap:9px;margin-top:32px}.youtube-toc{padding:14px}.youtube-toc a{min-height:44px}.youtube-reading{margin-top:20px}}
+@media(max-width:639px){
+  .youtube-detail{padding:12px;}
+  .youtube-detail-actions>*{flex:1 1 0;min-height:44px;justify-content:center;padding:8px;font-size:12px;line-height:1.5;text-align:center;}
+  .youtube-detail-header>p.mt-5{margin-top:12px;}
+  .youtube-detail-header>h2{margin-top:8px;font-size:18px;line-height:1.6;}
+  .youtube-detail>p.mt-5{margin-top:12px;line-height:1.7;}
+  .youtube-prose{font-size:16px;line-height:1.8;}
+  .youtube-prose p{margin-bottom:14px;}
+  .youtube-prose h3{font-size:17px;gap:8px;margin:24px 0 12px;padding-top:16px;}
+  .youtube-prose .youtube-time{max-width:100%;overflow-wrap:anywhere;}
+  .youtube-toc{padding:8px 12px;margin-bottom:16px;}
+  .youtube-toc summary{min-height:44px;align-content:center;margin-bottom:0;letter-spacing:normal;}
+  .youtube-toc a{min-height:44px;padding:8px 0;gap:8px;}
+  .youtube-reading{margin-top:16px;}
+}

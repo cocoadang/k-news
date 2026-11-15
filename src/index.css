@@ -12,6 +12,12 @@ body,button,input,select,textarea{font-family:inherit;}
 .admin-card input[type=checkbox]{accent-color:#06b6d4;width:18px;height:18px;flex-shrink:0;}
 /* Keep mobile controls easy to tap; reclaim space from framing and gaps. */
 @media(max-width:639px){
+  .news-detail{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+  .news-detail-scroll{overflow-wrap:anywhere;}
+  .news-detail-sections>div.rounded-xl{padding:12px;}
+  .news-detail-sections p,.news-detail-sections li{font-size:14px;line-height:1.7;}
+  .news-detail-sections a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;}
+  .news-detail-sections svg{flex-shrink:0;}
   .admin-settings{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   .admin-settings>header{flex-shrink:0;padding:8px 12px;gap:8px;}
   .admin-settings>header p{margin-top:2px;}

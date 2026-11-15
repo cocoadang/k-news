@@ -1,4 +1,5 @@
 import {summaryLibrary,publicSummaryLibrary} from './library.mjs';
+import {isApprovedDeliveryRecipient} from './publicChannel.mjs';
 import {createVidiqMcpClient} from './mcpClient.mjs';
 import {youtubeDiscovery,vidiqCaptions,telegramTransport} from './adapters.mjs';
 import {rssDiscovery} from './rssDiscovery.mjs';
@@ -106,7 +107,7 @@ export function createConfiguredWallstreetRuntime({getFirestore,config=wallstree
       }
     }
     if(!dependencies.telegram&&config.deliveryApproved===true){
-      if(!env.TELEGRAM_BOT_TOKEN||! /^[1-9]\d*$/.test(config.recipient||''))throw Error('private_delivery_configuration_required');
+      if(!env.TELEGRAM_BOT_TOKEN||!isApprovedDeliveryRecipient(config.recipient))throw Error('private_delivery_configuration_required');
       const transport=telegramTransport({token:env.TELEGRAM_BOT_TOKEN,approved:true,fetcher});
       dependencies.telegram={send(id,text){if(id!==config.recipient)throw Error('recipient_mismatch');return transport.send(id,text);}};
     }

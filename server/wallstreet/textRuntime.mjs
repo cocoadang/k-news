@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {isApprovedDeliveryRecipient} from './publicChannel.mjs';
 import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
 import {reserveVidiq,refundVidiq} from './vidiqBudget.mjs';
@@ -198,7 +199,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           }
           if(r.stage!=='text_delivery')continue;
           if(c.deliveryApproved!==true||!telegram||(c.deliveryMode!=='immediate'&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(c.deliveryTime||''))){r.hold='delivery_approval_time_required';continue;}
-          if(!/^[1-9]\d*$/.test(c.recipient)||(c.deliveryMode!=='immediate'&&!due(now,c.deliveryTime)))continue;
+          if(!isApprovedDeliveryRecipient(c.recipient)||(c.deliveryMode!=='immediate'&&!due(now,c.deliveryTime)))continue;
           delete r.hold;
           for(const p of r.parts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
             p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt});}catch{result={status:'unknown'};}

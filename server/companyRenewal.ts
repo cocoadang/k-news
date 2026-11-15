@@ -278,7 +278,7 @@ ${articleListText}
 1. proposedSearchKeywords: 구글 뉴스/RSS에서 주요 재무/투자 뉴스를 놓치지 않고 수집할 복합 키워드 후보 (최대 3개 제안).
 2. proposedCoreBusinesses: 설명문이 아닌 2~3단어 이내의 간결한 핵심 사업/제품명 (최대 2개 제안, 각 20자 이내).
 3. 각 후보 항목은 반드시 목록에 실존하는 [EVID: id] 중 하나를 evidenceId로 명시해야 하며, 목록에 없는 ID나 추측성 근거는 무효 처리된다.
-4. 각 후보 항목은 제안 이유(reason)를 구체적으로 작성해야 한다.
+4. 각 후보 항목은 제안 이유(reason)를 근거 중심으로 80자 이내로 작성하라. 전체 사유(summaryRationale)는 160자 이내. 키워드는 30자, 핵심 사업은 20자 이내.
 5. 채용공고, 사용자 지원 문의, 단순 API 문서는 근거로 채택하지 말 것.`;
 
   const ai = options?.mockClient !== undefined ? options.mockClient : getGeminiClient();
@@ -307,29 +307,31 @@ ${articleListText}
           properties: {
             proposedSearchKeywords: {
               type: Type.ARRAY,
+              maxItems: 3,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  keyword: { type: Type.STRING },
-                  evidenceId: { type: Type.STRING },
-                  reason: { type: Type.STRING },
+                  keyword: { type: Type.STRING, maxLength: 30 },
+                  evidenceId: { type: Type.STRING, maxLength: 100 },
+                  reason: { type: Type.STRING, maxLength: 80 },
                 },
                 required: ['keyword', 'evidenceId', 'reason'],
               },
             },
             proposedCoreBusinesses: {
               type: Type.ARRAY,
+              maxItems: 2,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  business: { type: Type.STRING },
-                  evidenceId: { type: Type.STRING },
-                  reason: { type: Type.STRING },
+                  business: { type: Type.STRING, maxLength: 20 },
+                  evidenceId: { type: Type.STRING, maxLength: 100 },
+                  reason: { type: Type.STRING, maxLength: 80 },
                 },
                 required: ['business', 'evidenceId', 'reason'],
               },
             },
-            summaryRationale: { type: Type.STRING },
+            summaryRationale: { type: Type.STRING, maxLength: 160 },
           },
           required: ['proposedSearchKeywords', 'proposedCoreBusinesses'],
         },
@@ -396,7 +398,9 @@ ${articleListText}
     parsed = null;
   }
 
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+      !Array.isArray(parsed.proposedSearchKeywords) || !Array.isArray(parsed.proposedCoreBusinesses) ||
+      finishReason === 'MAX_TOKENS') {
     // 원인 진단용: 응답 종료 사유(MAX_TOKENS면 잘림)와 길이를 기록
     db.addLog(
       'Gemini',

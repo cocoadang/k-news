@@ -398,12 +398,12 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   });
 
   // 3-1. Company Keyword & Business AI Suggestion (Admin only + Rate Limited)
-  app.post('/api/admin/companies/spacex/approved-test',verifyAdminAuth,aiRateLimitMiddleware,async(_req,res)=>{
+  app.post('/api/admin/companies/:companyId/approved-test',verifyAdminAuth,aiRateLimitMiddleware,async(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     try{
       const available=getIsFirestoreAvailable(),week=getSeoulWeekString();
       const before=available?await firestoreRepo.getWeeklyRenewalBudget(week):null;
-      const result=await runApprovedKeywordTest({firestore:available?initFirestore():null,execute:executeWeeklyCompanyRenewal,getArticles:getRecentCompanyArticlesForRenewal,sync:(c:any)=>db.syncAuthoritativeCompany(c),ready:!!process.env.OPENAI_API_KEY&&db.getSettings().weeklyCompanyRenewalEnabled!==false});
+      const result=await runApprovedKeywordTest({companyId:req.params.companyId,firestore:available?initFirestore():null,execute:executeWeeklyCompanyRenewal,getArticles:getRecentCompanyArticlesForRenewal,sync:(c:any)=>db.syncAuthoritativeCompany(c),ready:!!process.env.OPENAI_API_KEY&&db.getSettings().weeklyCompanyRenewalEnabled!==false});
       const after=available?await firestoreRepo.getWeeklyRenewalBudget(week):null;
       res.status(result.status==='success'?200:409).json({...result,weeklyBudgetBefore:before,weeklyBudgetAfter:after});
     }catch{res.status(503).json({status:'review_required'});}

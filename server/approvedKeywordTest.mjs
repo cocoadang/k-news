@@ -1,16 +1,19 @@
 import {randomUUID} from 'node:crypto';
 export const APPROVED_TEST_ID='spacex-20261115';
 export const APPROVED_TEST_END=Date.parse('2026-11-15T15:00:00Z'); // Ends at midnight KST.
+export const APPROVED_NVIDIA_TEST_ID='nvda-20261115';
+const approvals={spacex:APPROVED_TEST_ID,nvda:APPROVED_NVIDIA_TEST_ID};
 const view=c=>({searchKeywords:c.searchKeywords||[],coreBusinesses:c.coreBusinesses||[],pinnedSearchKeywords:c.pinnedSearchKeywords||[],lastKeywordRenewalAttemptAt:c.lastKeywordRenewalAttemptAt||null,version:c.version||1});
 
 // Owner approved one extra call for this one company/date. The normal weekly
 // budget collection is neither read as an allowance nor modified here.
-export async function runApprovedKeywordTest({firestore,execute,getArticles,sync,now=new Date(),ready=true}){
+export async function runApprovedKeywordTest({firestore,execute,getArticles,sync,now=new Date(),ready=true,companyId='spacex'}){
+ if(!Object.hasOwn(approvals,companyId))return {status:'not_approved'};
  if(!ready||!firestore)return {status:'unavailable'};
  const at=now.getTime();if(at>=APPROVED_TEST_END||at<Date.parse('2026-11-15T00:00:00+09:00'))return {status:'approval_expired'};
- const articles=getArticles('spacex',30,20,at);if(articles.length<2)return {status:'insufficient_evidence'};
- const ref=firestore.collection('companies').doc('spacex');
- const ledger=firestore.collection('approved_keyword_tests').doc(APPROVED_TEST_ID);
+ const articles=getArticles(companyId,30,20,at);if(articles.length<2)return {status:'insufficient_evidence'};
+ const ref=firestore.collection('companies').doc(companyId);
+ const ledger=firestore.collection('approved_keyword_tests').doc(approvals[companyId]);
  const claim=await firestore.runTransaction(async tx=>{
   const [previous,snap]=await Promise.all([tx.get(ledger),tx.get(ref)]);
   if(previous.exists)return {status:'already_attempted'};
@@ -29,7 +32,7 @@ export async function runApprovedKeywordTest({firestore,execute,getArticles,sync
  try{result=await execute(claim.company,{now,expectedVersion:claim.company.version||1,lockToken:claim.token,preFilteredArticles:articles,preserveScheduledAttemptAt:claim.company.lastKeywordRenewalAttemptAt});}
  catch{await ledger.set({status:'review_required',finishedAt:new Date().toISOString()},{merge:true});return {status:'review_required'};}
  const after=result.updatedProfile?view(result.updatedProfile):null;
- const report={status:result.status,companyId:'spacex',before:claim.before,after,reason:result.reason||null,evidenceArticleIds:result.historyEntry?.evidenceArticleIds||[],usedTokens:result.usedTokens||null,finishedAt:new Date().toISOString()};
+ const report={status:result.status,companyId,before:claim.before,after,reason:result.reason||null,evidenceArticleIds:result.historyEntry?.evidenceArticleIds||[],usedTokens:result.usedTokens||null,finishedAt:new Date().toISOString()};
  await ledger.set(report,{merge:true});
  if(result.updatedProfile)sync(result.updatedProfile);
  return report;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectXPosts, emptyXState, xPostStatements, X_ACCOUNTS, XState, XPost } from './xPosts';
+import { collectXPosts, emptyXState, xPostStatements, X_ACCOUNTS, XState, XPost, recentSinceId } from './xPosts';
 import { headlineContents, parseHeadlineOutput } from './koHeadlines';
 
 function memStore() {
@@ -8,6 +8,30 @@ function memStore() {
   return { writes, get: () => s, store: { read: async () => JSON.parse(JSON.stringify(s)), write: async (n: XState, added: XPost[]) => { s = JSON.parse(JSON.stringify(n)); writes.push(added); } } };
 }
 const NOW = Date.parse('2026-11-07T00:00:00Z');
+const snowflake=(time:number)=>(BigInt(time-1288834974657)<<22n).toString();
+
+test('recent search omits expired, near-boundary, malformed and future cursors',()=>{
+ assert.equal(recentSinceId(snowflake(NOW-86400000),NOW),snowflake(NOW-86400000));
+ for(const id of [snowflake(NOW-13*86400000),snowflake(NOW-7*86400000+30000),snowflake(NOW+60000),'not-an-id'])assert.equal(recentSinceId(id,NOW),undefined);
+});
+
+test('stale cursor recovers real recent results, deduplicates posts, and advances only to returned ID',async()=>{
+ const m=memStore(),account=X_ACCOUNTS[4],old=snowflake(NOW-13*86400000),fresh=snowflake(NOW-3600000);
+ m.get().months['2026-11']={usd:3};m.get().accounts[account.username]={newestId:old};
+ m.get().posts[fresh]={id:fresh,username:account.username,personId:account.personId,companyId:'googl',text:'Already stored',createdAt:new Date(NOW-3600000).toISOString()};
+ let calls=0;
+ const fetchImpl:any=async(u:any)=>{calls++;assert.equal(new URL(u).searchParams.has('since_id'),false);return Response.json({data:[{id:fresh,text:'Existing post',created_at:new Date(NOW-3600000).toISOString()}],meta:{newest_id:fresh}});};
+ const r=await collectXPosts({token:'t',store:m.store,fetchImpl,now:()=>NOW,deadline:NOW+60000,capUsd:5,accounts:[account]});
+ assert.equal(r.status,'x_ok');assert.equal(r.kept,0);assert.equal(calls,1);assert.deepEqual(r.recentCursorResets,[account.username]);assert.equal(m.get().accounts[account.username].newestId,fresh);
+ assert.equal(m.get().months['2026-11'].usd,3.005);
+});
+
+test('one account HTTP 400 does not prevent subsequent accounts from collecting',async()=>{
+ const m=memStore();m.get().months['2026-11']={usd:3};const calls:string[]=[];
+ const fetchImpl:any=async(u:any)=>{const q=new URL(u).searchParams.get('query')!;calls.push(q);return q.includes('sundarpichai')?new Response('{}',{status:400}):Response.json({data:[{id:snowflake(NOW-1000),text:'New post',created_at:new Date(NOW-1000).toISOString()}]});};
+ const r=await collectXPosts({token:'t',store:m.store,fetchImpl,now:()=>NOW,deadline:NOW+60000,capUsd:5,accounts:[X_ACCOUNTS[4],X_ACCOUNTS[5]]});
+ assert.equal(calls.length,2);assert.equal(r.kept,1);assert.equal(m.get().lastRun?.status,'partial');
+});
 
 function fakeX(pages: Record<string, any[]>, calls: string[], status = 200) {
   return (async (u: any) => {

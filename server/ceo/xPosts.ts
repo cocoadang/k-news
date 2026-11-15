@@ -33,7 +33,7 @@ export interface XState {
   /** 계정별: 최근 검색 기준 id, 과거 검색 진행 위치 */
   accounts: Record<string, { newestId?: string; backfillUntil?: string; backfillDone?: boolean; archiveUnavailable?: boolean }>;
   posts: Record<string, XPost>;
-  lastRun?: { at: string; status: string; fetched: number; kept: number; usd: number };
+  lastRun?: { at: string; status: string; fetched: number; kept: number; usd: number; recentCursorResets?: string[] };
 }
 export const emptyXState = (): XState => ({ version: 1, months: {}, accounts: {}, posts: {} });
 export interface XStore { read(): Promise<XState>; write(s: XState, added: XPost[]): Promise<void> }
@@ -42,6 +42,16 @@ const month = (ms: number) => new Date(ms).toISOString().slice(0, 7);
 const kstDay = (iso: string) => new Date(Date.parse(iso) + 9 * 3600000).toISOString().slice(0, 10);
 
 export function spentUsd(s: XState, ms: number) { return s.months[month(ms)]?.usd || 0; }
+
+/** Recent search rejects since_id outside its rolling seven-day window. A
+ * stale cursor must not block an inactive account forever. Omitting it asks
+ * X for its supported recent window; stored post IDs still deduplicate reads.
+ * Keep a minute of margin for transport delay and provider clock differences. */
+export function recentSinceId(id:string|undefined, now:number):string|undefined {
+  if(!id || !/^\d{16,20}$/.test(id))return undefined;
+  const createdAt=Number((BigInt(id)>>22n)+1288834974657n);
+  return createdAt>now-7*86400000+60000 && createdAt<=now ? id : undefined;
+}
 
 /** 검색 1회: 결과 수만큼 과금. 예약(max_results×단가)이 상한을 넘으면 요청하지 않음 */
 async function search(o: { token: string; fetchImpl: typeof fetch; s: XState; now: number; cap: number; archive: boolean; query: string; sinceId?: string; endTime?: string; startTime?: string; max: number }) {
@@ -71,7 +81,7 @@ export async function collectXPosts(o: { token?: string; store: XStore; fetchImp
   const f = o.fetchImpl || fetch;
   const cap = o.capUsd ?? X_DEFAULT_CAP_USD;
   const s = await o.store.read();
-  let fetched = 0, kept = 0; const notes: string[] = []; const added: XPost[] = [];
+  let fetched = 0, kept = 0; const notes: string[] = []; const added: XPost[] = []; const recentCursorResets:string[]=[];
   const keep = (a: XAccount, d: any) => {
     const text = String(d?.note_tweet?.text || d?.text || '').trim();
     if (!d?.id || !text || s.posts[d.id]) return;
@@ -86,8 +96,10 @@ export async function collectXPosts(o: { token?: string; store: XStore; fetchImp
     const query = `from:${a.username} -is:retweet -is:reply${a.keywords ? ' ' + a.keywords : ''}`;
     try {
       // 1) 최근 7일(새 글)
-      const r = await search({ token: o.token, fetchImpl: f, s, now: o.now(), cap, archive: false, query, sinceId: st.newestId, max: 100 });
-      if (!r.ok) { notes.push(`${a.username}:${r.reason}`); if (r.reason.startsWith('http_40')) break; continue; }
+      const sinceId=recentSinceId(st.newestId,o.now());
+      if(st.newestId && !sinceId)recentCursorResets.push(a.username);
+      const r = await search({ token: o.token, fetchImpl: f, s, now: o.now(), cap, archive: false, query, sinceId, max: 100 });
+      if (!r.ok) { notes.push(`${a.username}:${r.reason}`); if (r.reason==='http_401'||r.reason==='http_403') break; continue; }
       fetched += r.data.length; r.data.forEach(d => keep(a, d));
       if (r.newestId) st.newestId = r.newestId;
       if (!st.backfillUntil) st.backfillUntil = r.oldestTime || new Date(o.now() - 7 * 86400000).toISOString();
@@ -101,9 +113,9 @@ export async function collectXPosts(o: { token?: string; store: XStore; fetchImp
     } catch (e: any) { notes.push(`${a.username}:${String(e?.name || 'error')}`); }
   }
   const usd = spentUsd(s, o.now());
-  s.lastRun = { at: new Date(o.now()).toISOString(), status: notes.length ? 'partial' : 'ok', fetched, kept, usd };
+  s.lastRun = { at: new Date(o.now()).toISOString(), status: notes.length ? 'partial' : 'ok', fetched, kept, usd, recentCursorResets };
   await o.store.write(s, added);
-  return { status: notes.length ? 'x_partial' : 'x_ok', fetched, kept, monthUsd: usd, notes: notes.slice(0, 6) };
+  return { status: notes.length ? 'x_partial' : 'x_ok', fetched, kept, monthUsd: usd, notes: notes.slice(0, 6), recentCursorResets };
 }
 
 /** CEO 발언 화면용 공개 항목 (본인 X 게시물, 게시일 기준) */

@@ -1,4 +1,5 @@
 // Explicit server deployment switch. Credentials remain environment/Secret Manager bindings.
+import {PUBLIC_CHANNEL_ID} from './publicChannel.mjs';
 const enabled=process.env.KNEWS_YOUTUBE_ENABLED==='true';
 // The deployment activation time (10/29 11:21 KST) is later than that morning's episodes, which were then never collected.
 // Collection may look back to 10/29 00:00 KST; the 48-hour discovery window still bounds how old a video can be.
@@ -25,7 +26,7 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   mode:'caption_text',vidiqApproved:enabled,paidFallback:false,freeEvidence:null,projectId:'gen-lang-client-0064554427',
   supadataApproved:enabled,supadataOrganizationId:'febfd73e-8c82-4621-8c32-fbae9b021859',supadataCycleStart:process.env.KNEWS_SUPADATA_WINDOW_START?Date.parse(process.env.KNEWS_SUPADATA_WINDOW_START):null,supadataCycleEnd:process.env.KNEWS_SUPADATA_WINDOW_END?Date.parse(process.env.KNEWS_SUPADATA_WINDOW_END):null,supadataCycleLimit:90,supadataDailyLimit:6,
   discoverySource:process.env.KNEWS_YOUTUBE_DISCOVERY_SOURCE||'official_rss',
-  discoveryApproved:enabled,summaryApproved:enabled,deliveryApproved:enabled,combinedTokenCapVerified:true,deliveryMode:'immediate',deliveryTime:null,recipient:process.env.TELEGRAM_CHAT_ID||null,
+  discoveryApproved:enabled,summaryApproved:enabled,deliveryApproved:enabled,combinedTokenCapVerified:true,deliveryMode:'immediate',deliveryTime:null,recipient:PUBLIC_CHANNEL_ID,
   dailyCredits:5,monthlyCredits:110,dailySummaryMicros:260000,monthlySummaryMicros:2000000,
   summaryReservationMicros:30000,longSummaryReservationMicros:50000,longSummaryMinutes:30,model:'gpt-6-luna',inputMicrosPerToken:.1,outputMicrosPerToken:.5,maxOutputTokens:4200});
 

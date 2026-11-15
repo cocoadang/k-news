@@ -48,6 +48,7 @@ jobs:
             echo "::error title=monitoringAndDedup::$(grep -E 'not ok|rror|xpected|actual|✖|FAIL' /tmp/m.txt | head -15 | tr '\n' ' ' | cut -c1-1500)"; tail -40 /tmp/m.txt; exit 1
           fi
       - run: python3 -m unittest discover -s ops -p "test_*.py"
+      - run: node --import tsx server/telegramSubscriber.test.ts
       - run: npm run build
 
   deploy:

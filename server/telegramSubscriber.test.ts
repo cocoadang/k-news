@@ -1,7 +1,8 @@
 import assert from 'node:assert';
 import crypto from 'node:crypto';
 import { db } from './db';
-import { handleTelegramCommand, sendEventToTelegram, mapConcurrent, isBotBlockedError } from './telegram';
+import { handleTelegramCommand, sendEventToTelegram, sendPublicEventToTelegram, mapConcurrent, isBotBlockedError } from './telegram';
+import { PUBLIC_CHANNEL_ID } from './wallstreet/publicChannel.mjs';
 import { NewsEvent } from './types';
 
 async function runTests() {
@@ -145,6 +146,7 @@ async function runTests() {
       originalTitle: 'SpaceX Starship Completes Flight 6 Successfully',
       category: 'Starship / 우주인프라',
       importance: 5,
+      sourceTier: 'tier1',
       isImportant: true,
       impact: 'positive',
       impactRationale: '스타십 발사 주기가 단축되며 상용화 속도 가속화',
@@ -267,13 +269,26 @@ async function runTests() {
     assert.strictEqual(fetchCalls[0].body.chat_id, process.env.TELEGRAM_CHAT_ID, 'Must fallback to TELEGRAM_CHAT_ID');
     console.log('✅ Test 9 Passed: Successfully fell back to TELEGRAM_CHAT_ID when subscriber count is 0.');
 
+    // Public publishing must use only the channel, share dedup, and report rejected sends.
+    fetchCalls.length = 0;
+    const publicEvent = {...sampleEvent3, id: `public-${Date.now()}`, title: '공개 채널 신규 테스트 뉴스', isSentToTelegram: false, telegramDispatchStatus: undefined};
+    await db.saveEvent(publicEvent);
+    assert.strictEqual((await sendPublicEventToTelegram(publicEvent, true)).success, true);
+    assert.deepStrictEqual(fetchCalls.map(c => c.body.chat_id), [PUBLIC_CHANNEL_ID]);
+    assert.strictEqual((await sendPublicEventToTelegram(publicEvent)).success, false);
+    assert.strictEqual(fetchCalls.length, 1);
+    mockFetchHandler = async () => new Response(JSON.stringify({ok:false,description:'Forbidden: bot is not a member'}), {status:403});
+    const rejectedPublicEvent = {...publicEvent, id: `public-rejected-${Date.now()}`, title:'공개 채널 권한 실패 테스트', isSentToTelegram:false, telegramDispatchStatus:undefined};
+    await db.saveEvent(rejectedPublicEvent);
+    assert.strictEqual((await sendPublicEventToTelegram(rejectedPublicEvent,true)).success,false);
+
     // -------------------------------------------------------------
     // Test 10: Duplicate send prevention (Atomic Claiming)
     // -------------------------------------------------------------
     console.log('\nTest 10: Duplicate send prevention via atomic claim');
     const duplicateTry = await sendEventToTelegram(sampleEvent3, false);
     assert.strictEqual(duplicateTry.success, false, 'Second non-forced dispatch of sent event must be rejected');
-    assert.ok(duplicateTry.error?.includes('already sent') || duplicateTry.error?.includes('actively processed'));
+    assert.ok(duplicateTry.error?.includes('already sent') || duplicateTry.error?.includes('already dispatched') || duplicateTry.error?.includes('actively processed'));
     console.log('✅ Test 10 Passed: Atomic claim successfully prevents duplicate dispatches.');
 
     // -------------------------------------------------------------

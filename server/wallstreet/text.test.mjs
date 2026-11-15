@@ -2,7 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createTextRuntime,renderBrief,parseUiTranscript,TEXT_PROJECT,SUMMARY_FIX_VERSION} from './textRuntime.mjs';
 import {PROGRAMMES} from './programmes.mjs';
+import {PUBLIC_CHANNEL_ID,isApprovedDeliveryRecipient} from './publicChannel.mjs';
 const now=Date.parse('2026-10-28T10:00:00Z');
+
+test('approved public channel delivers once; unrelated channels remain blocked and private backlog is not replayed',async()=>{
+ const x=setup({recipient:PUBLIC_CHANNEL_ID,deliveryMode:'immediate'}),r=x.run();
+ await r.importTranscript(source(video()));
+ await Promise.all([r.run(),r.run()]);await x.run().run();
+ assert.equal(x.sent.length,1);assert.equal(x.sent[0].id,PUBLIC_CHANNEL_ID);
+ assert.equal(x.store.state.videos[video().id].stage,'sent');
+ for(const id of ['-1009999999','@unapproved','0',''])assert.equal(isApprovedDeliveryRecipient(id),false);
+ const legacy=setup();await legacy.run().importTranscript(source(video()));
+ legacy.deps.config.recipient=PUBLIC_CHANNEL_ID;legacy.deps.config.deliveryMode='immediate';
+ await legacy.run().run();assert.equal(legacy.sent.length,0);
+});
 
 test('manual request IDs survive restart and concurrent execution without altering scheduled slot',async()=>{
  const x=setup({dailyCheckTimes:['09:00','15:00'],excludedVideoIds:['Idn_d5ArZvA']});let calls=0;

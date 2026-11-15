@@ -84,3 +84,5 @@
 }
 
 .tl-related{margin:8px 0 0;padding-left:18px;color:#cfd8e6;font-size:13px;line-height:1.6}
+
+@media(max-width:640px){.ceo-tl .tl-scopes{flex-wrap:nowrap;overflow-x:auto;padding:2px 0 10px;max-width:100%;}.ceo-tl .tl-chip{flex-shrink:0;min-height:40px;font-size:13px;padding:6px 12px;}}

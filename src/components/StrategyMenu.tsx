@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {PageHeader, RefreshButton, chipClass} from './ui';
+import {PageHeader, chipClass} from './ui';
 import {useLang, tr, getLang} from '../i18n';
 
 // 나스닥 전략 비교 — 자료 출처는 KS Wealth OS(asset.dsoom.com)
@@ -114,7 +114,6 @@ export function StrategyMenu() {
   const {t, lang} = useLang();
   const [live, setLive] = useState<Live | null>(null), [bt, setBt] = useState<Backtest | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [version, setVersion] = useState(0);
   const [variant, setVariant] = useState<string>('');
   useEffect(() => {
     const c = new AbortController(); setStatus('loading');
@@ -124,11 +123,11 @@ export function StrategyMenu() {
     ]).then(([l, b]) => { setLive(l); setBt(b); setStatus(l || b ? 'ready' : 'error'); if (b && !variant) setVariant(Object.keys(b.variants)[0]); })
       .catch(e => { if (e.name !== 'AbortError') setStatus('error'); });
     return () => c.abort();
-  }, [version]);
+  }, []);
 
   return <section aria-label={t('나스닥 전략', 'Nasdaq strategy')} className="min-w-0 space-y-4 text-slate-200">
-    <PageHeader title={t('나스닥 전략', 'Nasdaq Strategy')} description={t('나스닥100 하락폭에 따라 매수처를 바꾸는 규칙(3/25·5/10/20)을 무한매수·QQQ 적립과 비교합니다. 투자 권유가 아닌 기록용 계산입니다.', 'Compares drawdown-based buying rules for the Nasdaq-100 (3/25, 5/10/20) with Infinite Buying and plain QQQ DCA. A record-keeping calculation, not investment advice.')}
-      actions={<RefreshButton onClick={() => setVersion(v => v + 1)} busy={status === 'loading'}/>}/>
+    <PageHeader title={t('나스닥 전략', 'Nasdaq Strategy')} description={t('나스닥 하락폭에 따른 매수 규칙을 비교합니다. 투자 권유가 아닌 기록용 계산입니다.', 'Compares drawdown-based buying rules for the Nasdaq-100 (3/25, 5/10/20) with Infinite Buying and plain QQQ DCA. A record-keeping calculation, not investment advice.')}
+      />
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}
     {status === 'error' && <p role="alert">{t('자료를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.', 'Could not load data. Please refresh in a moment.')}</p>}
     {live && <LiveSection live={live}/>}

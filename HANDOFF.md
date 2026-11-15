@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-11-15 Simplified public/admin UX
+- Owner confirmed all four public menus stay: YouTube, news, CEO and Nasdaq strategy. Public pages now focus on content; refresh/collect, per-news send/reanalysis, YouTube channel tests and CEO translation tools live in authenticated Settings → 운영.
+- Settings is now `AdminSettings.tsx`: 운영 / 기업·키워드 / 자동화·알림. Old `SettingsModal.tsx`, duplicate CEO legacy list, inactive driver menu branch, ineffective display-importance control and outdated infrastructure instructions were removed from the UI. Service connection and keyword rollback remain in collapsed sections.
+- Company creation needs a name (ticker optional), starts collection with that name, and enables weekly renewal by default. Seven-day renewal, recent-news evidence, pinned terms, existing weekly five-call cap and versioned history remain intact. The next due date is shown explicitly.
+- `maintainCompanyKeywords` also checks due companies at the start of scheduled analysis-only cycles, so a long daily collection cannot indefinitely starve renewal. It does not create a timer, bypass disabled flags, or change renewal evidence/cost/locking rules.
+- Mobile 390px review: public page and settings fit without horizontal overflow; anonymous gear opens login; collection and settings writes were not executed during UI review.
+
 ## 2026-11-15 Public Telegram channel
 - Owner created `미국주식 뉴스·유튜브 요약`, added `@coocadangnewsBot` as admin with Post Messages, and saved public link https://t.me/dsoom_news.
 - Channel ID `-1004441977675` is from the owner's Telegram Web channel URL. `server/wallstreet/publicChannel.mjs` pins the ID; no secret/config changes are needed. Verify bot access with a live message after deployment.

@@ -2748,9 +2748,11 @@ async function runCeoScheduleAndAdminRegressionTests() {
   assert.strictEqual(publicMenuHtml.includes('ceo-admin-panel'), false, '비로그인 시 ceo-admin-panel 미노출');
   assert.strictEqual(publicMenuHtml.includes('공식 원문 수집'), false, '비로그인 시 새로고침 버튼 미노출');
 
-  const adminMenuHtml = renderToString(React.createElement(CeoMenu, { isAdmin: true }));
+  const publicAdminHtml = renderToString(React.createElement(CeoMenu, { isAdmin: true }));
+  assert.strictEqual(publicAdminHtml.includes('공식 원문 수집'), false, '관리자도 콘텐츠 화면에는 운영 도구 미노출');
+  const adminMenuHtml = renderToString(React.createElement(CeoMenu, { isAdmin: true, adminToolsOnly: true }));
   assert.strictEqual(adminMenuHtml.includes('ceo-admin-panel'), true, '관리자 시 ceo-admin-panel 정상 노출');
-  assert.strictEqual(adminMenuHtml.includes('공식 원문 수집 (관리자)'), true, '관리자 시 새로고침 버튼 정상 노출');
+  assert.strictEqual(adminMenuHtml.includes('공식 원문 수집'), true, '관리자 설정에서 원문 수집 버튼 정상 노출');
 
   // 23-2: 서버 관리자 API 인증 거부 유지 (401/403)
   const testAdminSecret = 'test-admin-secret-23';

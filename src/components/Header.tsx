@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Settings, Lock, ShieldCheck } from 'lucide-react';
+import { Activity, Settings } from 'lucide-react';
 import { AuthStatus } from '../types';
 import { LangToggle, useLang } from '../i18n';
 
@@ -38,34 +38,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LangToggle />
             
-            {/* Admin status (Subtle icon button) */}
-            {authStatus?.requiresAuth && (
-              authStatus.isAuthenticated ? (
-                <button
-                  onClick={onLogout}
-                  title={t('관리자 인증됨 (클릭 시 로그아웃)', 'Admin signed in (click to sign out)')}
-                  className="p-1.5 rounded-lg bg-cyan-950/60 hover:bg-rose-950/60 border border-cyan-800/60 hover:border-rose-800/60 text-cyan-400 hover:text-rose-300 transition-colors cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={onOpenLogin}
-                  title={t('관리자 로그인', 'Admin sign-in')}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 transition-colors cursor-pointer"
-                >
-                  <Lock className="w-4 h-4" />
-                </button>
-              )
-            )}
-
-            {/* 수집 실행·새로고침 버튼은 각 메뉴 머리말(PageHeader)로 옮겼습니다. */}
-
             {/* Settings Gear Button (⚙️) */}
             <button
-              onClick={onOpenSettings}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title={t('기업 및 알림 필터 설정', 'Companies & alert settings')}
+              onClick={authStatus?.isAuthenticated ? onOpenSettings : onOpenLogin}
+              className="min-h-[44px] min-w-[44px] p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title={t('관리자 설정', 'Admin settings')}
               aria-label={t('설정', 'Settings')}
             >
               <Settings className="w-4 h-4" />

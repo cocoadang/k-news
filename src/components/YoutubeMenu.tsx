@@ -1,7 +1,6 @@
 import React, {useEffect,useState,useRef} from 'react';
 import {YoutubeSummaryBody} from './YoutubeSummaryBody';
-import {WallstreetRunButton} from './WallstreetRunButton';
-import {PageHeader,RefreshButton,chipClass,buttonClass} from './ui';
+import {PageHeader,chipClass,buttonClass} from './ui';
 import {useLang,tr,getLang} from '../i18n';
 
 type Video={id:string;title:string;publishedAt:number|null;programmes:string[];status:string;source:string;url:string;summary:string|null};
@@ -14,18 +13,8 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
   const [videos,setVideos]=useState<Video[]>([]),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState('all');
   const [status,setStatus]=useState<'loading'|'ready'|'error'|'auth'>('loading');
   const [version,setVersion]=useState(0);
-  const [runStatus,setRunStatus]=useState('');
-  const [sendingTest,setSendingTest]=useState(false);
-  const [testResult,setTestResult]=useState('');
-  const sendChannelTest=async(id:string)=>{
-    if(sendingTest)return;setSendingTest(true);setTestResult('');
-    try{
-      const r=await fetch('/api/admin/wallstreet/channel-test',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoId:id})});
-      const b=await r.json();setTestResult(b.status==='sent'?t('새 채널로 요약 전송 완료','Summary sent to the new channel'):b.status==='already_sent'?t('이 요약은 이미 채널 테스트로 전송했습니다.','This summary was already sent as a channel test.'):t('전송 결과 확인이 필요합니다. 반복 전송하지 말고 채널을 확인하세요.','Check the channel before retrying; delivery needs review.'));
-    }catch{setTestResult(t('전송 결과 확인이 필요합니다. 채널을 먼저 확인하세요.','Check the channel before retrying.'));}finally{setSendingTest(false);}
-  };
   const listPosition=useRef(0);
-  const openVideo=(id:string)=>{listPosition.current=window.scrollY;setTestResult('');setSelected(id);window.scrollTo(0,0);};
+  const openVideo=(id:string)=>{listPosition.current=window.scrollY;setSelected(id);window.scrollTo(0,0);};
   const closeVideo=()=>{setSelected(null);requestAnimationFrame(()=>{window.scrollTo(0,listPosition.current);document.getElementById(`video-${selected}`)?.focus({preventScroll:true});});};
   useEffect(()=>{
     setVideos([]);setSelected(null);
@@ -41,17 +30,15 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
   const video=videos.find(v=>v.id===selected);
   const button=buttonClass.secondary;
   return <section aria-label={t('유튜브 요약','YouTube summaries')} className="min-w-0 space-y-4 text-slate-200">
-    <PageHeader title={t('유튜브 요약','YouTube Summaries')} description={t('영상별 상세 요약과 근거 장면을 확인하세요. 날짜는 한국시간 기준입니다.','Detailed per-video summaries with timestamped evidence. Summaries are in Korean; times are KST.')} status={runStatus||undefined}
-      actions={<>{isAdmin&&<WallstreetRunButton onStatus={setRunStatus} onDone={()=>setVersion(v=>v+1)}/>}<RefreshButton onClick={()=>setVersion(v=>v+1)}/></>}/>
+    <PageHeader title={t('유튜브 요약','YouTube Summaries')} description={t('영상의 핵심 내용과 근거 장면','Detailed per-video summaries with timestamped evidence. Summaries are in Korean; times are KST.')} />
     {     status==='loading'?<p role="status">{t('저장된 요약을 불러오는 중입니다.','Loading saved summaries…')}</p>:
-     status==='error'?<p role="alert">{t('저장 결과를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.','Could not load saved results. Please refresh in a moment.')}</p>:
+     status==='error'?<p role="alert">{t('요약을 불러오지 못했습니다. 잠시 후 다시 접속해 주세요.','Could not load saved results. Please refresh in a moment.')}</p>:
      video?<article className="youtube-detail min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
        <div className="youtube-detail-header"><button className={button} onClick={closeVideo}>← {t('영상 목록','Video list')}</button>
        <p className="mt-5 text-sm text-cyan-300">{video.programmes.map(p=>programmes[p]).join(' · ')||t('코너 정보 없음','No programme info')}</p>
        <h2 className="mt-3 break-words text-xl font-bold leading-relaxed text-white">{video.title}</h2>
        <p className="mt-2 text-sm text-slate-400">{date(video.publishedAt)} · {statuses[video.status]||t('상태 확인 필요','Status unknown')}</p>
        <a className="mt-3 inline-block break-all text-cyan-300 underline" href={video.url} target="_blank" rel="noopener noreferrer">{t('YouTube 원문 보기','Watch on YouTube')} ↗</a>
-       {isAdmin&&video.status==='ready'&&<div className="mt-4"><button className={button} disabled={sendingTest} onClick={()=>sendChannelTest(video.id)}>{sendingTest?t('전송 중…','Sending…'):t('새 채널로 테스트 발송','Send channel test')}</button>{testResult&&<p role="status" className="mt-2 text-sm text-cyan-300">{testResult}</p>}</div>}
        </div>{video.status==='ready'&&video.summary?<><p className="mx-auto mt-5 max-w-[760px] border-l-2 border-slate-600 pl-3 text-xs leading-6 text-slate-400">{video.source==='transcript_review'?t('자막 직접 검토 요약 · 외부 공식 자료 대조 미실시','Summary from a reviewed transcript · not cross-checked against official sources'):video.source==='supervised_trial'?t('기존 시험의 자막 검토·교정본 · 무인 자동 검증 결과가 아닙니다. 외부 공식 자료 대조 미실시','Reviewed/corrected transcript from an earlier trial · not an automated verification · not cross-checked against official sources'):t('자동 자막 기반 요약 · 근거 대조·점검을 통과한 항목만 표시 · 외부 공식 자료 대조 미실시','Summary from auto-captions · only items that passed evidence checks are shown · not cross-checked against official sources')}</p>
        <YoutubeSummaryBody text={video.summary} videoId={video.id}/></>:<div className="mt-5 rounded-lg bg-amber-950/30 p-4 leading-7 text-amber-200">{t('아직 표시할 완료 요약이 없습니다. 검증 보류·미생성·처리 실패 결과를 완료 요약으로 표시하지 않습니다. 채팅에서 직접 검토해 전달한 요약은 이 저장소에 자동으로 등록되지 않습니다.','No finished summary to show yet. Held, missing or failed results are not shown as summaries.')}</div>}
      </article>:<>

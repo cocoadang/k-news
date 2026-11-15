@@ -417,53 +417,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
         </div>
 
-        {/* Footer Actions (Admin Controls) */}
-        <div className="px-4 sm:px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center flex-wrap gap-1">
-            {event.relatedBusinesses.slice(0, 3).map((b, idx) => (
-              <span key={idx} className="text-xs text-cyan-400">#{b}</span>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Preview Telegram */}
-            {onPreviewTelegram && (
-              <button
-                onClick={() => onPreviewTelegram(event)}
-                className="flex items-center px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
-                title={t('텔레그램 메시지 서식 미리보기', 'Preview Telegram message')}
-              >
-                <Eye className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                <span className="hidden sm:inline">{t('미리보기', 'Preview')}</span>
-              </button>
-            )}
-
-            {/* AI Reanalyze */}
-            <button
-              onClick={handleReanalyze}
-              disabled={isReanalyzing}
-              className="flex items-center px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-purple-200 text-xs font-semibold border border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
-              title={t('Gemini 모델로 다시 분석합니다', 'Re-run Gemini analysis')}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isReanalyzing ? 'animate-spin' : 'mr-1'}`} />
-              <span>{isReanalyzing ? t('분석중...', 'Analyzing...') : t('AI 재분석', 'AI re-analyze')}</span>
-            </button>
-
-            {/* Send Telegram */}
-            <button
-              onClick={handleSend}
-              disabled={isSending}
-              className={`flex items-center px-3 sm:px-3.5 py-1.5 rounded-lg text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer ${
-                event.isSentToTelegram
-                  ? 'bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800/60'
-                  : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/30'
-              }`}
-              title={t('개인 Telegram으로 이 알림을 발송합니다', 'Send this alert to your Telegram')}
-            >
-              <Send className={`w-3.5 h-3.5 ${isSending ? 'animate-bounce' : 'mr-1.5'}`} />
-              <span>{isSending ? t('전송중...', 'Sending...') : event.isSentToTelegram ? t('재전송', 'Resend') : t('텔레그램 전송', 'Send to Telegram')}</span>
-            </button>
-          </div>
-        </div>
+        <div className="flex justify-end border-t border-slate-800 px-4 py-3"><button onClick={onClose} className="min-h-[40px] rounded-lg border border-slate-700 px-4 text-sm text-slate-300">{t('닫기','Close')}</button></div>
 
       </div>
     </div>

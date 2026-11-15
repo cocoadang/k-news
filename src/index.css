@@ -3,3 +3,11 @@
 /* 전체 메뉴 공통 글자체: Pretendard(없으면 OS 한글 기본체) */
 :root{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;}
 body,button,input,select,textarea{font-family:inherit;}
+
+.admin-card{border:1px solid #1e293b;border-radius:12px;background:#02061780;padding:16px;min-width:0;}
+.admin-card h3{font-size:14px;font-weight:700;color:#f8fafc;}
+.admin-card p{font-size:12px;line-height:1.7;color:#94a3b8;margin-top:8px;margin-bottom:12px;overflow-wrap:anywhere;}
+.admin-input{display:block;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px 12px;font-size:14px;color:#e2e8f0;}
+.admin-input:focus{outline:2px solid #22d3ee;outline-offset:2px;}
+.admin-card input[type=checkbox]{accent-color:#06b6d4;width:18px;height:18px;flex-shrink:0;}
+@media(max-width:480px){.admin-card{padding:12px;}}

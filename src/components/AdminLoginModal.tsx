@@ -21,7 +21,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setErrorMsg('관리자 비밀번호(ADMIN_SECRET)를 입력해주세요.');
+      setErrorMsg('관리자 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -68,7 +68,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">관리자 인증</h2>
-              <p className="text-xs text-slate-400">Cloud Run 보안 세션 로그인</p>
+              <p className="text-xs text-slate-400">설정을 변경하려면 로그인하세요.</p>
             </div>
           </div>
           <button
@@ -84,14 +84,13 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              서버 환경변수에 <code className="bg-slate-900 px-1 py-0.5 rounded text-cyan-300 font-mono">ADMIN_SECRET</code>이 설정되어 있습니다. 
-              인증 시 안전한 <strong className="text-white">HttpOnly 세션 쿠키</strong>가 발급되며, 브라우저에는 Secret이 일체 저장되지 않습니다.
+              수집 실행과 기업·알림 설정은 관리자만 사용할 수 있습니다.
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              관리자 암호 (ADMIN_SECRET)
+              관리자 비밀번호
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
@@ -99,7 +98,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
               </div>
               <input
                 type="password"
-                placeholder="서버 환경변수에 설정된 암호 입력..."
+                placeholder="관리자 비밀번호 입력"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus

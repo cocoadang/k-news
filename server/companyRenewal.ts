@@ -172,6 +172,7 @@ export async function executeWeeklyCompanyRenewal(
   company: CompanyProfile,
   options?: {
     force?: boolean;
+    preserveScheduledAttemptAt?: string;
     now?: Date;
     expectedVersion?: number;
     lockToken?: string;
@@ -181,6 +182,8 @@ export async function executeWeeklyCompanyRenewal(
 ): Promise<CompanyRenewalResult> {
   const now = options?.now || new Date();
   const nowIso = now.toISOString();
+  const attemptDate = options?.preserveScheduledAttemptAt && Number.isFinite(Date.parse(options.preserveScheduledAttemptAt)) ? new Date(options.preserveScheduledAttemptAt) : now;
+  const attemptIso = attemptDate.toISOString();
 
   // 1. Eligibility Check:
   // If lockToken was claimed and passed, verify ownership against company.renewalLock.token and running status.
@@ -229,11 +232,11 @@ export async function executeWeeklyCompanyRenewal(
         options?.lockToken,
         'skipped',
         'insufficient_recent_articles',
-        now
+        attemptDate
       );
     }
     db.patchCompanyRenewalMetadata(company.id, {
-      lastKeywordRenewalAttemptAt: nowIso,
+      lastKeywordRenewalAttemptAt: attemptIso,
       lastRenewalStatus: 'skipped',
       lastRenewalReason: 'insufficient_recent_articles (최근 30일 내 검증된 투자 뉴스가 2건 미만으로 기존값 유지)',
       renewalLock: null,
@@ -364,11 +367,11 @@ ${articleListText}
         options?.lockToken,
         failStatus,
         errorMsg,
-        now
+        attemptDate
       );
     }
     db.patchCompanyRenewalMetadata(company.id, {
-      lastKeywordRenewalAttemptAt: nowIso,
+      lastKeywordRenewalAttemptAt: attemptIso,
       lastRenewalStatus: failStatus,
       lastRenewalReason: errorMsg,
       renewalLock: null,
@@ -406,11 +409,11 @@ ${articleListText}
         options?.lockToken,
         'failed',
         'malformed_json_response',
-        now
+        attemptDate
       );
     }
     db.patchCompanyRenewalMetadata(company.id, {
-      lastKeywordRenewalAttemptAt: nowIso,
+      lastKeywordRenewalAttemptAt: attemptIso,
       lastRenewalStatus: 'failed',
       lastRenewalReason: 'malformed_json_response (Gemini 응답 JSON 파싱 실패)',
       renewalLock: null,
@@ -482,11 +485,11 @@ ${articleListText}
         options?.lockToken,
         'failed',
         'no_valid_evidenced_proposals',
-        now
+        attemptDate
       );
     }
     db.patchCompanyRenewalMetadata(company.id, {
-      lastKeywordRenewalAttemptAt: nowIso,
+      lastKeywordRenewalAttemptAt: attemptIso,
       lastRenewalStatus: 'failed',
       lastRenewalReason: 'no_valid_evidenced_proposals (유효한 근거 ID를 가진 갱신 후보 없음)',
       renewalLock: null,
@@ -601,7 +604,7 @@ ${articleListText}
     coreBusinesses: finalCoreBusinesses,
     pinnedSearchKeywords: pinnedKeywords,
     pinnedCoreBusinesses: pinnedBusinesses,
-    lastKeywordRenewalAttemptAt: nowIso,
+    lastKeywordRenewalAttemptAt: attemptIso,
     lastKeywordRenewalSuccessAt: nowIso,
     lastRenewalStatus: 'success',
     lastRenewalReason: historyEntry.reason,

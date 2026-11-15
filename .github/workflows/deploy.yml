@@ -28,6 +28,7 @@ jobs:
       - run: npm run lint
       - run: node --import tsx --test server/openaiClient.test.ts
       - run: node --import tsx --test server/keywordMaintenance.test.ts
+      - run: node --import tsx --test server/approvedKeywordTest.test.ts
       - run: node --test src/components/ceo/timeline/*.test.mjs src/components/youtubeSummary.test.mjs src/components/driverModel.test.mjs src/components/driverComparison.test.mjs src/components/driverRiskRange.test.mjs server/statusReport.test.mjs server/opsHealth.test.mjs server/newsTitleKo.test.mjs server/wallstreet/*.test.mjs
       - run: node --import tsx --test server/sessionCompatibility.test.ts server/ceo/reportedHeadlines.test.ts server/ceo/koHeadlines.test.ts server/httpDelivery.test.ts
       - name: CEO server tests

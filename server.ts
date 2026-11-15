@@ -9,7 +9,8 @@ import { jsonCompression, packedCache, publicCdnHeader, sendPacked, serveBuiltAp
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
 import { sendPublicEventToTelegram as sendEventToTelegram, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
-import { rollbackCompanyKeywords } from './server/companyRenewal';
+import { rollbackCompanyKeywords,executeWeeklyCompanyRenewal,getRecentCompanyArticlesForRenewal } from './server/companyRenewal';
+import {runApprovedKeywordTest} from './server/approvedKeywordTest.mjs';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
 import { createCeoRouter, createCeoRuntime, translatePendingHeadlines, translatePendingXPosts } from './server/ceo/routes';
 import { collectXPosts, firestoreXStore, xPostStatements, xTokenStore, validXToken, X_DEFAULT_CAP_USD } from './server/ceo/xPosts';
@@ -17,7 +18,7 @@ import { registerWallstreetRoutes } from './server/wallstreet/runtime.mjs';
 import { createConfiguredWallstreetRuntime } from './server/wallstreet/providers.mjs';
 import { CeoRuntime } from './server/ceo/runtime';
 import { SystemStatus } from './server/types';
-import { getIsFirestoreAvailable, initFirestore, firestoreRepo } from './server/firestore';
+import { getIsFirestoreAvailable, initFirestore, firestoreRepo,getSeoulWeekString } from './server/firestore';
 import {
   SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
@@ -397,6 +398,17 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
   });
 
   // 3-1. Company Keyword & Business AI Suggestion (Admin only + Rate Limited)
+  app.post('/api/admin/companies/spacex/approved-test',verifyAdminAuth,aiRateLimitMiddleware,async(_req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    try{
+      const available=getIsFirestoreAvailable(),week=getSeoulWeekString();
+      const before=available?await firestoreRepo.getWeeklyRenewalBudget(week):null;
+      const result=await runApprovedKeywordTest({firestore:available?initFirestore():null,execute:executeWeeklyCompanyRenewal,getArticles:getRecentCompanyArticlesForRenewal,sync:(c:any)=>db.syncAuthoritativeCompany(c),ready:!!process.env.OPENAI_API_KEY&&db.getSettings().weeklyCompanyRenewalEnabled!==false});
+      const after=available?await firestoreRepo.getWeeklyRenewalBudget(week):null;
+      res.status(result.status==='success'?200:409).json({...result,weeklyBudgetBefore:before,weeklyBudgetAfter:after});
+    }catch{res.status(503).json({status:'review_required'});}
+  });
+
   app.post('/api/companies/suggest-keywords', verifyAdminAuth, aiRateLimitMiddleware, async (req, res) => {
     const { companyName, ticker } = req.body || {};
     if (!companyName || typeof companyName !== 'string' || !companyName.trim()) {

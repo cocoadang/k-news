@@ -1,7 +1,10 @@
 import {randomUUID} from 'node:crypto';
 
 export const TITLE_RETRY_MS=3600000;
-export const canTranslate=(job,now)=>!job || (job.status==='rejected'&&job.attempts<2&&job.retryAt<=now);
+export const TITLE_VALIDATION_VERSION=2;
+// A corrected validator may retry known rejected output once immediately. Ready
+// translations and ambiguous paid requests retain their original claims.
+export const canTranslate=(job,now)=>!job || (job.status==='rejected'&&((job.validationVersion||1)<TITLE_VALIDATION_VERSION || (job.attempts<2&&job.retryAt<=now)));
 
 // Claiming titles and reserving their worst-case cost share one transaction.
 // Unknown outcomes keep both their claim and reservation; successful translations survive event-save failures.
@@ -20,7 +23,7 @@ export function createTitleKoStore(db){
     if(snaps.some(s=>!canTranslate(s.exists?s.data():null,now)))return {ok:false,reason:'claimed'};
     if(!Number.isSafeInteger(spent)||spent<0)throw Error('invalid_title_budget');
     if(spent+reserveNano>capNano)return {ok:false,reason:'month_cap'};
-    keys.forEach((key,i)=>tx.set(ref(key),{status:'reserved',attemptId,attempts:(snaps[i].data()?.attempts||0)+1,at:now}));
+    keys.forEach((key,i)=>{const previous=snaps[i].data();tx.set(ref(key),{status:'reserved',attemptId,validationVersion:TITLE_VALIDATION_VERSION,attempts:((previous?.validationVersion||1)<TITLE_VALIDATION_VERSION?0:(previous?.attempts||0))+1,at:now});});
     tx.set(budget,{month,nano:spent+reserveNano});
     return {ok:true,attemptId};
    });

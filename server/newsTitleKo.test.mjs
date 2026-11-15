@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {translateTitles,needsTitleKo,parseTitles,titleKey} from './newsTitleKo.mjs';
-import {createTitleKoStore,TITLE_RETRY_MS} from './newsTitleKoStore.mjs';
+import {createTitleKoStore,TITLE_RETRY_MS,canTranslate,TITLE_VALIDATION_VERSION} from './newsTitleKoStore.mjs';
 const now=Date.parse('2026-11-01T04:00:00Z');
 const ev=(id,t,extra={})=>({id,title:t,originalTitle:t,analysisStatus:'screened',firstSeenAt:new Date(now).toISOString(),...extra});
 function memoryDb(b){
@@ -25,6 +25,31 @@ test('numbers not in the source drop that translation',()=>{
  const items=[{i:0,t:'Nvidia rises 4%'}];
  assert.equal(parseTitles(JSON.stringify({items:[{i:0,ko:'엔비디아 5% 상승'}]}),items).size,0);
  assert.equal(parseTitles(JSON.stringify({items:[{i:0,ko:'엔비디아 4% 상승'}]}),items).get(0),'엔비디아 4% 상승');
+});
+
+test('equivalent Korean amounts, dates and fiscal years pass; changed values still fail',()=>{
+ const cases=[
+  ['$7 billion orders','70억 달러 주문','7억 달러 주문'],
+  ['$1.66 billion fine','16억6천만 달러 벌금','16억7천만 달러 벌금'],
+  ['$1.4 trillion valuation and $64 billion IPO','기업가치 1조4천억 달러, IPO 640억 달러','기업가치 1조5천억 달러, IPO 640억 달러'],
+  ['$720 million funding','7억2천만 달러 유치','7억3천만 달러 유치'],
+  ['November 13 launch','11월 13일 발사','11월 14일 발사'],
+  ['FY27 revenue $9 billion','2027 회계연도 매출 90억 달러','2028 회계연도 매출 90억 달러'],
+  ['162% rally in a year','1년 새 162% 상승','1년 새 163% 상승'],
+  ['$999 for one year','1년간 999달러','1년간 1,000달러'],
+  ['$9007199254740993 cost','9007199254740993달러 비용','9007199254740992달러 비용'],
+ ];
+ for(const [t,good,bad] of cases){
+  const parse=ko=>parseTitles(JSON.stringify({items:[{i:0,ko}]}),[{i:0,t}]);
+  assert.equal(parse(good).get(0),good,t);assert.equal(parse(bad).size,0,t);
+ }
+});
+
+test('validator upgrade retries known rejects without replaying ready or ambiguous requests',()=>{
+ const old={status:'rejected',attempts:2,retryAt:now+TITLE_RETRY_MS};
+ assert.equal(canTranslate(old,now),true);
+ assert.equal(canTranslate({...old,validationVersion:TITLE_VALIDATION_VERSION},now),false);
+ for(const status of ['ready','reserved','uncertain'])assert.equal(canTranslate({...old,status},now),false);
 });
 test('monthly cap stops before calling',async()=>{
  const x=deps(it=>({i:it.i,ko:'번역'}));x.b.nano=999_999_000;

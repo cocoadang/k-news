@@ -8,7 +8,32 @@ export const titleKey=text=>createHash('sha256').update('title-ko-1\0'+TITLE_KO_
 export const IN_NANO = 125, OUT_NANO = 500; // USD per 1M tokens × 1000 = 나노달러/토큰
 export const BATCH = 40, MAX_OUTPUT = 4096, MONTH_CAP_NANO = 1_000_000_000;
 
-const nums = s => (String(s).match(/\d+(?:[.,]\d+)*/g) || []).map(n => n.replace(/,/g, ''));
+// Compare quantities, not their spelling: $7 billion and 70억 달러 are equal.
+// Use exact fractions so large monetary amounts never lose integer precision.
+const numberPattern = '\\d+(?:,\\d{3})*(?:\\.\\d+)?';
+const scales = {trillion:12,billion:9,million:6,thousand:3,bn:9,mn:6,t:12,b:9,m:6,k:3,'조':12,'억':8,'만':4,'천':3,'백':2};
+const words = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
+const months = {january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12};
+const fraction = (n, exponent=0) => {
+ const [whole,decimal='']=n.replace(/,/g,'').split('.');
+ return [BigInt(whole+decimal)*10n**BigInt(exponent),10n**BigInt(decimal.length)];
+};
+const canonical = ([n,d]) => {let a=n,b=d;while(b){[a,b]=[b,a%b];}return `${n/a}/${d/a}`;};
+const add = ([a,b],[c,d]) => [a*d+c*b,b*d];
+const nums = s => {
+ const normalized=String(s).replace(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\.?(?=\s+\d)/gi,m=>String(months[m.toLowerCase().replace('.','')]))
+  .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,m=>String(words[m.toLowerCase()]))
+  .replace(/\b(?:a|an)\s+(?=year|month|week|day|hour\b)/gi,'1 ')
+  .replace(/\bFY\s*['’]?(\d{2})(?!\d)/gi,(_,year)=>`FY20${year}`);
+ const pattern=new RegExp(`${numberPattern}\\s*(?:(?:trillion|billion|million|thousand|bn|mn|[tbmk])\\b|[조억만천백]+(?:\\s*${numberPattern}\\s*[조억만천백]+)*)?`,'gi');
+ return [...normalized.matchAll(pattern)].map(([quantity])=>{
+  const terms=[...quantity.matchAll(new RegExp(`(${numberPattern})\\s*([조억만천백]+|trillion|billion|million|thousand|bn|mn|[tbmk])?`,'gi'))];
+  return canonical(terms.reduce((sum,[,n,unit])=>{
+   const exponent=unit ? (scales[unit.toLowerCase()]??[...unit].reduce((e,u)=>e+scales[u],0)) : 0;
+   return add(sum,fraction(n,exponent));
+  },[0n,1n]));
+ });
+};
 export function needsTitleKo(e) {
   if (!e || e.titleKo || /[가-힣]/.test(e.title || '')) return false;
   if (e.analysisStatus === 'completed' || e.analysisStatus === 'skipped') return false;
@@ -35,7 +60,7 @@ export function parseTitles(text, items) {
  * events: 대상 후보, deps: { generate(prompt, timeoutMs)->{text, usage:{in,out}}, store:{read,reserve,settle,uncertain}, save(id,titleKo), now, deadline, maxBatches }
  */
 export async function translateTitles(events, deps) {
-  const r = { pending: 0, translated: 0, calls: 0, stopped: null };
+  const r = { pending: 0, translated: 0, rejected: 0, calls: 0, stopped: null };
   const todo = events.filter(needsTitleKo).sort((a, b) => (Date.parse(b.firstSeenAt) || 0) - (Date.parse(a.firstSeenAt) || 0));
   r.pending = todo.length;
   if(!deps.store){r.stopped='store_required';return r;}
@@ -60,6 +85,7 @@ export async function translateTitles(events, deps) {
     catch { await deps.store.uncertain({...job,now:deps.now()});r.stopped='call_failed';break; }
     if(!Number.isSafeInteger(res?.usage?.in)||res.usage.in<0||!Number.isSafeInteger(res?.usage?.out)||res.usage.out<0){await deps.store.uncertain({...job,now:deps.now()});r.stopped='usage_unknown';break;}
     const actual=Math.ceil(res.usage.in*IN_NANO+res.usage.out*OUT_NANO),parsed=parseTitles(res.text,items),results={};
+    r.rejected+=batch.length-parsed.size;
     for(const [i,ko] of parsed)results[batch[i].key]=ko;
     await deps.store.settle({...job,actualNano:actual,results,now:deps.now()});
     for (const [i, ko] of parsed)for(const e of batch[i].events)if(await deps.save(e.id,ko)!==false)r.translated++;

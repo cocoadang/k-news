@@ -10,4 +10,27 @@ body,button,input,select,textarea{font-family:inherit;}
 .admin-input{display:block;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px 12px;font-size:14px;color:#e2e8f0;}
 .admin-input:focus{outline:2px solid #22d3ee;outline-offset:2px;}
 .admin-card input[type=checkbox]{accent-color:#06b6d4;width:18px;height:18px;flex-shrink:0;}
-@media(max-width:480px){.admin-card{padding:12px;}}
+/* Keep mobile controls easy to tap; reclaim space from framing and gaps. */
+@media(max-width:639px){
+  .admin-settings{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+  .admin-settings>header{flex-shrink:0;padding:8px 12px;gap:8px;}
+  .admin-settings>header p{margin-top:2px;}
+  .admin-settings>nav{flex-shrink:0;padding:0 8px;}
+  .admin-settings>footer{flex-shrink:0;padding:8px 12px;}
+  .admin-settings button,.admin-settings summary{min-height:44px;}
+  .admin-settings button{max-width:100%;justify-content:center;white-space:normal;overflow-wrap:anywhere;}
+  .admin-settings button svg{flex-shrink:0;}
+  .admin-settings summary{align-content:center;line-height:1.5;}
+  .admin-settings label:has(input[type=checkbox]){min-height:44px;}
+  .admin-settings input[type=checkbox]{width:20px;height:20px;flex-shrink:0;}
+  .admin-settings input:not([type=checkbox]),.admin-settings select,.admin-settings textarea{min-height:44px;font-size:16px;max-width:100%;}
+  .admin-settings .admin-card{padding:12px;}
+  .admin-settings .admin-card p{margin-top:6px;margin-bottom:8px;line-height:1.6;}
+  .admin-settings .space-y-4>:not(:last-child){margin-bottom:12px;}
+  .admin-settings .mt-4{margin-top:12px;}
+  .admin-settings .admin-operations>.admin-card>button,
+  .admin-settings .admin-operations>.admin-card>div>button,
+  .admin-settings .admin-operations>button{width:100%;}
+  .admin-settings .admin-card .flex.flex-wrap>button{flex:1 1 auto;}
+  .admin-settings .admin-card [data-testid=x-connect]{padding:12px;}
+}

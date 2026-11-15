@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Settings Gear Button (⚙️) */}
             <button
               onClick={authStatus?.isAuthenticated ? onOpenSettings : onOpenLogin}
-              className="min-h-[44px] min-w-[44px] p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
               title={t('관리자 설정', 'Admin settings')}
               aria-label={t('설정', 'Settings')}
             >

@@ -1,7 +1,7 @@
 import { db } from './db';
 import { collectNewArticles } from './collector';
 import { clusterAndProcessArticles, runTwoStageAnalysis } from './geminiAnalyzer';
-import { sendEventToTelegram, isEventQualifiedForTelegramAutoDispatch } from './telegram';
+import { sendPublicEventToTelegram as sendEventToTelegram, isEventQualifiedForTelegramAutoDispatch } from './telegram';
 import { NewsEvent } from './types';
 import { getSeoulDateString, getIsFirestoreAvailable, initFirestore } from './firestore';
 import { runWeeklyCompanyRenewalsBatch } from './companyRenewal';

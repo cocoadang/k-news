@@ -14,7 +14,7 @@ import {
 } from './dedup';
 import { computeNormalizedTitle } from './firestore';
 import { evaluateSourceTier, SourceTier } from './sourceTiers';
-import { sendEventToTelegram, isEventQualifiedForTelegramAutoDispatch } from './telegram';
+import { sendPublicEventToTelegram as sendEventToTelegram, isEventQualifiedForTelegramAutoDispatch } from './telegram';
 import { firestoreRepo, getIsFirestoreAvailable } from './firestore';
 import { checkArticleAnalysisEligibility, getEffectiveEventTime } from './newsNoiseFilter';
 

@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 import { db } from './server/db';
 import { jsonCompression, packedCache, publicCdnHeader, sendPacked, serveBuiltApp } from './server/httpDelivery';
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
-import { sendEventToTelegram, handleTelegramCommand } from './server/telegram';
+import { sendPublicEventToTelegram as sendEventToTelegram, handleTelegramCommand } from './server/telegram';
 import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords } from './server/companyRenewal';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';

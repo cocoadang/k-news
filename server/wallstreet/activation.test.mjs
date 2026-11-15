@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {PUBLIC_CHANNEL_ID} from './publicChannel.mjs';
 const url=new URL('./config.mjs',import.meta.url).href;
 function config(extra={}){return JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',`import {wallstreetConfig as c} from '${url}';console.log(JSON.stringify(c));`],{encoding:'utf8',env:{SystemRoot:process.env.SystemRoot||'',...extra}}));}
 test('deployment switch enables approved nonzero limits and preserves exclusions; default stays disabled',()=>{
@@ -10,7 +11,7 @@ test('deployment switch enables approved nonzero limits and preserves exclusions
  assert.equal(c.model,'gpt-6-luna');assert.equal(c.automaticSummaryRetries,false);
  assert.equal(c.supadataDailyLimit,6);assert.equal(c.supadataCycleLimit,90);assert.equal(c.paidFallback,false);assert.equal(c.counterEvidenceRequired,true);
  assert.ok(c.vidiqApproved&&c.supadataApproved&&c.discoveryApproved&&c.summaryApproved&&c.deliveryApproved);
- assert.deepEqual(c.dailyCheckTimes,['09:00','15:00']);assert.equal(c.recipient,'123');assert.equal(c.excludedVideoIds.length,4);
+ assert.deepEqual(c.dailyCheckTimes,['09:00','15:00']);assert.equal(c.recipient,PUBLIC_CHANNEL_ID);assert.equal(c.excludedVideoIds.length,4);
 });
 
 

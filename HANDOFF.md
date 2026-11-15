@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-11-15 Public Telegram channel
+- Owner created `미국주식 뉴스·유튜브 요약`, added `@coocadangnewsBot` as admin with Post Messages, and saved public link https://t.me/dsoom_news.
+- Channel ID `-1004441977675` is from the owner's Telegram Web channel URL. `server/wallstreet/publicChannel.mjs` pins the ID; no secret/config changes are needed. Verify bot access with a live message after deployment.
+- News and YouTube tabs show the channel join button. CEO/strategy tabs are unchanged.
+- Production news publishing uses `sendPublicEventToTelegram` and the existing qualification/claim/status machinery. Legacy personal subscription handler remains available; automatic news now publishes to the public channel. Status reports retain private `TELEGRAM_CHAT_ID`.
+- New YouTube records use the public channel, explicitly allowlisted in the text runtime only. Legacy private runtime restrictions remain. Old records retain their recipient and are not replayed or re-summarized for the channel.
+- Build, TypeScript, 153 Wall Street tests, subscriber/public delivery checks and 23 monitoring integration checks passed locally. Live delivery has not been tested; production deployment remains manual under the existing policy below.
+
 Production baseline: revision 00034-vsp. YouTube uploads API discovery; 09:00/15:00 Asia/Seoul schedule. vidIQ for Wall Street, Supadata native for the other programmes. Existing duplicate exclusions, private-recipient enforcement, quality holds and secret references must be preserved. Gemini caps: $0.03/video (raised from $0.02 on 2026-11-02, owner-approved), $0.26/day, $2/month. Free-only provider limits remain unchanged. No runtime configuration or DB records are exported.
 
 CEO candidate: original quotations, reviewed translations and AI summaries are separated. Confirmed spoken dates are distinct from publication dates; unknown dates do not imply chronological change. Company/person boundaries and singleton insufficient-history states are tested. Topic matching is a reviewable lexical candidate, not reliable semantic classification. Remaining work: integrate into app, full TypeScript checks, improve topic relevance and provenance/conditions, review UI before deployment. Backfill and model use require separate authorization.

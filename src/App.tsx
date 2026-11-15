@@ -513,6 +513,15 @@ export default function App() {
           ))}
         </nav>
 
+        {(mainView === 'youtube' || mainView === 'news') && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-800/60 bg-sky-950/30 px-4 py-3">
+            <p className="text-sm text-slate-300">{t('주요 뉴스와 유튜브 요약을 텔레그램에서 받아보세요.', 'Receive key news and YouTube summaries on Telegram.')}</p>
+            <a href="https://t.me/dsoom_news" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
+              {t('텔레그램으로 받기 ↗', 'Join Telegram ↗')}
+            </a>
+          </div>
+        )}
+
         {mainView === 'youtube' ? (<YoutubeMenu isAdmin={!!authStatus?.isAuthenticated} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
           <CeoMenu isAdmin={!!authStatus?.isAuthenticated} />
         ) : mainView === 'strategy' ? (

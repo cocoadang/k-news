@@ -1,6 +1,7 @@
 import { NewsEvent, TelegramSubscriber, MonitorSettings } from './types';
 import { db } from './db';
 import { computeEventFingerprint, isFingerprintSpecific } from './dedup';
+import { PUBLIC_CHANNEL_ID } from './wallstreet/publicChannel.mjs';
 
 
 export function getStarRatingString(stars: number): string {
@@ -314,7 +315,11 @@ export function isEventQualifiedForTelegramAutoDispatch(
   return { qualified: true };
 }
 
-export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean = false): Promise<{ success: boolean; error?: string }> {
+export function sendPublicEventToTelegram(event: NewsEvent, forceResend = false) {
+  return sendEventToTelegram(event, forceResend, PUBLIC_CHANNEL_ID);
+}
+
+export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean = false, channelId?: string): Promise<{ success: boolean; error?: string }> {
   // 1. Qualification Check for auto-dispatch (bypassed only when manually forced by admin)
   if (!forceResend) {
     const settings = db.getSettings();
@@ -362,8 +367,19 @@ export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean
     return { success: false, error: 'TELEGRAM_BOT_TOKEN missing in server environment variables' };
   }
 
-  const activeSubscribers = await db.getActiveTelegramSubscribers();
   const formatted = formatTelegramMessage(event);
+  // Public publishing shares the existing qualification, atomic claim and delivery ledger.
+  // Operational reports keep their separate TELEGRAM_CHAT_ID private destination.
+  if (channelId) {
+    if (channelId !== PUBLIC_CHANNEL_ID) throw new Error('Unapproved public channel');
+    const result = await sendTelegramMessage(token, channelId, formatted.text, formatted.inlineKeyboard);
+    await db.updateEventTelegramStatus(event.id, result.success, result.messageId, result.error, fingerprint);
+    db.addLog('Telegram', result.success ? 'success' : 'error', result.success
+      ? `Public channel alert sent for "${event.title.slice(0, 35)}"`
+      : `Public channel alert failed: ${result.error}`);
+    return { success: result.success, ...(result.error ? { error: result.error } : {}) };
+  }
+  const activeSubscribers = await db.getActiveTelegramSubscribers();
 
   // Dispatch Strategy:
   // If active subscribers exist (>= 1) -> send to all active subscribers with concurrency limit 5

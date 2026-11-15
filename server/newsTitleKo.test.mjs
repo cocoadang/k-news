@@ -48,6 +48,10 @@ test('equivalent Korean amounts, dates and fiscal years pass; changed values sti
   ['$4 bln project','40억 달러 사업','4억 달러 사업'],
   ['$0.10 per million tokens','100만 토큰당 0.1달러','100만 토큰당 0.2달러'],
   ['A half-trillion annual revenue run rate','연매출 환산 5,000억 달러','연매출 환산 6,000억 달러'],
+  ['A trio accused of $47 million fraud','3명, 4,700만 달러 사기 혐의','4명, 4,700만 달러 사기 혐의'],
+  ['Deliveries beat estimates by 25,000 vehicles','인도량 전망치보다 2만 5,000대 많아','인도량 전망치보다 2만 6,000대 많아'],
+  ['un millón de dólares','100만 달러','200만 달러'],
+  ['AI briefs him around the clock','AI가 24시간 브리핑','AI가 25시간 브리핑'],
   ['$9007199254740993 cost','9007199254740993달러 비용','9007199254740992달러 비용'],
  ];
  for(const [t,good,bad] of cases){

@@ -61,7 +61,7 @@ test('a corrected translation replaces a legacy empty cache result and is not bi
  const x=setup(()=>JSON.stringify({items:[{i:0,ko:'12월 합병'}]}));await x.ledger.configure({enabled:true,now});
  const text='Merger in December',key=headlineKey(text);
  await x.ledger.reserve({jobKey:'legacy',statementId:'headline-batch',costNano:1000,now,attemptId:'old'});
- await x.ledger.settle({jobKey:'legacy',attemptId:'old',costNano:100,now,result:null,extraResults:{[key]:{title:'',summary:'',generatedAt:new Date(now).toISOString(),model:'legacy'}}});
+ await x.ledger.settle({jobKey:'legacy',attemptId:'old',costNano:100,now,usage:{prompt:1,candidates:0,thoughts:0},result:null,extraResults:{[key]:{title:'',summary:'',generatedAt:new Date(now).toISOString(),model:'legacy'}}});
  const opts={ledger:x.ledger,client:x.client,now:()=>now,deadline:now+120000};
  assert.equal((await translateHeadlines([text],opts)).translated,1);
  assert.equal((await x.ledger.read()).results[key].title,'12월 합병');

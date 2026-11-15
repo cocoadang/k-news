@@ -44,6 +44,10 @@ test('equivalent Korean amounts, dates and fiscal years pass; changed values sti
   ['Microsoft may have proved its point','마이크로소프트가 입증했을 가능성','마이크로소프트, 5월 입증'],
   ['Covid-19 alone cannot explain it','코로나19만으로 설명할 수 없다','코로나20만으로 설명할 수 없다'],
   ['$19 cost','비용은 19달러','비용은 19만 달러'],
+  ['$72–82 billion target','목표 720억~820억 달러','목표 710억~820억 달러'],
+  ['$4 bln project','40억 달러 사업','4억 달러 사업'],
+  ['$0.10 per million tokens','100만 토큰당 0.1달러','100만 토큰당 0.2달러'],
+  ['A half-trillion annual revenue run rate','연매출 환산 5,000억 달러','연매출 환산 6,000억 달러'],
   ['$9007199254740993 cost','9007199254740993달러 비용','9007199254740992달러 비용'],
  ];
  for(const [t,good,bad] of cases){

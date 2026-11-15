@@ -1,4 +1,4 @@
-import { PageHeader } from './components/ui';
+import { PageHeader, TelegramSubscribeButton } from './components/ui';
 import { AdminOperations } from './components/AdminOperations';
 import { YoutubeMenu } from './components/YoutubeMenu';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -519,21 +519,12 @@ export default function App() {
           ))}
         </nav>
 
-        {(mainView === 'youtube' || mainView === 'news') && (
-          <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-sky-800/50 bg-sky-950/20 px-3 py-2">
-            <p className="text-xs text-slate-400">{t('뉴스·유튜브 요약 알림', 'News & video alerts')}</p>
-            <a href="https://t.me/dsoom_news" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] shrink-0 items-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
-              {t('텔레그램으로 받기 ↗', 'Join Telegram ↗')}
-            </a>
-          </div>
-        )}
-
         {mainView === 'youtube' ? (<YoutubeMenu key={viewVersion} isAdmin={false} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
           <CeoMenu key={viewVersion} isAdmin={false} />
         ) : mainView === 'strategy' ? (
           <StrategyMenu key={viewVersion} />
         ) : (<>
-        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} />
+        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} actions={<TelegramSubscribeButton />} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}
         <CompanyTabs
           companies={companies}

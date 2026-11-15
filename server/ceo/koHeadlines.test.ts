@@ -57,6 +57,17 @@ test('same monetary value and standalone month pass headline validation',()=>{
  assert.equal(parseHeadlineOutput('{"items":[{"i":0,"ko":"12월 80억 달러 합병"}]}',items).size,0);
 });
 
+test('a corrected translation replaces a legacy empty cache result and is not billed again',async()=>{
+ const x=setup(()=>JSON.stringify({items:[{i:0,ko:'12월 합병'}]}));await x.ledger.configure({enabled:true,now});
+ const text='Merger in December',key=headlineKey(text);
+ await x.ledger.reserve({jobKey:'legacy',statementId:'headline-batch',costNano:1000,now,attemptId:'old'});
+ await x.ledger.settle({jobKey:'legacy',attemptId:'old',costNano:100,now,result:null,extraResults:{[key]:{title:'',summary:'',generatedAt:new Date(now).toISOString(),model:'legacy'}}});
+ const opts={ledger:x.ledger,client:x.client,now:()=>now,deadline:now+120000};
+ assert.equal((await translateHeadlines([text],opts)).translated,1);
+ assert.equal((await x.ledger.read()).results[key].title,'12월 합병');
+ assert.equal((await translateHeadlines([text],opts)).pending,0);assert.equal(x.calls(),1);
+});
+
 test('rejected items are marked tried (empty title) so the same batch is not re-sent', async () => {
   const x = setup(() => JSON.stringify({ items: [{ i: 0, ko: '엔비디아 매출 45% 증가' }, { i: 1, ko: '머스크, 로보택시 언급' }] }));
   await x.ledger.configure({ enabled: true, now });

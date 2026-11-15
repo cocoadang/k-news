@@ -83,7 +83,12 @@ export function decideSettle(s: KoLedgerState, o: SettleInput): { next: KoLedger
   nj.status = 'settled'; nj.costNano = o.costNano; nj.usage = o.usage; nj.endedAt = new Date(o.now).toISOString(); if (o.note) nj.note = o.note;
   next.months[j.month] = { spentNano: (next.months[j.month]?.spentNano ?? 0) + o.costNano };
   if (o.result) next.results[o.jobKey] = o.result;
-  for (const [k, v] of Object.entries(o.extraResults || {})) if (!next.results[k]) next.results[k] = v;
+  for (const [k, v] of Object.entries(o.extraResults || {})) {
+    const previous=next.results[k];
+    // Repair a formerly rejected empty result, while preserving valid cached
+    // translations. A newer validation marker also prevents endless retries.
+    if (!previous || (!previous.title && (v.title || (v.validationVersion||0)>(previous.validationVersion||0)))) next.results[k] = v;
+  }
   const over = o.costNano > j.reservedNano ? `실제 비용(${o.costNano})이 예약(${j.reservedNano})을 넘음` : null;
   const halt = o.halt || over;
   if (halt && !next.halted) next.halted = halt;

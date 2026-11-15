@@ -28,7 +28,7 @@ export function headlineContents(items: { i: number; text: string }[], posts = f
   ].join('\n');
 }
 
-const VALIDATION_VERSION = 3;
+const VALIDATION_VERSION = 4;
 export function parseHeadlineOutput(text: string | undefined, items: { i: number; text: string }[], maxLen = 300): Map<number, string> {
   const out = new Map<number, string>();
   let data: any;
@@ -71,7 +71,7 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
     const baseKey = 'hlb:' + crypto.createHash('sha256').update(batch.map(([k]) => k).join('|')).digest('hex');
     const prev = state.jobs[baseKey];
     const corrected = batch.some(([k])=>state.results[k] && !state.results[k].title && state.results[k].validationVersion !== VALIDATION_VERSION);
-    jobKey = prev?.status === 'settled' ? baseKey + (corrected ? ':v3' : ':r2') : baseKey;
+    jobKey = prev?.status === 'settled' ? baseKey + (corrected ? `:v${VALIDATION_VERSION}` : ':r2') : baseKey;
     if (jobKey !== baseKey && state.jobs[jobKey]?.status === 'settled') return r;
     if (state.jobs[jobKey]) { r.stoppedReason = '기존 작업 처리 완료 또는 결과 확인 대기'; return r; }
     items = batch.map(([, text], i) => ({ i, text: o.posts ? text.replace(/https?:\/\/\S+/g, '').trim().slice(0, 1200) : text }));

@@ -12,7 +12,7 @@ export const BATCH = 40, MAX_OUTPUT = 4096, MONTH_CAP_NANO = 1_000_000_000;
 // Use exact fractions so large monetary amounts never lose integer precision.
 const numberPattern = '\\d+(?:,\\d{3})*(?:\\.\\d+)?';
 const scales = {trillion:12,billion:9,million:6,thousand:3,bn:9,mn:6,t:12,b:9,m:6,k:3,'조':12,'억':8,'만':4,'천':3,'백':2};
-const words = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
+const words = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10,double:2,doubles:2,twice:2,triple:3,triples:3,quadruple:4};
 const months = {january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12};
 const fraction = (n, exponent=0) => {
  const [whole,decimal='']=n.replace(/,/g,'').split('.');
@@ -21,8 +21,10 @@ const fraction = (n, exponent=0) => {
 const canonical = ([n,d]) => {let a=n,b=d;while(b){[a,b]=[b,a%b];}return `${n/a}/${d/a}`;};
 const add = ([a,b],[c,d]) => [a*d+c*b,b*d];
 const nums = s => {
- const normalized=String(s).replace(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\.?(?=\s+\d)/gi,m=>String(months[m.toLowerCase().replace('.','')]))
-  .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi,m=>String(words[m.toLowerCase()]))
+ const normalized=String(s).replace(/\b(january|jan|february|feb|march|mar|april|apr|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b\.?/gi,m=>String(months[m.toLowerCase().replace('.','')]))
+  // "may have" is a verb, not a month. Recognize May only in date contexts.
+  .replace(/\bMay(?=\s+\d)/gi,'5').replace(/\b(in|by|since|until|during|this|next|last)\s+May\b/gi,'$1 5')
+  .replace(new RegExp(`\\b(${Object.keys(words).join('|')})\\b`,'gi'),m=>String(words[m.toLowerCase()]))
   .replace(/\b(?:a|an)\s+(?=year|month|week|day|hour\b)/gi,'1 ')
   .replace(/\bFY\s*['’]?(\d{2})(?!\d)/gi,(_,year)=>`FY20${year}`);
  const pattern=new RegExp(`${numberPattern}\\s*(?:(?:trillion|billion|million|thousand|bn|mn|[tbmk])\\b|[조억만천백]+(?:\\s*${numberPattern}\\s*[조억만천백]+)*)?`,'gi');

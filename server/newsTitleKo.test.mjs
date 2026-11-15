@@ -37,6 +37,11 @@ test('equivalent Korean amounts, dates and fiscal years pass; changed values sti
   ['FY27 revenue $9 billion','2027 회계연도 매출 90억 달러','2028 회계연도 매출 90억 달러'],
   ['162% rally in a year','1년 새 162% 상승','1년 새 163% 상승'],
   ['$999 for one year','1년간 999달러','1년간 1,000달러'],
+  ['A merger in December','12월 합병','11월 합병'],
+  ['Third-quarter 2026 revenue KRW 3.4724 trillion','2026년 3분기 매출 3조4,724억 원','2026년 3분기 매출 3조4,725억 원'],
+  ['Pledge to triple 2027 revenue','2027년 매출 3배 목표','2027년 매출 4배 목표'],
+  ['Prices double Dec. 1','12월 1일 가격 2배 인상','12월 1일 가격 3배 인상'],
+  ['Microsoft may have proved its point','마이크로소프트가 입증했을 가능성','마이크로소프트, 5월 입증'],
   ['$9007199254740993 cost','9007199254740993달러 비용','9007199254740992달러 비용'],
  ];
  for(const [t,good,bad] of cases){

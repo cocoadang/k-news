@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 
 export const TITLE_RETRY_MS=3600000;
-export const TITLE_VALIDATION_VERSION=2;
+export const TITLE_VALIDATION_VERSION=3;
 // A corrected validator may retry known rejected output once immediately. Ready
 // translations and ambiguous paid requests retain their original claims.
 export const canTranslate=(job,now)=>!job || (job.status==='rejected'&&((job.validationVersion||1)<TITLE_VALIDATION_VERSION || (job.attempts<2&&job.retryAt<=now)));

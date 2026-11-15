@@ -12,6 +12,17 @@ body,button,input,select,textarea{font-family:inherit;}
 .admin-card input[type=checkbox]{accent-color:#06b6d4;width:18px;height:18px;flex-shrink:0;}
 /* Keep mobile controls easy to tap; reclaim space from framing and gaps. */
 @media(max-width:639px){
+  .strategy-menu{overflow-wrap:anywhere;}
+  .strategy-menu .strategy-card,.strategy-menu .strategy-kpi{padding:12px;}
+  .strategy-menu .strategy-card>h2{line-height:1.5;}
+  .strategy-menu>.mb-5{margin-bottom:12px;}
+  .strategy-menu .mt-4{margin-top:12px;}
+  .strategy-menu summary{min-height:44px;align-content:center;line-height:1.5;}
+  .strategy-menu details{padding:8px 12px;}
+  .strategy-menu [aria-label="시작 시점"],.strategy-menu [aria-label="Start point"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .strategy-menu button{min-height:44px;justify-content:center;white-space:normal;padding:8px;font-size:13px;line-height:1.5;}
+  .strategy-table{max-width:calc(100% + 8px);overscroll-behavior-x:contain;}
+  .strategy-menu .strategy-kpi p{overflow-wrap:normal;}
   .news-detail{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
   .news-detail-scroll{overflow-wrap:anywhere;}
   .news-detail-sections>div.rounded-xl{padding:12px;}

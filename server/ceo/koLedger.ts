@@ -30,7 +30,7 @@ export interface KoJob {
   usage?: { prompt: number; candidates: number; thoughts: number; total?: number; modelVersion?: string };
   note?: string;
 }
-export interface KoResult { title: string; summary: string; generatedAt: string; model: string }
+export interface KoResult { title: string; summary: string; generatedAt: string; model: string; validationVersion?: number }
 export interface KoLedgerState {
   schemaVersion: 1;
   enabled: boolean;

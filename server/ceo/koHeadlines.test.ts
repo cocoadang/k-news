@@ -9,7 +9,7 @@ function setup(answer: (contents: string) => string) {
   const ledger = new MemoryKoLedger();
   let calls = 0, counts = 0;
   const client = {
-    countTokens: async () => { counts++; return { totalTokens: 200 }; },
+    countTokens: async (_req: {contents:string}) => { counts++; return { totalTokens: 200 }; },
     generate: async ({ contents }: any) => { calls++; return { text: answer(contents), modelVersion: 'gpt-6-luna-001', usageMetadata: usage }; },
   };
   return { ledger, client, calls: () => calls, counts: () => counts };
@@ -38,6 +38,23 @@ test('disabled ledger makes no call', async () => {
   const x = setup(() => '{}');
   const r = await translateHeadlines(['Musk says X'], { ledger: x.ledger, client: x.client, now: () => now, deadline: now + 120_000 });
   assert.equal(r.stoppedReason, '꺼짐'); assert.equal(x.calls(), 0);
+});
+
+test('long posts shrink before reservation instead of blocking the entire queue',async()=>{
+ const x=setup(contents=>JSON.stringify({items:JSON.parse(contents.slice(contents.lastIndexOf('\n')+1)).items.map((it:any)=>({i:it.i,ko:'원문 게시물 번역'}))}));
+ await x.ledger.configure({enabled:true,now});
+ const sizes:number[]=[];
+ x.client.countTokens=async({contents}:any)=>{sizes.push(Buffer.byteLength(contents)+256);return {totalTokens:sizes.at(-1)!};};
+ const texts=Array.from({length:12},(_,i)=>`${i} `+'Long English post. '.repeat(70));
+ const r=await translateHeadlines(texts,{ledger:x.ledger,client:x.client,now:()=>now,deadline:now+120000,posts:true});
+ assert.equal(r.stoppedReason,null);assert.ok(r.sent>0&&r.sent<12);assert.equal(r.translated,r.sent);
+ assert.ok(sizes[0]>6000);assert.ok(sizes.at(-1)!<=6000);assert.equal(x.calls(),1);
+});
+
+test('same monetary value and standalone month pass headline validation',()=>{
+ const items=[{i:0,text:'$7 billion merger in December'}];
+ assert.equal(parseHeadlineOutput('{"items":[{"i":0,"ko":"12월 70억 달러 합병"}]}',items).size,1);
+ assert.equal(parseHeadlineOutput('{"items":[{"i":0,"ko":"12월 80억 달러 합병"}]}',items).size,0);
 });
 
 test('rejected items are marked tried (empty title) so the same batch is not re-sent', async () => {

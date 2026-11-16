@@ -11,8 +11,10 @@ export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt
   acceptMinimumItems:3,
   allowSourceRepair:true,
   counterEvidenceRequired:true,
-  // Luna combines counter-evidence and semantic review in one call; do not rerun whole videos on rejection/timeouts.
+    // Legacy immediate/version-bump retries remain disabled. One known validation
+    // failure may correct at the next schedule, inside the original video/day/month caps.
   automaticSummaryRetries:false,
+  automaticSummaryRetryOnce:true,
   dailyCheckTimes:Object.freeze(['09:00','15:00']),scheduleTimeZone:'Asia/Seoul',
   // 사용자 요청(2026-10-30): 크립토 PLUS 수집 제외
   disabledProgrammes:Object.freeze(['crypto']),

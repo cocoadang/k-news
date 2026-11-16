@@ -33,7 +33,9 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
   const journal={protocol:'evidence_ids_v1',provider:'openai',model:LUNA_MODEL,pipelineVersion:LUNA_PIPELINE_VERSION,segments:windows.length,calls:[],cacheHits:0};
   let reserved=0;
   async function call(stage,instruction,payload,schema,cap){
-   const args={contents:instruction+(stage==='repair'||stage.startsWith('extract_')?SOURCE_DETAIL_RULES:'')+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
+   const generates=stage==='repair'||stage.startsWith('extract_');
+   const correction=checkpoint.automaticRetryAttempt===1&&generates?' One corrective pass after a rejected result: reconstruct only source-supported topics, retaining opposing views, attribution and conditions. Omit unclear peripheral details. Never pad the minimum count.':'';
+   const args={contents:instruction+(generates?SOURCE_DETAIL_RULES:'')+correction+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
    const key=digest(args),entry=checkpoint.entries[key];
    if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
    // A timeout/crash may have incurred a charge. Never repeat it automatically.

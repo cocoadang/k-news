@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import {analysisFailureCode,mayResumeAnalysis,claimAnalysisRetry,retryResult} from './analysisAutoRetry';
 import { Type } from '@google/genai';
 import { OpenAITextClient as GoogleGenAI, resolveOpenAIModel } from './openaiClient';
 import { RawArticle, NewsEvent, NewsCategory, InvestmentImpact, ArticleSource, CompanyImpactItem, ArticleContentType } from './types';
@@ -481,7 +482,7 @@ ${articleBody}
     const sanitizedError = errorMsg.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]').slice(0, 100);
     db.addLog('Gemini', 'warn', `Gemini (${modelId}) analysis failed: ${sanitizedError}. Marking event as pending analysis.`);
     
-    return createUnanalyzedEvent(article, `분석 대기 중 (${sanitizedError})`);
+    return {...createUnanalyzedEvent(article, `분석 대기 중 (${sanitizedError})`),analysisFailureCode:analysisFailureCode(err)};
   }
 }
 
@@ -1516,7 +1517,8 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
       return saved;
     }
     const current = db.getEventById(expected.id);
-    if (!current || current.updatedAt !== expected.updatedAt || current.analysisStatus === 'completed') return current || null;
+    if (!current || current.updatedAt !== expected.updatedAt || current.analysisStatus !== expected.analysisStatus || current.analysisStatus === 'completed' ||
+        current.analysisAutoRetry?.token !== expected.analysisAutoRetry?.token || current.analysisAutoRetry?.status !== expected.analysisAutoRetry?.status) return current || null;
     const saved = { ...current, ...patch, updatedAt: new Date().toISOString() };
     await db.saveEvent(saved); return saved;
   });
@@ -1536,7 +1538,7 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
   let eligible: NewsEvent[] = [];
   for (const event of db.getEvents()) {
     if (options.eventIds && !options.eventIds.includes(event.id)) continue;
-    if (resolved(event) || event.analysisStatus === 'skipped') continue;
+    if (resolved(event) || event.analysisStatus === 'skipped' || !mayResumeAnalysis(event)) continue;
     // A potentially important screened item must not silently expire in the backlog.
     const hasValidScreen = event.screening?.evidenceKey === screeningEvidenceKey(event);
     const eligibility = checkArticleAnalysisEligibility(event, now);
@@ -1559,15 +1561,26 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
   const unassessed = [...fairAnalysisOrder(notScreened.filter(isRecent), 'newest'),
     ...(options.includeBacklog ? fairAnalysisOrder(notScreened.filter(e => !isRecent(e)), 'newest') : [])];
   for (let offset = 0; offset < unassessed.length; offset += SCREEN_BATCH) {
-    const batch = unassessed.slice(offset, offset + SCREEN_BATCH);
-    const prompt = `Evaluate EVERY item independently. Return items as an object keyed by each exact input id; each value is {score:1..5,reason:Korean <=120 chars,uncertain:boolean}. Include every input id exactly once.\nScores: 1 routine/minor, 2 commentary/unverified rumor, 3 meaningful incremental fact, 4 material business/financial change, 5 confirmed structural enterprise-value change. Source prestige alone does not imply importance. If magnitude/context is missing set uncertain=true. This is preliminary screening, not a final rating.\n` + JSON.stringify(batch.map(e => ({
+    let batch = unassessed.slice(offset, offset + SCREEN_BATCH);
+    const promptFor = (input:NewsEvent[]) => `Evaluate EVERY item independently. Return items as an object keyed by each exact input id; each value is {score:1..5,reason:Korean <=120 chars,uncertain:boolean}. Include every input id exactly once.\nScores: 1 routine/minor, 2 commentary/unverified rumor, 3 meaningful incremental fact, 4 material business/financial change, 5 confirmed structural enterprise-value change. Source prestige alone does not imply importance. If magnitude/context is missing set uncertain=true. This is preliminary screening, not a final rating.\n` + JSON.stringify(input.map(e => ({
       id: e.id, title: (e.originalTitle || e.title).slice(0,260), snippet: (e.primarySource.snippet || '').slice(0,600),
       source: e.primarySource.name.slice(0,80), tier: e.sourceTier,
       publishedAt: e.primarySource.publishedAt, companies: e.relatedCompanies,
       corroboration: (e.relatedSources || []).slice(0,2).map(s => ({ title:s.title?.slice(0,180), snippet:s.snippet?.slice(0,220) })),
     })));
+    let prompt=promptFor(batch);
     const reservation = Buffer.byteLength(prompt, 'utf8') + 4096;
     if (!generate || summary.isRateLimited || summary.screeningCalls >= maxScreenCalls || !reserve(reservation) || pastScreeningDeadline()) break;
+    // Claim only after the normal call/time/token checks. No allowance is lost
+    // while waiting for budget, and concurrent workers cannot claim it twice.
+    const claimed:NewsEvent[]=[];
+    for(const event of batch){
+      if(event.analysisStatus!=='failed'){claimed.push(event);continue;}
+      const saved=await claimAnalysisRetry(event,'screen',commit,now.toISOString());
+      if(saved)claimed.push(saved);
+    }
+    batch=claimed;if(!batch.length)continue;
+    prompt=promptFor(batch);
     summary.screeningCalls++;
     let settled = false;
     try {
@@ -1578,30 +1591,35 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
         const screening = results.get(event.id)!;
         const needsDetail = needsDetailedAnalysis({ ...event, screening }) && withinDetailWindow(event, now);
         const saved = await commit(event, { screening, importance: 0, isImportant: false,
-          analysisStatus: needsDetail ? 'pending' : 'screened', analysisError: '',
+          analysisStatus: needsDetail ? 'pending' : 'screened', analysisError: '',analysisFailureCode:'',
+          ...retryResult(event,needsDetail?'ready':'recovered'),
           analysisDeferredReason: needsDetail ? '상세 분석 대기' : '',
         });
         if (saved?.screening?.evidenceKey === screening.evidenceKey) summary.screened++;
       }
     } catch (error) {
       if (!settled) settle(reservation);
-      const code = String((error as Error)?.message || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0,80);
+      const code = analysisFailureCode(error);
       db.addLog('Gemini', 'warn', `[TwoStage] screening batch rejected: ${code}; items=${batch.length}`);
       summary.isRateLimited = rateLimited(error);
-      for (const event of batch) await commit(event, { analysisStatus:'failed', analysisError:
-        summary.isRateLimited ? '간단 평가 할당량 초과: 다음 실행에서 재시도' : '간단 평가 응답 오류: 다음 실행에서 재시도' });
+      for (const event of batch) await commit(event, { analysisStatus:'failed',analysisFailureCode:code,...retryResult(event,'review_required'), analysisError:
+        mayResumeAnalysis({...event,analysisStatus:'failed',analysisFailureCode:code}) ? '간단 평가 실패: 다음 정기 실행에서 1회 재처리 대기' : '간단 평가 실패: 관리자 확인 필요' });
       summary.failed += batch.length;
     }
   }
   // Refresh authoritative cache after screening commits; never reuse stale candidate references.
-  const detailCandidates = db.getEvents().filter(e => (!options.eventIds || options.eventIds.includes(e.id)) && !resolved(e) && e.analysisStatus !== 'skipped' &&
+  const detailCandidates = db.getEvents().filter(e => (!options.eventIds || options.eventIds.includes(e.id)) && !resolved(e) && e.analysisStatus !== 'skipped' && mayResumeAnalysis(e) &&
     (e.analysisRetryCount || 0) < 3 && e.screening?.evidenceKey === screeningEvidenceKey(e) && needsDetailedAnalysis(e) && withinDetailWindow(e, now));
   // 최근 72시간 뉴스의 상세 분석이 먼저(알림 대상), 과거분은 남는 시간에만
   let detailedQueue = [...priorityAnalysisOrder(detailCandidates.filter(isRecent)),
     ...priorityAnalysisOrder(detailCandidates.filter(e => !isRecent(e)))];
-  for (const event of detailedQueue) {
+  for (let event of detailedQueue) {
     const reservation = 16000 + Buffer.byteLength(event.primarySource.snippet || '', 'utf8');
     if ((!ai && !options.analyze) || summary.isRateLimited || summary.detailedCalls >= maxDetailCalls || !reserve(reservation) || pastDeadline()) break;
+    if(event.analysisStatus==='failed'||event.analysisAutoRetry?.status==='ready'){
+      const claimed=await claimAnalysisRetry(event,'detail',commit,now.toISOString());
+      if(!claimed)continue;event=claimed;
+    }
     summary.detailedCalls++;
     let usage: number | undefined;
     let detailSettled = false;
@@ -1611,18 +1629,19 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
         snippet:event.primarySource.snippet || (event.factualPoints || []).join(' '), firstSeenAt:event.firstSeenAt,
         sourceType:event.primarySource.sourceType }, tokens => { usage = tokens; });
       settle(reservation,usage); detailSettled = true;
-      if (analyzed.analysisStatus !== 'completed') throw new Error(analyzed.analysisError || 'analysis_failed');
+      if (analyzed.analysisStatus !== 'completed') throw Object.assign(new Error('analysis_failed'),{failureCode:analyzed.analysisFailureCode});
       const { id, primarySource, relatedSources, firstSeenAt, eventFingerprint, isSentToTelegram,
-        telegramDispatchStatus, articleCount, ...analysisFields } = analyzed;
+          telegramDispatchStatus, articleCount, analysisAutoRetry, ...analysisFields } = analyzed;
       const saved = await commit(event, { ...analysisFields, screening:event.screening, analysisStatus:'completed',
-        analysisDeferredReason:'', analysisError:'', analysisRetryCount:(event.analysisRetryCount || 0)+1 });
+        analysisDeferredReason:'', analysisError:'',analysisFailureCode:'',...retryResult(event,'recovered'), analysisRetryCount:(event.analysisRetryCount || 0)+1 });
       if (saved?.analysisStatus === 'completed') { summary.detailed++; summary.completedEventIds.push(saved.id); }
     } catch (error) {
       if (!detailSettled) settle(reservation,usage);
       // Do not turn quota failures or malformed responses into low-importance results.
       summary.isRateLimited = summary.isRateLimited || rateLimited(error);
       await commit(event, { analysisStatus:'failed', analysisRetryCount:(event.analysisRetryCount || 0)+1,
-        analysisError: summary.isRateLimited ? '상세 분석 할당량 초과: 다음 실행에서 재시도' : '상세 분석 실패: 다음 실행에서 재시도',
+        analysisFailureCode:analysisFailureCode(error),...retryResult(event,'review_required'),
+        analysisError: mayResumeAnalysis({...event,analysisStatus:'failed',analysisFailureCode:analysisFailureCode(error)}) ? '상세 분석 실패: 다음 정기 실행에서 1회 재처리 대기' : '상세 분석 실패: 관리자 확인 필요',
         lastAnalysisAttemptAt:now.toISOString() });
       summary.failed++;
     }
@@ -1630,7 +1649,7 @@ export async function runTwoStageAnalysis(options: TwoStageOptions = {}) {
   let demoted = 0;
   for (const event of db.getEvents()) {
     if (options.eventIds && !options.eventIds.includes(event.id)) continue;
-    if (resolved(event) || event.analysisStatus === 'skipped') continue;
+    if (resolved(event) || event.analysisStatus === 'skipped' || !mayResumeAnalysis(event)) continue;
     if (event.screening?.evidenceKey === screeningEvidenceKey(event)) {
       if (!needsDetailedAnalysis(event) || !withinDetailWindow(event, now)) {
         // 상세 분석 대상이 아니게 된 대기 건(4점 미만·7일 경과)은 간단 평가 완료로 정리

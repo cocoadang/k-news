@@ -38,8 +38,10 @@ function summaryDiag(r) {
     retried: !!r.summaryRetried, laterRunRetried: !!r.summaryLaterRunRetried };
 }
 
-export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [], youtube = null, ko = null, config = {} } = {}) {
+export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [], youtube = null, ko = null, config = {}, analysisRecovery = null } = {}) {
   const issues = [];
+  if(analysisRecovery?.pending)issues.push(`뉴스 분석 자동 재처리 대기 ${analysisRecovery.pending}건`);
+  if(analysisRecovery?.reviewRequired)issues.push(`뉴스 분석 확인 필요 ${analysisRecovery.reviewRequired}건`);
   const sorted = [...logs].filter(l => l && l.timestamp && typeof l.message === 'string').sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
   const since = t => sorted.filter(l => Date.parse(l.timestamp) >= now - t);
 
@@ -86,6 +88,9 @@ export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [
     const sd = youtube.supadata || null;
     const ceoMonth = youtube.ceoVideoBudget?.months?.[today.slice(0, 7)] || 0;
     yt = {
+      automaticRetry: {enabled:config.automaticSummaryRetryOnce===true,limit:1,
+        recovered:recent.filter(r=>youtube.videos[r.id]?.summaryAutoRetry?.status==='recovered').length,
+        reviewRequired:recent.filter(r=>youtube.videos[r.id]?.summaryAutoRetry?.status==='review_required'||youtube.videos[r.id]?.summaryAutoRetry?.status==='inflight').length},
       recent, counts: { done: recent.filter(r => DONE.includes(r.stage)).length, active: recent.filter(r => ACTIVE.includes(r.stage)).length, failed: failed.length },
       summaryBudget: { todayMicros: textDay, dailyLimitMicros: config.dailySummaryMicros ?? null, monthMicros: textMonth, monthlyLimitMicros: config.monthlySummaryMicros ?? null, monthPct: pct(textMonth, config.monthlySummaryMicros) },
       supadata: sd ? { used: sd.used ?? 0, cycleLimit: config.supadataCycleLimit ?? null, usedPct: pct(sd.used ?? 0, config.supadataCycleLimit), today: sd.days?.[today] ?? 0, dailyLimit: config.supadataDailyLimit ?? null, cycleEnd: sd.end ?? null } : null,
@@ -102,6 +107,7 @@ export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [
   return {
     generatedAt: new Date(now).toISOString(), ok: issues.length === 0, issues,
     news: {
+      automaticRetry: analysisRecovery,
       lastPollTime, pollAgeHours: pollAgeH == null ? null : Math.round(pollAgeH * 10) / 10,
       lastCycle: cycleLog ? { at: cycleLog.timestamp, ...parseCycle(cycleLog.message) } : null,
       lastStatusReport: reportLog ? { at: reportLog.timestamp, level: reportLog.level, warning: reportWarn, text: reportText.slice(0, 600) } : null,

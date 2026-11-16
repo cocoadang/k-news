@@ -4,6 +4,13 @@ const now = Date.parse('2026-11-01T00:20:00Z'); // 09:20 KST
 const at = h => new Date(now - h * 3600_000).toISOString();
 const config = { disabledProgrammes: ['crypto'], dailySummaryMicros: 260000, monthlySummaryMicros: 2000000, supadataCycleLimit: 90, supadataDailyLimit: 6, ceoVideo: { monthlyVideos: 15 } };
 
+test('automatic analysis retry reports aggregate waiting and review states without journal/token contents',()=>{
+ const analysisRecovery={enabled:true,limit:1,pending:2,reviewRequired:1,recovered:3};
+ const r=buildOpsHealth({now,lastPollTime:at(1),analysisRecovery});
+ assert.deepEqual(r.news.automaticRetry,analysisRecovery);
+ assert.ok(r.issues.some(x=>x.includes('재처리 대기 2건')));assert.ok(r.issues.some(x=>x.includes('확인 필요 1건')));
+});
+
 test('healthy morning: no issues, counts parsed, no raw messages leaked', () => {
   const logs = [
     { timestamp: at(2.3), level: 'info', module: 'Scheduler', message: '[StatusReport] 📊 아침 점검 | 뉴스 새 기사 160 | ✅ 이상 없음' },

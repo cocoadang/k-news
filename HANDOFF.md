@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-11-16 One-shot scheduled analysis recovery (owner requested)
+- News screening/detail failures persist a sanitized failure code. Known malformed/incomplete response and definite 429 errors may claim exactly one automatic recovery through optimistic persistence before model use. A recovered screening plus its detail stage share that allowance. Unknown transport/usage outcomes, interrupted claims, and a second rejection stay held for review. Deployment/version changes never reset it.
+- YouTube permits one correction at the next existing scheduled run only for known grounding/semantic validation failures with fully completed call journals/checkpoints. Initial spending plus retry stays within the original per-video cap; the existing day/month reservation, strict grounding, counter-evidence/semantic audit, caption quotas and Telegram outbox remain intact. Legacy records with unknown spending, ambiguous deliveries and used allowances are not replayed. Unavailable budget waits without claiming.
+- Claims and outcomes survive restart; news and YouTube retry aggregates appear in the existing cached operations health response. No new schedule, model, quality threshold, spending cap or provider HTTP retry was added.
+- Behavioral tests cover budget waits, two attempts maximum, equal-timestamp concurrent claims, restart/crash safety, screening-to-detail continuation, unknown charge/delivery holds, original video cap, audit/cache reuse and single Telegram delivery. Synthetic providers only; production content is never deliberately failed for testing.
+
 ## 2026-11-16 Cost reduction (owner authorized implementation and deployment)
 - News/status polling now runs every 60 seconds only on screens that use it; hidden tabs stop and refresh immediately on return. Admin action refreshes stay immediate. Full news search/filter data is retained.
 - Packed news/YouTube responses use content-based weak ETags, returning bodyless 304 on unchanged conditional reads; explicit no-store admin refreshes still return 200 payloads. Compression and existing CDN TTLs stay intact.

@@ -8,9 +8,9 @@ import {runCeoVideoStep} from './ceoVideo.mjs';
 import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
-// Bump when summary validation is fixed so recently failed videos are re-attempted once.
-export const SUMMARY_FIX_VERSION=8; // Literal ASR details: omit unsupported names/numbers; one bounded migration attempt.
-const LATER_RUN_RETRY_FAILURES=['insufficient_context_reviewed_items','insufficient_source_grounded_items'];
+import {summaryRetryEligible} from './automaticRetry.mjs';
+// Diagnostic version only: deployments never reset a consumed retry allowance.
+export const SUMMARY_FIX_VERSION=8;
 export const TRANSCRIPT_KEEP_MS=3*86400000;
 const TRANSCRIPT_DONE_STAGES=['sent','historical_complete','text_review_required','text_caption_expired'];
 export const TEXT_PROJECT='gen-lang-client-0064554427';
@@ -160,42 +160,35 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
               else{r.stage='text_review_required';r.hold='caption_failed_or_uncertain_no_retry';}
             }await save();
           }
-          // A failed summary (validation rejection or timeout) is retried once
-          // right away in the same run. Records held before this change (no summaryFailedAt) get their one retry at the next run.
-          // Captions are already stored, so no caption credits are spent; budget caps and grounding checks still apply.
-          // Summary happens before any Telegram send, so retrying cannot duplicate a message; cost stays inside the budget caps.
-          const validationRejected=x=>['summary_failed_or_uncertain','summary_outcome_unknown'].includes(x.hold)&&Array.isArray(x.transcript)&&x.transcript.length;
-          // After a validator fix (SUMMARY_FIX_VERSION bump), recent validation failures get one fresh attempt pair.
-          if(r.stage==='text_review_required'&&validationRejected(r)&&(r.summaryFixVersion||0)<SUMMARY_FIX_VERSION&&now-(r.firstSeen||0)<259200000){
-            r.summaryFixVersion=SUMMARY_FIX_VERSION;r.summaryRetried=false;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
-          }
-          if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)&&(r.summaryFailedAt?now-r.summaryFailedAt<7200000:now-r.firstSeen<172800000)){
-            r.summaryRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
-          }
-          // Context-review shortfalls (too few claims left after counter-evidence) vary run to run; the same validators get
-          // one more single attempt at a later scheduled run (>=1h after the failure, within 24h of discovery). No caption credits.
-          if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&r.summaryRetried&&!r.summaryLaterRunRetried&&validationRejected(r)&&LATER_RUN_RETRY_FAILURES.includes(r.summaryFailure)&&r.summaryFailedAt&&now-r.summaryFailedAt>=3600000&&now-(r.firstSeen||0)<86400000){
-            r.summaryLaterRunRetried=true;delete r.summaryCandidate;r.stage='text_summary';delete r.hold;
-          }
-          if(r.stage==='text_summary'){
+          // One later-run correction, never an immediate retry or a version-bump
+          // reset. Unknown paid outcomes and already-used allowances stay held.
+          const automaticRetry=summaryRetryEligible(r,c,now);
+          if(r.stage==='text_summary'||automaticRetry){
             if(c.summaryApproved!==true||!summarizer||c.combinedTokenCapVerified!==true){r.hold='text_summary_approval_or_verified_cap_required';continue;}
             for(const k of ['summaryReservationMicros','dailySummaryMicros','monthlySummaryMicros'])if(!Number.isSafeInteger(c[k])||c[k]<=0)throw Error('text_budget_required');
-            const amount=summaryReservation(c,r.transcript);let held=null;
+            const videoLimit=summaryReservation(c,r.transcript);
+            const amount=automaticRetry?videoLimit-r.summarySpentMicros:videoLimit;let held=null;
+            if(!Number.isSafeInteger(amount)||amount<=0){r.summaryRetryDecision='video_budget_exhausted';await save();continue;}
             const attempt=async()=>{
+              let accounted=false;
+              const account=journal=>{if(accounted)return;accounted=true;const refunded=settleReservation(s,held,journal);r.summarySpentMicros=(r.summarySpentMicros||0)+held.amount-refunded;};
               r.stage='text_summary_inflight';delete r.hold;await save();
               try{r.summaryCheckpoint ||= {};const result=await summarizer.summarize({instruction:TEXT_INSTRUCTION,video:r.video,segments:r.transcript,maxCostMicros:amount,checkpoint:r.summaryCheckpoint,saveCheckpoint:save});
-                settleReservation(s,held,result?.validationJournal);
+                account(result?.validationJournal);
                 r.summaryCandidate=result;await save();
                 const message=c.summaryProtocol==='evidence_ids_v1'?renderGroundedBrief(r.video,result):renderBrief(r.video,r.transcript,result);
                 r.parts=splitMessage(message).map(text=>({text,hash:hash(text),status:'pending'}));r.stage='text_delivery';
-              }catch(error){settleReservation(s,held,error?.candidate);if(error?.candidate)r.summaryCandidate=error.candidate;else delete r.summaryCandidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.summaryFailedAt=now;r.summaryFixVersion=SUMMARY_FIX_VERSION;r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}await save();
+              }catch(error){account(error?.candidate);if(error?.candidate)r.summaryCandidate=error.candidate;else delete r.summaryCandidate;r.summaryFailure=/^[a-z_]{1,60}$/.test(error?.message||'')?error.message:'unclassified';r.summaryFailedAt=now;r.summaryFixVersion=SUMMARY_FIX_VERSION;r.stage='text_review_required';r.hold='summary_failed_or_uncertain';}
+              if(r.summaryAutoRetry)r.summaryAutoRetry.status=r.stage==='text_delivery'?'recovered':'review_required';
+              await save();
             };
-            if(!(held=reserve(s,now,c,amount))){r.hold='text_budget';continue;}
-            await attempt();
-            if(c.automaticSummaryRetries!==false&&r.stage==='text_review_required'&&!r.summaryRetried&&validationRejected(r)){
-              r.summaryRetried=true;
-              if((held=reserve(s,now,c,amount)))await attempt();else{r.hold='text_budget';await save();}
+            if(!(held=reserve(s,now,c,amount))){if(automaticRetry)r.summaryRetryDecision='daily_or_monthly_budget';else r.hold='text_budget';await save();continue;}
+            if(automaticRetry){
+              r.summaryAutoRetry={attempts:1,status:'inflight',at:now};
+              r.summaryCheckpoint ||= {};r.summaryCheckpoint.automaticRetryAttempt=1;
+              delete r.summaryRetryDecision;
             }
+            await attempt();
           }
           if(r.stage!=='text_delivery')continue;
           if(c.deliveryApproved!==true||!telegram||(c.deliveryMode!=='immediate'&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(c.deliveryTime||''))){r.hold='delivery_approval_time_required';continue;}

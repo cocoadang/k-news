@@ -166,6 +166,8 @@ export interface NewsEvent {
   analysisDeferredReason?: string;
   skipReason?: string;
   analysisRetryCount?: number;
+  analysisFailureCode?: string;
+  analysisAutoRetry?: {attempts:1;status:'inflight'|'ready'|'recovered'|'review_required';phase:'screen'|'detail';token:string;at:string};
   lastAnalysisAttemptAt?: string;
   analysisError?: string;
   contentType?: ArticleContentType;

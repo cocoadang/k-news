@@ -38,10 +38,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
    // A timeout/crash may have incurred a charge. Never repeat it automatically.
    if(entry)throw Error('luna_previous_call_uncertain');
-   if(journal.calls.length>=windows.length+2)throw Error('luna_call_limit');
+   if(journal.calls.length>=windows.length+4)throw Error('luna_call_limit');
    // Completed stages with older prompts may coexist with their replacements.
    // Keep that history bounded without charging cache hits against this run's call limit.
-   if(Object.keys(checkpoint.entries).length>=2*(windows.length+2))throw Error('luna_checkpoint_limit');
+   if(Object.keys(checkpoint.entries).length>=2*(windows.length+4))throw Error('luna_checkpoint_limit');
    const input=client.estimateInputTokens(args);
    if(!Number.isSafeInteger(input)||input<1||input>250000)throw Error('luna_input_limit');
    // A fresh request may be billed at the cache-write rate for its input.
@@ -100,11 +100,28 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    items.sort((a,b)=>a.start-b.start);
    let audit=await call('audit',REVIEW_INSTRUCTION,reviewPayload(items),items.length<=32?smallAuditSchema:auditSchema,Math.min(6000,1000+items.length*140));
    if(!Array.isArray(audit?.checks)||audit.checks.length!==items.length||audit.checks.some((x,i)=>x.index!==i))throw Error('semantic_verification_failed');
-   let classified=conservativeClassification(items,audit);audit=classified.audit;
-   const kept=[];
-   for(let i=0;i<items.length;i++){
-    const c=audit.checks[i],allowed=new Set(items[i].relatedBlocks.map(b=>b.id));
-    if(c.supported===true&&c.classificationCorrect===true&&c.counterStatus==='clear'&&c.duplicateOf===null&&typeof c.reason==='string'&&c.reason.trim()&&c.reason.length<=200&&Array.isArray(c.sourceIds)&&c.sourceIds.every(id=>allowed.has(id))&&['reported','outlook'].includes(c.recommendedKind))kept.push({item:classified.items[i],check:c});
+   let classified,kept=[];
+   for(let pass=0;pass<2;pass++){
+    classified=conservativeClassification(items,audit);audit=classified.audit;kept=[];
+    for(let i=0;i<items.length;i++){
+     const c=audit.checks[i],allowed=new Set(items[i].relatedBlocks.map(b=>b.id));
+     if(c.supported===true&&c.classificationCorrect===true&&c.counterStatus==='clear'&&c.duplicateOf===null&&typeof c.reason==='string'&&c.reason.trim()&&c.reason.length<=200&&Array.isArray(c.sourceIds)&&c.sourceIds.every(id=>allowed.has(id))&&['reported','outlook'].includes(c.recommendedKind))kept.push({item:classified.items[i],check:c});
+    }
+    if(kept.length>=floor||pass===1)break;
+    const qualified=items.flatMap((x,i)=>audit.checks[i]?.supported===true&&audit.checks[i]?.counterStatus==='qualifies'?[{item:x,check:audit.checks[i]}]:[]);
+    if(!qualified.length)break;
+    const supplied=[...new Map(qualified.flatMap(x=>x.item.relatedBlocks).map(b=>[b.id,b])).values()];
+    const repair=await call('qualify','Repair ONLY the drafts below by explicitly preserving the material caveats or opposing views identified by the auditor. Keep their supported core topic, attribution and uncertainty. Do not turn a report of a possibility into a prediction. Use only supplied blocks; omit unclear ASR names/numbers/abbreviations. Return corrected items with literal evidenceIds covering both the claim and its caveat. Do not add topics or outside facts.',{drafts:qualified.map(x=>({title:x.item.title,text:x.item.text,kind:x.item.kind,check:x.check})),blocks:compactBlocks(supplied)},candidatesSchema,2000);
+    const next=kept.map(x=>x.item),allowed=new Set(supplied.map(b=>b.id));
+    for(const x of repair.items||[]){
+     if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!allowed.has(id)))continue;
+     const screened=filterGroundedCandidates({items:[x]},blocks,{minimum:1,contextRadius:1,topicContext:true});
+     for(const g of screened.items)if(!next.some(n=>n.text===g.text))next.push({...g,kind:x.kind});
+    }
+    if(next.length<floor)break;
+    items.splice(0,items.length,...next.sort((a,b)=>a.start-b.start));
+    audit=await call('audit_qualified',REVIEW_INSTRUCTION,reviewPayload(items),items.length<=32?smallAuditSchema:auditSchema,Math.min(6000,1000+items.length*140));
+    if(!Array.isArray(audit?.checks)||audit.checks.length!==items.length||audit.checks.some((x,i)=>x.index!==i))throw Error('semantic_verification_failed');
    }
    if(kept.length<floor)throw Error('insufficient_context_reviewed_items');
    const result=acceptVerification(kept.map(x=>x.item),{checks:kept.map((x,index)=>({...x.check,index}))});

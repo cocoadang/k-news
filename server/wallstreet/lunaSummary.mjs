@@ -110,10 +110,22 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
      if(c.supported===true&&c.classificationCorrect===true&&c.counterStatus==='clear'&&c.duplicateOf===null&&typeof c.reason==='string'&&c.reason.trim()&&c.reason.length<=200&&Array.isArray(c.sourceIds)&&c.sourceIds.every(id=>allowed.has(id))&&['reported','outlook'].includes(c.recommendedKind))kept.push({item:classified.items[i],check:c});
     }
     if(kept.length>=floor||pass===1)break;
-    const qualified=items.flatMap((x,i)=>audit.checks[i]?.supported===true&&audit.checks[i]?.counterStatus==='qualifies'?[{item:x,check:audit.checks[i]}]:[]);
+    // A locally grounded draft can still carry an ambiguous ASR clause. Preserve
+    // the supported topic by removing that clause, then require a fresh full
+    // semantic audit. Never rescue semantic duplicates or pad the item count.
+    const qualified=items.flatMap((x,i)=>{
+     const c=audit.checks[i];
+     return c?.duplicateOf===null&&(c.supported!==true||['qualifies','uncertain'].includes(c.counterStatus))?[{item:x,check:c}]:[];
+    });
     if(!qualified.length)break;
     const supplied=[...new Map(qualified.flatMap(x=>x.item.relatedBlocks).map(b=>[b.id,b])).values()];
-    const repair=await call('qualify','Repair ONLY the drafts below by explicitly preserving the material caveats or opposing views identified by the auditor. Keep their supported core topic, attribution and uncertainty. Do not turn a report of a possibility into a prediction. Use only supplied blocks; omit unclear ASR names/numbers/abbreviations. Return corrected items with literal evidenceIds covering both the claim and its caveat. Do not add topics or outside facts.',{drafts:qualified.map(x=>({title:x.item.title,text:x.item.text,kind:x.item.kind,check:x.check})),blocks:compactBlocks(supplied)},candidatesSchema,2000);
+    const ambiguous=qualified.some(x=>x.check.supported!==true||x.check.counterStatus==='uncertain');
+    const instruction=ambiguous?
+     'Repair ONLY the rejected drafts below against their supplied source blocks and auditor reasons. Keep each supported core topic and remove unsupported or ambiguous peripheral clauses, especially unclear ASR names, roles, numbers or objects of an appointment. Do not guess whom an unclear phrase refers to. Preserve attribution, opposing views, caveats, conditions and reported/outlook classification. If the core topic itself lacks evidence, OMIT the draft. Return at most one corrected item per rejected draft with literal evidenceIds; do not split, add topics, outside facts or pad a minimum count. The complete result must pass a new independent semantic audit.':
+     'Repair ONLY the drafts below by explicitly preserving the material caveats or opposing views identified by the auditor. Keep their supported core topic, attribution and uncertainty. Do not turn a report of a possibility into a prediction. Use only supplied blocks; omit unclear ASR names/numbers/abbreviations. Return corrected items with literal evidenceIds covering both the claim and its caveat. Do not add topics or outside facts.';
+    journal.semanticRepairAttempted=true;
+    const repair=await call(ambiguous?'clarify':'qualify',instruction,{drafts:qualified.map(x=>({title:x.item.title,text:x.item.text,kind:x.item.kind,check:x.check})),blocks:compactBlocks(supplied)},candidatesSchema,2000);
+    if(!Array.isArray(repair?.items)||repair.items.length>qualified.length)throw Error('semantic_verification_failed');
     const next=kept.map(x=>x.item),allowed=new Set(supplied.map(b=>b.id));
     for(const x of repair.items||[]){
      if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!allowed.has(id)))continue;

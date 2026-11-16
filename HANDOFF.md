@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-11-16 Semantic draft repair after live recovery hold (owner requested)
+- The live diagnostic yielded three grounded drafts but only two passed semantics: an otherwise supported investigation report included an unclear ASR clause about an external appointment. Previously only missing-caveat (`qualifies`) failures could be corrected, so this draft was discarded wholesale.
+- When fewer than three items survive, one bounded clarification can now remove ambiguous peripheral details from rejected nonduplicate drafts. It cannot add topics/split drafts, and every resulting item must pass the unchanged grounding, classification, counter-evidence, duplicate and full semantic audit again. An unsupported core remains omitted/held. Existing call/checkpoint and spending limits still apply.
+- Supervised recovery subtracts previous per-video spending before reservation and accumulates settled cost on both success/failure. Existing completed checkpoints remain reusable; automatic retry allowances are never reset.
+- The owner explicitly requested one additional live repair/send test. Use an independent durable supervised claim on the existing operational diagnostic record; retain all original publications and receipts. No repeated paid trial after an uncertain outcome.
+
 ## 2026-11-16 One-shot scheduled analysis recovery (owner requested)
 - News screening/detail failures persist a sanitized failure code. Known malformed/incomplete response and definite 429 errors may claim exactly one automatic recovery through optimistic persistence before model use. A recovered screening plus its detail stage share that allowance. Unknown transport/usage outcomes, interrupted claims, and a second rejection stay held for review. Deployment/version changes never reset it.
 - YouTube permits one correction at the next existing scheduled run only for known grounding/semantic validation failures with fully completed call journals/checkpoints. Initial spending plus retry stays within the original per-video cap; the existing day/month reservation, strict grounding, counter-evidence/semantic audit, caption quotas and Telegram outbox remain intact. Legacy records with unknown spending, ambiguous deliveries and used allowances are not replayed. Unavailable budget waits without claiming.

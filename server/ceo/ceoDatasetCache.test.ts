@@ -1,3 +1,4 @@
+import http from 'node:http';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -19,6 +20,8 @@ test('public CEO dataset is cached (one assembly for repeated views) and invalid
     assert.deepEqual(a, b);
     const raw = await fetch(base + '/api/ceo/dataset', { headers: { 'Accept-Encoding': 'identity' } });
     assert.deepEqual(await raw.json(), a, 'uncompressed cached copy');
+    const unchanged:any=await new Promise(resolve=>http.get(base+'/api/ceo/dataset',{headers:{'If-None-Match':raw.headers.get('etag')!}},r=>{let text='';r.on('data',b=>text+=b);r.on('end',()=>resolve({status:r.statusCode,text}));}));
+    assert.equal(unchanged.status,304);assert.equal(unchanged.text,'');
     assert.equal(a.dataset.statements.length, 2);
     assert.equal(snaps, 1, 'second view served from cache');
     assert.equal(koReads, 1, 'translations read once per assembly');

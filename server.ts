@@ -569,7 +569,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
 
     return events;
   };
-  const eventsCache = packedCache(() => listEvents({}), process.env.NODE_ENV === 'production' ? 10_000 : 0);
+  const eventsCache = packedCache(() => listEvents({}), process.env.NODE_ENV === 'production' ? 60_000 : 0);
   app.get('/api/events', async (req, res) => {
     const keys = Object.keys(req.query);
     try {
@@ -577,7 +577,7 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
         const t0 = Date.now();
         // fresh=…: 관리자 작업 직후 화면 갱신용(주소가 매번 달라 CDN도 거침없이 새로 받음)
         const r = 'fresh' in req.query ? { packed: await eventsCache.fresh(), hit: false } : await eventsCache.get();
-        res.setHeader('Cache-Control', 'fresh' in req.query ? 'no-store' : publicCdnHeader(15, 30));
+        res.setHeader('Cache-Control', 'fresh' in req.query ? 'no-store' : publicCdnHeader(60, 60));
         res.setHeader('Server-Timing', `events;desc="${r.hit ? 'hit' : 'miss'}";dur=${Date.now() - t0}`);
         return sendPacked(req, res, r.packed);
       }

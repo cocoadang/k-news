@@ -77,14 +77,15 @@ test('built app: precompressed hashed assets with long cache, index.html no-cach
   } finally { srv.close(); fs.rmSync(dist, { recursive: true, force: true }); }
 });
 
-test('packedCache: hit within ttl, background rebuild after half, single-flight, fresh after admin action', async () => {
+test('packedCache: hit within ttl without background reads, single-flight, fresh after admin action', async () => {
   let t = 0, builds = 0;
   const c = packedCache(async () => { builds++; await new Promise(r => setTimeout(r, 5)); return { n: builds }; }, 10_000, () => t);
   const [a, b] = await Promise.all([c.get(), c.get()]);
   assert.equal(builds, 1); assert.equal(a.hit, false); assert.equal(b.hit, false);
   t = 3000; assert.equal((await c.get()).hit, true); assert.equal(builds, 1);
   t = 6000; const stale = await c.get(); assert.equal(stale.hit, true); assert.deepEqual(JSON.parse(stale.packed.json.toString()), { n: 1 });
-  await new Promise(r => setTimeout(r, 20)); assert.equal(builds, 2, 'rebuilt in background');
+  await new Promise(r => setTimeout(r, 20)); assert.equal(builds, 1, 'no reads outside the request');
+  t=10001; await c.get(); assert.equal(builds,2,'expired cache rebuilt in request');
   const f = await c.fresh(); assert.deepEqual(JSON.parse(f.json.toString()), { n: 3 });
   const none = packedCache(async () => ({ x: ++builds }), 0);
   await none.get(); await none.get(); assert.equal(builds, 5, 'ttl 0 never caches');
@@ -134,4 +135,10 @@ test('unchanged packed JSON returns bodyless 304; changed data and admin fresh r
     assert.equal(changed.status, 200); assert.notEqual(changed.headers.etag, etag);
     assert.equal(JSON.parse(changed.body.toString()).version, 2);
   } finally { srv.close(); }
+});
+
+test('cache reads do not rebuild at half TTL; expiry coalesces refresh', async()=>{
+ let time=0,calls=0;const c=packedCache(async()=>({version:++calls}),100,()=>time);
+ await c.get();time=70;await c.get();await new Promise(r=>setImmediate(r));assert.equal(calls,1);
+ time=101;await Promise.all([c.get(),c.get(),c.get()]);assert.equal(calls,2);
 });

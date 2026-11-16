@@ -128,7 +128,6 @@ export function packedCache(build: () => Promise<unknown>, ttlMs: number, now: (
     async get(): Promise<{ packed: PackedJson; hit: boolean }> {
       const age = cur ? now() - cur.at : Infinity;
       if (ttlMs > 0 && cur && age < ttlMs) {
-        if (age > ttlMs / 2) rebuild().catch(() => null);
         return { packed: cur, hit: true };
       }
       return { packed: await rebuild(), hit: false };

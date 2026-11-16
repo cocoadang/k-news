@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-11-16 Future YouTube flow verification
+- `futureRecoveryFlow.test.mjs` exercises newly discovered videos through the production provider factory, OpenAI request adapter, Luna grounding/clarification/audit, transactional store, real schedule gating, budget ledger and Telegram adapter. Only external services are synthetic; no production content or spending is created.
+- Coverage: initial ambiguous clause correction plus full audit; next-slot exactly-one recovery with new runtime instances; continued hold after second rejection; unknown Telegram outcome never resent. Caption acquisition occurs once. Repeated future slots do not re-summarize or resend. Reservations reach but never exceed the existing video/day/month limits.
+- Generic semantic correction from #99 is automatic for future collected videos. The prior live diagnostic also required supervised shortening of its particular ambiguous conditions; those literal edits are not a universal automated transcript correction. Future items still must pass at least three grounded, semantically verified distinct points or remain held after their single retry.
+- This change adds regression tests/documentation only; the deployed production correction and automatic retry policy remain unchanged.
+
 ## 2026-11-16 Semantic draft repair after live recovery hold (owner requested)
 - The live diagnostic yielded three grounded drafts but only two passed semantics: an otherwise supported investigation report included an unclear ASR clause about an external appointment. Previously only missing-caveat (`qualifies`) failures could be corrected, so this draft was discarded wholesale.
 - When fewer than three items survive, one bounded clarification can now remove ambiguous peripheral details from rejected nonduplicate drafts. It cannot add topics/split drafts, and every resulting item must pass the unchanged grounding, classification, counter-evidence, duplicate and full semantic audit again. An unsupported core remains omitted/held. Existing call/checkpoint and spending limits still apply.

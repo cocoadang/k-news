@@ -1,3 +1,4 @@
+import {aiUsageMetric,aiAttemptMetric} from '../costAiTelemetry.mjs';
 // Native fetch keeps the provider stateless and disables SDK/HTTP automatic retries.
 export const LUNA_MODEL='gpt-6-luna';
 export const LUNA_INPUT_RATE=.1, LUNA_OUTPUT_RATE=.5, LUNA_CACHE_WRITE_RATE=.125;
@@ -20,10 +21,11 @@ export function createLunaClient({apiKey,fetcher=fetch}){
   estimateInputTokens(args){return Buffer.byteLength(JSON.stringify(body(args)),'utf8')+2048;},
   async generate(args){
    if(!Number.isSafeInteger(args.maxOutputTokens)||args.maxOutputTokens<1||args.maxOutputTokens>6000)throw Error('luna_output_cap');
+   aiAttemptMetric('youtube_pipeline');
    const r=await fetcher('https://api.openai.com/v1/responses',{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body(args)),signal:AbortSignal.timeout(60000)});
    // Do not expose provider bodies (or retry uncertain paid requests).
    if(!r.ok)throw Error(r.status===429?'luna_rate_limited':'luna_http_error');
-   const result=await r.json(),usage=result.usage;
+   const result=await r.json(),usage=result.usage;aiUsageMetric('youtube_pipeline',usage,result.status);
    const content=(result.output||[]).filter(x=>x.type==='message').flatMap(x=>x.content||[]);
    if(result.status!=='completed'||content.some(x=>x.type==='refusal'))throw Object.assign(Error('luna_incomplete'),{usage});
    const text=content.filter(x=>x.type==='output_text').map(x=>x.text).join('');

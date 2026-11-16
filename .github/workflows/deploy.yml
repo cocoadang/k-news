@@ -25,6 +25,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --import tsx --test server/costTelemetry.test.ts
+      - run: node --test server/costAiTelemetry.test.mjs
       - run: npm run lint
       - run: node --import tsx --test src/screenPolling.test.ts
       - run: node --import tsx --test server/openaiClient.test.ts

@@ -1,3 +1,4 @@
+import {costHttpTelemetry} from './server/costTelemetry';
 import { resolveOpenAIModel } from './server/openaiClient';
 import 'dotenv/config';
 import express from 'express';
@@ -52,6 +53,7 @@ const telegramReplayTracker = new TelegramReplayTracker(5000);
 
 export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRuntime }) {
   const app = express();
+  app.use(costHttpTelemetry());
 
   // Trust Cloud Run / Reverse Proxy headers so req.protocol, req.secure, and req.ip accurately reflect client HTTPS
   app.set('trust proxy', 1);

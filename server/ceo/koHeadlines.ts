@@ -1,3 +1,4 @@
+import {aiCacheMetric} from '../costAiTelemetry.mjs';
 /**
  * 언론 헤드라인(보도 발언) AI 한국어 번역 — 기존 CEO 한국어 요약 원장(월 USD 1 한도)·Gemini 어댑터를 그대로 재사용.
  * - 여러 헤드라인을 요청 1회로 묶어 번역하고, 결과는 헤드라인 원문 해시로 원장 결과 캐시에 저장(같은 헤드라인은 다시 번역하지 않음).
@@ -54,6 +55,8 @@ export async function translateHeadlines(texts: string[], o: { ledger: KoLedger;
   try { state = await o.ledger.read(); } catch { r.stoppedReason = '원장 읽기 실패'; return r; }
   const uniq = [...new Map(texts.filter(needsHeadlineTranslation).map(t => [headlineKey(t), t])).entries()];
   const pending = uniq.filter(([k]) => !state.results[k] || (!state.results[k].title && state.results[k].validationVersion !== VALIDATION_VERSION));
+  aiCacheMetric(o.posts?'x_headline_translation':'headline_translation','hit',uniq.length-pending.length);
+  aiCacheMetric(o.posts?'x_headline_translation':'headline_translation','miss',pending.length);
   r.pending = pending.length;
   if (!pending.length) return r;
   if (!state.enabled) { r.stoppedReason = '꺼짐'; return r; }

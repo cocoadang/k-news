@@ -1,3 +1,4 @@
+import {aiCacheMetric} from '../costAiTelemetry.mjs';
 import {createHash} from 'node:crypto';
 import {evidenceBlocks,segmentWindows,filterGroundedCandidates,conservativeClassification,acceptVerification} from './groundedSummary.mjs';
 import {LUNA_MODEL,LUNA_CACHE_WRITE_RATE,LUNA_OUTPUT_RATE,lunaUsageCost} from './lunaClient.mjs';
@@ -37,9 +38,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    const correction=checkpoint.automaticRetryAttempt===1&&generates?' One corrective pass after a rejected result: reconstruct only source-supported topics, retaining opposing views, attribution and conditions. Omit unclear peripheral details. Never pad the minimum count.':'';
    const args={contents:instruction+(generates?SOURCE_DETAIL_RULES:'')+correction+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
    const key=digest(args),entry=checkpoint.entries[key];
-   if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
+   if(entry?.status==='completed'){aiCacheMetric('youtube_checkpoint','hit');journal.cacheHits++;return entry.result;}
    // A timeout/crash may have incurred a charge. Never repeat it automatically.
-   if(entry)throw Error('luna_previous_call_uncertain');
+   if(entry){aiCacheMetric('youtube_checkpoint','pending');throw Error('luna_previous_call_uncertain');}
+   aiCacheMetric('youtube_checkpoint','miss');
    if(journal.calls.length>=windows.length+4)throw Error('luna_call_limit');
    // Completed stages with older prompts may coexist with their replacements.
    // Keep that history bounded without charging cache hits against this run's call limit.

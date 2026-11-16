@@ -1,3 +1,4 @@
+import {aiCacheMetric} from '../costAiTelemetry.mjs';
 /** CEO Korean summaries: OpenAI Luna, original evidence/validation and monthly ledger retained. */
 import crypto from 'node:crypto';
 import { CeoStatement, KoSummaryInfo, StatementKoSummary } from '../../src/ceo/types';
@@ -139,7 +140,8 @@ export async function runKoSummaries(statements: CeoStatement[], o: KoRunOptions
     r.considered++;
     if (s.translationKo?.status === 'reviewed' && !o.overrideReviewed) { r.skippedReviewed++; continue; }
     const legacy = [legacyKoJobKey(s), legacyKoJobKey(s, 'ko-sum-2')].find(k => k && (state.results[k] || state.jobs[k]));
-    if (state.results[key] || state.jobs[key] || (legacy && (state.results[legacy] || state.jobs[legacy]))) { r.cacheHits++; continue; } // 캐시 hit: count 요청도 없음
+    if (state.results[key] || state.jobs[key] || (legacy && (state.results[legacy] || state.jobs[legacy]))) { aiCacheMetric('ceo_translation',state.results[key]||(legacy&&state.results[legacy])?'hit':'pending');r.cacheHits++; continue; }
+    aiCacheMetric('ceo_translation','miss'); // 캐시 hit: count 요청도 없음
     if (!state.enabled) { stop('꺼짐'); break; }
     if (state.halted) { stop(`중지됨: ${state.halted}`); break; }
     if (!o.client) { stop('OpenAI 키 미설정'); break; }
@@ -162,7 +164,7 @@ export async function runKoSummaries(statements: CeoStatement[], o: KoRunOptions
     try { res = await o.ledger.reserve({ jobKey: key, statementId: s.statementId, costNano, now: o.now(), attemptId }); }
     catch { stop('예약 결과 불확실(원장 오류) — 호출 0'); break; }
     if (res.ok === false) {
-      if (res.reason === 'exists') { r.cacheHits++; continue; }
+      if (res.reason === 'exists') { aiCacheMetric('ceo_translation','reservation_exists');r.cacheHits++; continue; }
       stop(res.reason === 'over_limit' ? '월 한도 도달' : res.reason === 'halted' ? '중지됨' : res.reason === 'disabled' ? '꺼짐' : '예약 값 이상'); break;
     }
     // 여기부터 외부 호출. 시작 직전에 시간 재확인: 부족하면 명백한 미전송으로 해제

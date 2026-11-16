@@ -13,7 +13,11 @@ const {db}=await import('./db');
 const {runTwoStageAnalysis,createUnanalyzedEvent}=await import('./geminiAnalyzer');
 const {_setIsFirestoreAvailableForTesting}=await import('./firestore');
 _setIsFirestoreAvailableForTesting(false);
-process.on('exit',()=>{process.chdir(cwd);rmSync(dir,{recursive:true,force:true});});
+process.on('exit',()=>{
+ process.chdir(cwd);
+ try{rmSync(dir,{recursive:true,force:true});}
+ catch(error){if(!['EPERM','EBUSY'].includes((error as NodeJS.ErrnoException).code||''))throw error;}
+});
 const now=new Date();
 const fixture=()=>({...createUnanalyzedEvent({id:'retry',title:'Google product announcement',link:'https://example.com/retry',source:'Reuters',publishedAt:now.toISOString(),firstSeenAt:now.toISOString(),snippet:'Confirmed company facts and product context from the primary source. '.repeat(3)}),id:'retry',updatedAt:now.toISOString()});
 const commit=async(expected:NewsEvent,patch:Partial<NewsEvent>)=>{

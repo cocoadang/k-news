@@ -1,0 +1,174 @@
+{
+  "checkedAt": "2026-11-16T09:01:48.431Z",
+  "apps": {
+    "news": {
+      "revision": "spacex-intelligence-news-monitor-gh-22e4cfa56d3c",
+      "window": {
+        "start": "2026-11-16T09:01:08.887Z",
+        "end": "2026-11-16T09:01:13.641Z"
+      },
+      "checks": {
+        "noTruncation": true,
+        "events": true,
+        "ceo_dataset": true,
+        "youtube_summaries": true
+      },
+      "rows": [
+        {
+          "timestamp": "2026-11-16T09:01:10.053633Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "events",
+          "method": "GET",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 631389,
+          "conditional": false,
+          "durationMs": 454
+        },
+        {
+          "timestamp": "2026-11-16T09:01:10.879338Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "events",
+          "method": "GET",
+          "status": 304,
+          "complete": true,
+          "responseBodyBytes": 0,
+          "conditional": true,
+          "durationMs": 1
+        },
+        {
+          "timestamp": "2026-11-16T09:01:11.073959Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "ceo_dataset",
+          "method": "GET",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 290305,
+          "conditional": false,
+          "durationMs": 1
+        },
+        {
+          "timestamp": "2026-11-16T09:01:11.735513Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "ceo_dataset",
+          "method": "GET",
+          "status": 304,
+          "complete": true,
+          "responseBodyBytes": 0,
+          "conditional": true,
+          "durationMs": 1
+        },
+        {
+          "timestamp": "2026-11-16T09:01:12.580506Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "youtube_summaries",
+          "method": "GET",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 36019,
+          "conditional": false,
+          "durationMs": 651
+        },
+        {
+          "timestamp": "2026-11-16T09:01:12.842594Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "youtube_summaries",
+          "method": "GET",
+          "status": 304,
+          "complete": true,
+          "responseBodyBytes": 0,
+          "conditional": true,
+          "durationMs": 1
+        }
+      ]
+    },
+    "housing": {
+      "revision": "k-housing-metrics-3d12f51",
+      "window": {
+        "start": "2026-11-16T09:00:42.716Z",
+        "end": "2026-11-16T09:00:51.988Z"
+      },
+      "checks": {
+        "noTruncation": true,
+        "durableHit": true,
+        "memoryHit": true,
+        "aiRoute": true,
+        "noPaidCalls": true
+      },
+      "rows": [
+        {
+          "timestamp": "2026-11-16T09:00:42.960598Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "health",
+          "method": "GET",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 184,
+          "conditional": false,
+          "durationMs": 1802
+        },
+        {
+          "timestamp": "2026-11-16T09:00:44.617995Z",
+          "type": "COST_AI_CACHE_V1",
+          "v": 1,
+          "scope": "housing_report",
+          "outcome": "durable_hit",
+          "status": 200
+        },
+        {
+          "timestamp": "2026-11-16T09:00:44.618126Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "ai_analysis",
+          "method": "POST",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 2619,
+          "conditional": false,
+          "durationMs": 1421
+        },
+        {
+          "timestamp": "2026-11-16T09:00:45.758718Z",
+          "type": "COST_AI_CACHE_V1",
+          "v": 1,
+          "scope": "housing_report",
+          "outcome": "memory_hit",
+          "status": 200
+        },
+        {
+          "timestamp": "2026-11-16T09:00:45.758837Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "ai_analysis",
+          "method": "POST",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 2619,
+          "conditional": false,
+          "durationMs": 1035
+        },
+        {
+          "timestamp": "2026-11-16T09:00:51.530148Z",
+          "type": "COST_HTTP_V1",
+          "v": 1,
+          "route": "health",
+          "method": "GET",
+          "status": 200,
+          "complete": true,
+          "responseBodyBytes": 184,
+          "conditional": false,
+          "durationMs": 2
+        }
+      ]
+    }
+  },
+  "passed": true,
+  "normalTrafficComparisonFrom": "2026-11-16T09:01:14.641Z"
+}

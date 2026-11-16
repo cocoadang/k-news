@@ -8,7 +8,7 @@ import { db } from './server/db';
 import { jsonCompression, packedCache, publicCdnHeader, sendPacked, serveBuiltApp } from './server/httpDelivery';
 import { runMonitoringCycle, runAnalysisOnlyCycle, startScheduler, restartSchedulerWithNewInterval, getSchedulerStatus, setSchedulerCeoRuntime, getSchedulerCeoRuntime } from './server/scheduler';
 import { sendPublicEventToTelegram as sendEventToTelegram, handleTelegramCommand } from './server/telegram';
-import { analyzeArticleWithGemini, suggestCompanyKeywords } from './server/geminiAnalyzer';
+import { analyzeArticleWithGemini, suggestCompanyKeywords, runTwoStageAnalysis } from './server/geminiAnalyzer';
 import { rollbackCompanyKeywords,executeWeeklyCompanyRenewal,getRecentCompanyArticlesForRenewal } from './server/companyRenewal';
 import {runApprovedKeywordTest} from './server/approvedKeywordTest.mjs';
 import { projectEventAnalysisStatus } from './server/newsNoiseFilter';
@@ -761,6 +761,19 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     }
   });
 
+  // Targeted recovery runs the scheduled analysis path without notifications.
+  app.post('/api/admin/analysis/recover', verifyAdminAuth, aiRateLimitMiddleware, async (req, res) => {
+    const ids = req.body?.eventIds;
+    if (!Array.isArray(ids) || !ids.length || ids.length > 64 ||
+      ids.some(id => typeof id !== 'string' || !/^evt-[a-zA-Z0-9-]+$/.test(id)) || new Set(ids).size !== ids.length) {
+      return res.status(400).json({ error: 'valid_event_ids_required' });
+    }
+    try {
+      const summary = await runTwoStageAnalysis({ eventIds: ids, includeBacklog: true,
+        maxScreeningCalls: 4, maxDetailedCalls: 30, deadlineAt: Date.now() + 150_000 });
+      res.json({ success: true, summary, notificationsSent: 0 });
+    } catch { res.status(503).json({ error: 'analysis_recovery_failed' }); }
+  });
   // 7. Re-analyze Event with Gemini (Admin only + Rate Limited)
   app.post('/api/events/:id/reanalyze', verifyAdminAuth, aiRateLimitMiddleware, async (req, res) => {
     const event = db.getEventById(req.params.id);

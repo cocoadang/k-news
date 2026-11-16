@@ -16,6 +16,7 @@ const smallAuditSchema=object({checks:{type:'array',items:check,maxItems:32}});
 export const EXTRACT_INSTRUCTION='Extract every distinct important news item in this supplied segment of a briefing about the previous US market session. Keep companies, indicators and policy events separate; do not force a topic count, merge unrelated news or pad with chatter/ads. Write concise Korean titles and 2-4 sentence summaries. kind=reported for what the broadcast reports, outlook for interpretation/prediction. Preserve attribution, conditions, uncertainty and conflicting views. Use only supplied evidenceIds (at most 12, within 12 consecutive IDs); include enough evidence for the actor and caveats. Do not guess unclear names/numbers or add outside facts. Title is a hint, not evidence. Empty items is allowed for chatter. Return the required JSON.';
 export const REVIEW_INSTRUCTION='Audit EVERY draft against its coreIds and relatedIds. Read later blocks for corrections, disagreement, missing conditions and attribution changes. A literal name nearby is not proof of attribution. Reject unsupported implications, names/numbers, ads, contextless claims or lost uncertainty. Check reported/outlook classification; recommend outlook for interpretation or forecasts. counterStatus=clear only after checking supplied context, qualifies for a material missing caveat (cite sourceIds), uncertain when evidence is insufficient. This is broadcast-grounding, not external fact checking. Mark a semantic duplicate with duplicateOf=an earlier draft index; otherwise null. Do not rewrite or add facts. Return one check per draft in order; reason at most 40 Korean characters.';
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const SOURCE_DETAIL_RULES=' Names, Latin words, abbreviations and quantities must use the literal spelling in the cited blocks (whitespace and Latin case may differ). Never convert a Korean phrase into an absent English abbreviation, normalize a corrupted ASR name, or expand an unclear number. If a peripheral detail is unclear, OMIT it and retain the supported core claim with generic attribution. Keep distinct subtopics and presenter views separate; never pad a count. For a supported short broadcast, cover its distinct news, opposing view and conditional outlook where present.';
 const compactBlocks=blocks=>blocks.map(({id,text})=>({id,text}));
 function reviewPayload(items){
  const blocks=[...new Map(items.flatMap(x=>x.relatedBlocks).map(x=>[x.id,x])).values()].sort((a,b)=>a.start-b.start);
@@ -32,7 +33,7 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
   const journal={protocol:'evidence_ids_v1',provider:'openai',model:LUNA_MODEL,pipelineVersion:LUNA_PIPELINE_VERSION,segments:windows.length,calls:[],cacheHits:0};
   let reserved=0;
   async function call(stage,instruction,payload,schema,cap){
-   const args={contents:instruction+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
+   const args={contents:instruction+(stage==='repair'||stage.startsWith('extract_')?SOURCE_DETAIL_RULES:'')+'\n'+JSON.stringify(payload),schema,name:stage.replace(/\W/g,'_'),maxOutputTokens:cap};
    const key=digest(args),entry=checkpoint.entries[key];
    if(entry?.status==='completed'){journal.cacheHits++;return entry.result;}
    // A timeout/crash may have incurred a charge. Never repeat it automatically.
@@ -79,7 +80,9 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    for(const x of candidates){
     if(seen.has(x.text))continue;seen.add(x.text);
     const s=filterGroundedCandidates({items:[x]},blocks,{minimum:1,contextRadius:1,topicContext:true});
-    if(s.items.length)items.push(...s.items);else rejected.push({item:x,reason:s.rejected[0]?.reason});
+    // A report ABOUT a possible event is not itself a forecast. Keep the
+    // draft classification until the semantic auditor checks the full claim.
+    if(s.items.length)items.push(...s.items.map(g=>({...g,kind:x.kind})));else rejected.push({item:x,reason:s.rejected[0]?.reason});
    }
    if(rejected.length){
     const selected=new Set();for(const {item:x} of rejected){const indexes=x.evidenceIds.map(id=>blocks.findIndex(b=>b.id===id));for(const i of indexes)for(let j=Math.max(0,i-2);j<=Math.min(blocks.length-1,i+2);j++)selected.add(j);}
@@ -88,9 +91,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
      // Repair cannot use evidence outside the supplied repair set.
      if(!Array.isArray(x?.evidenceIds)||x.evidenceIds.some(id=>!selected.has(blocks.findIndex(b=>b.id===id))))continue;
      const s=filterGroundedCandidates({items:[x]},blocks,{minimum:1,contextRadius:1,topicContext:true});
-     for(const g of s.items)if(!items.some(m=>m.text===g.text))items.push(g);
+     for(const g of s.items)if(!items.some(m=>m.text===g.text))items.push({...g,kind:x.kind});
     }
    }
+   journal.candidateCount=candidates.length;journal.sourceAccepted=items.length;journal.sourceRejected=rejected.map(x=>x.reason);
    if(items.length<floor)throw Error('insufficient_source_grounded_items');
    if(items.length>MAX_AUDIT_ITEMS)throw Error('luna_item_limit');
    items.sort((a,b)=>a.start-b.start);

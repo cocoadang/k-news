@@ -9,6 +9,15 @@ const video={id:'synthetic01',title:'미국시장 브리핑'};
 const segments=n=>Array.from({length:n},(_,i)=>({start:i*16,text:`뉴스 ${i} 관련 조건부 전망입니다.`}));
 const point=b=>({title:'조건부 전망',text:`출연자는 뉴스 ${b.text.match(/\d+/)[0]} 관련 조건부 전망을 소개했습니다.`,kind:'outlook',evidenceIds:[b.id]});
 const clear=(index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',counterStatus:'clear',sourceIds:[],duplicateOf:null,reason:'근거 일치'});
+test('reports about possible events retain their classification until semantic review',async()=>{
+ const f=fake({extract:p=>p.blocks.slice(0,3).map(b=>({...point(b),kind:'reported'})),
+  audit:i=>({...clear(i),recommendedKind:'reported'})});
+ const result=await lunaSummarizer({client:f.client,approved:true}).summarize({segments:segments(12),video,maxCostMicros:20000});
+ const audit=JSON.parse(f.calls.at(-1).contents.split('\n')[1]);
+ assert.ok(audit.drafts.every(x=>x.kind==='reported'));
+ assert.ok(result.items.every(x=>x.kind==='reported'));
+ assert.match(f.calls[0].contents,/OMIT it/);
+});
 function fake({audit,extract,failStage}={}){
  const calls=[];const client={estimateInputTokens:()=>1000,async generate(args){
   calls.push(args);if(args.name===failStage)throw Error('timeout');

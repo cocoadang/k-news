@@ -1,0 +1,77 @@
+{
+  "checkedAt": "2026-11-16T07:18:59.559Z",
+  "revision": "projects/gen-lang-client-0064554427/locations/asia-south1/services/spacex-intelligence-news-monitor/revisions/spacex-intelligence-news-monitor-gh-4ce1cb1de34e",
+  "image": "asia-south1-docker.pkg.dev/gen-lang-client-0064554427/knews-images/k-news:4ce1cb1de34e4926f8498cfc735290f249a24186",
+  "reads": [
+    {
+      "path": "/api/events",
+      "first": {
+        "status": 200,
+        "bytes": 631389,
+        "etag": "W/\"CDbUxz4TXUPQvDMNd0RgOjI9-Cq9tDBP0yPZ1sBg2yw\"",
+        "encoding": "br",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=60"
+      },
+      "second": {
+        "status": 304,
+        "bytes": 0,
+        "etag": "W/\"CDbUxz4TXUPQvDMNd0RgOjI9-Cq9tDBP0yPZ1sBg2yw\"",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=60"
+      }
+    },
+    {
+      "path": "/api/ceo/dataset",
+      "first": {
+        "status": 200,
+        "bytes": 290305,
+        "etag": "W/\"UglbU3CNw5U3Q7G_-gcEgqi3vOohfc3r2poQ7bA5WTE\"",
+        "encoding": "br",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+      },
+      "second": {
+        "status": 304,
+        "bytes": 0,
+        "etag": "W/\"UglbU3CNw5U3Q7G_-gcEgqi3vOohfc3r2poQ7bA5WTE\"",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+      }
+    },
+    {
+      "path": "/api/youtube/summaries",
+      "first": {
+        "status": 200,
+        "bytes": 36019,
+        "etag": "W/\"l0k2Rm1n3jmWi_IPrLQWapRRgqfjPZQ937b6C4MKU5U\"",
+        "encoding": "br",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+      },
+      "second": {
+        "status": 304,
+        "bytes": 0,
+        "etag": "W/\"l0k2Rm1n3jmWi_IPrLQWapRRgqfjPZQ937b6C4MKU5U\"",
+        "cache": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+      }
+    }
+  ],
+  "checks": {
+    "/api/events": true,
+    "/api/ceo/dataset": true,
+    "/api/youtube/summaries": true,
+    "recoveryImages": true,
+    "oldImagesRemoved": true,
+    "cleanupPolicy": true,
+    "ai-studio-bucket-9298525505-asia-south1Copies": true,
+    "ai-studio-bucket-9298525505-asia-south1Deleted": true,
+    "run-sources-gen-lang-client-0064554427-asia-south1Copies": true,
+    "run-sources-gen-lang-client-0064554427-asia-south1Deleted": true,
+    "xCapPreserved": true
+  },
+  "preExistingMissingHistoricalDigests": 92,
+  "cleanup": {
+    "images": 2,
+    "objects": 28,
+    "sourceBytes": 2339344318,
+    "recoveryCopies": 6
+  },
+  "telegram": "No poll, scheduler execution, refresh or notification endpoints invoked",
+  "passed": true
+}

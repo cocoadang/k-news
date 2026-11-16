@@ -9,7 +9,7 @@ import {twiceDailySlot} from './schedule.mjs';
 import {renderGroundedBrief} from './groundedSummary.mjs';
 import {safeDiscoveryFailure} from './discoveryError.mjs';
 // Bump when summary validation is fixed so recently failed videos are re-attempted once.
-export const SUMMARY_FIX_VERSION=7; // 7: Luna combined review; one migration attempt, no whole-video retries.
+export const SUMMARY_FIX_VERSION=8; // Literal ASR details: omit unsupported names/numbers; one bounded migration attempt.
 const LATER_RUN_RETRY_FAILURES=['insufficient_context_reviewed_items','insufficient_source_grounded_items'];
 export const TRANSCRIPT_KEEP_MS=3*86400000;
 const TRANSCRIPT_DONE_STAGES=['sent','historical_complete','text_review_required','text_caption_expired'];

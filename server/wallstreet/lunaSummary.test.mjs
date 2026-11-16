@@ -9,6 +9,15 @@ const video={id:'synthetic01',title:'미국시장 브리핑'};
 const segments=n=>Array.from({length:n},(_,i)=>({start:i*16,text:`뉴스 ${i} 관련 조건부 전망입니다.`}));
 const point=b=>({title:'조건부 전망',text:`출연자는 뉴스 ${b.text.match(/\d+/)[0]} 관련 조건부 전망을 소개했습니다.`,kind:'outlook',evidenceIds:[b.id]});
 const clear=(index)=>({index,supported:true,classificationCorrect:true,recommendedKind:'outlook',counterStatus:'clear',sourceIds:[],duplicateOf:null,reason:'근거 일치'});
+test('reports about possible events retain their classification until semantic review',async()=>{
+ const f=fake({extract:p=>p.blocks.slice(0,3).map(b=>({...point(b),kind:'reported'})),
+  audit:i=>({...clear(i),recommendedKind:'reported'})});
+ const result=await lunaSummarizer({client:f.client,approved:true}).summarize({segments:segments(12),video,maxCostMicros:20000});
+ const audit=JSON.parse(f.calls.at(-1).contents.split('\n')[1]);
+ assert.ok(audit.drafts.every(x=>x.kind==='reported'));
+ assert.ok(result.items.every(x=>x.kind==='reported'));
+ assert.match(f.calls[0].contents,/OMIT it/);
+});
 function fake({audit,extract,failStage}={}){
  const calls=[];const client={estimateInputTokens:()=>1000,async generate(args){
   calls.push(args);if(args.name===failStage)throw Error('timeout');
@@ -18,6 +27,19 @@ function fake({audit,extract,failStage}={}){
   return {text:JSON.stringify(result),usage:{input_tokens:1000,output_tokens:300,output_tokens_details:{reasoning_tokens:100}}};
  }};return {client,calls};
 }
+test('a material caveat gets one bounded repair and a fresh semantic audit before publication',async()=>{
+ const calls=[];const client={estimateInputTokens:()=>1000,async generate(args){
+  calls.push(args.name);const p=JSON.parse(args.contents.split('\n')[1]);let result;
+  if(args.name.startsWith('extract'))result={items:p.blocks.slice(0,3).map(point)};
+  else if(args.name==='qualify')result={items:[{title:'조건부 전망',text:'출연자는 뉴스 0 관련 조건부 전망과 반대 의견을 소개했습니다.',kind:'outlook',evidenceIds:['B0000']}]};
+  else result={checks:p.drafts.map((_,i)=>({...clear(i),counterStatus:args.name==='audit'&&i===0?'qualifies':'clear',sourceIds:['B0000']}))};
+  return {text:JSON.stringify(result),usage:{input_tokens:1000,output_tokens:200}};
+ }};
+ const seg=segments(12).map(s=>({...s,text:s.text+' 반대 의견도 있습니다.'}));
+ const r=await lunaSummarizer({client,approved:true}).summarize({segments:seg,video,maxCostMicros:20000});
+ assert.deepEqual(calls,['extract_0','audit','qualify','audit_qualified']);assert.equal(r.items.length,3);
+ assert.ok(r.items.some(x=>x.text.includes('반대 의견')));
+});
 test('45 minute briefing uses five extracts + one combined audit; keeps four news items per segment',async()=>{
  const seg=segments(170),f=fake(),checkpoint={};let saves=0;
  const s=lunaSummarizer({client:f.client,approved:true});

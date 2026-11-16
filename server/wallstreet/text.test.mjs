@@ -47,7 +47,7 @@ test('unknown Telegram delivery never retries',async()=>{const x=setup();let cal
 test('daily budget atomically holds second video, schedule can hold first',async()=>{const x=setup({dailySummaryMicros:100,deliveryTime:'23:00'}),r=x.run();await r.importTranscript(source(video()));await r.importTranscript(source(video('annR-E8m5WQ')));await Promise.all([r.run(),r.run()]);assert.equal(x.sent.length,0);assert.equal(x.store.state.videos['annR-E8m5WQ'].hold,'text_budget');});
 test('discovery without authorized caption collector waits, no title summary',async()=>{const x=setup();x.deps.discovery={list:async c=>Object.assign(c===video().channelId?[video()]:[],{coverageComplete:false})};await x.run().run();assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_waiting');assert.equal(x.sent.length,0);});
 test('reject transcript mismatch, unsupported number and unverified cap',async()=>{assert.throws(()=>parseUiTranscript(source(video()).text,video('annR-E8m5WQ')));assert.throws(()=>renderBrief(video(),[{start:0,text:'수요 증가'}],{items:result.items.map(x=>({...x,text:'수요 99% 증가'}))}));const x=setup({combinedTokenCapVerified:false}),r=x.run();await r.importTranscript(source(video()));await r.run();assert.equal(x.sent.length,0);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_summary');});
-test('summary timeout reserves budget for each attempt and retries only once',async()=>{const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('timeout');};const r=x.run();await r.importTranscript(source(video()));await r.run();await r.run();assert.equal(calls,2);assert.equal(Object.values(x.store.state.budgets)[0],200);});
+test('summary timeout keeps its reservation and is never retried',async()=>{const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('timeout');};const r=x.run();await r.importTranscript(source(video()));await r.run();await r.run();assert.equal(calls,1);assert.equal(Object.values(x.store.state.budgets)[0],100);});
 
 test('Luna retry policy persists checkpoint, disables immediate and later full-video retries',async()=>{
  const x=setup({automaticSummaryRetries:false});let calls=0;
@@ -107,25 +107,29 @@ test('twice-daily runtime admits at most two slots and excludes prior trial vide
  assert.equal((await x.run().importTranscript(source(video()))).status,'previously_delivered_excluded');
 });
 
-test('failed summary (validation or timeout) is retried once immediately, never more',async()=>{
- const x=setup();let calls=0;
- x.deps.summarizer.summarize=async()=>{calls++;if(calls===1){const e=Error('insufficient_source_grounded_items');e.candidate={protocol:'evidence_ids_v1',calls:[{ceiling:1,status:'completed',raw:'{}'}]};throw e;}return result;};
- const r=x.run();await r.importTranscript(source(video()));
- await r.run();assert.equal(calls,2);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');assert.equal(x.sent.length,1);
- const y=setup();let ycalls=0;
- y.deps.summarizer.summarize=async()=>{ycalls++;const e=Error('insufficient_source_grounded_items');e.candidate={calls:[{ceiling:1,status:'completed'}]};throw e;};
- const ry=y.run();await ry.importTranscript(source(video()));await ry.run();await ry.run();await ry.run();assert.equal(ycalls,2);
- assert.equal(y.store.state.videos.Idn_d5ArZvA.summaryFailure,'insufficient_source_grounded_items');
- const z=setup();let zcalls=0;
- z.deps.summarizer.summarize=async()=>{zcalls++;const e=Error('timeout');e.candidate={calls:[{ceiling:1,status:'inflight'}]};throw e;};
- const rz=z.run();await rz.importTranscript(source(video()));await rz.run();await rz.run();assert.equal(zcalls,2);assert.equal(z.sent.length,0);
+test('known validation failure retries only on the next run, within the original video cap and exactly once across restart/concurrency',async()=>{
+ const x=setup({automaticSummaryRetryOnce:true});let calls=0;const limits=[];
+ x.deps.summarizer.summarize=async({maxCostMicros,checkpoint})=>{limits.push(maxCostMicros);calls++;if(calls===1){const e=Error('insufficient_source_grounded_items');e.candidate={calls:[{ceiling:10,status:'completed',costMicros:10}]};throw e;}assert.equal(checkpoint.automaticRetryAttempt,1);return result;};
+ await x.run().importTranscript(source(video()));await x.run().run();assert.equal(calls,1);assert.equal(x.sent.length,0);
+ await Promise.all([x.run().run(),x.run().run()]);await x.run().run();
+ assert.equal(calls,2);assert.deepEqual(limits,[100,90]);assert.equal(x.sent.length,1);
+ const v=x.store.state.videos.Idn_d5ArZvA;assert.equal(v.summarySpentMicros,100);assert.equal(v.summaryAutoRetry.attempts,1);assert.equal(v.summaryAutoRetry.status,'recovered');
 });
 
-test('records held before the immediate-retry change get one retry at the next run',async()=>{
- const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
- const r=x.run();await r.importTranscript(source(video()));
+test('second validation failure stays held; unavailable budget does not consume the one retry',async()=>{
+ const x=setup({automaticSummaryRetryOnce:true});let calls=0;
+ x.deps.summarizer.summarize=async()=>{calls++;const e=Error('insufficient_context_reviewed_items');e.candidate={calls:[{ceiling:10,status:'completed',costMicros:10}]};throw e;};
+ await x.run().importTranscript(source(video()));await x.run().run();
+ x.deps.config.dailySummaryMicros=50;await x.run().run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.summaryAutoRetry,undefined);
+ x.deps.config.dailySummaryMicros=300;await x.run().run();await x.run().run();
+ assert.equal(calls,2);assert.equal(x.store.state.videos.Idn_d5ArZvA.summaryAutoRetry.status,'review_required');assert.equal(x.sent.length,0);
+});
+
+test('legacy held records without settled charges are never automatically replayed',async()=>{
+ const x=setup({automaticSummaryRetryOnce:true});let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
+ await x.run().importTranscript(source(video()));
  await x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryCandidate={calls:[{status:'completed'}]};await save();});
- await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');
+ await x.run().run();assert.equal(calls,0);assert.equal(x.sent.length,0);
 });
 
 test('Supadata definite no-caption answer with no charge is refunded and retried next run',async()=>{
@@ -145,11 +149,11 @@ test('user-disabled programme is not collected and pending records stop',async()
  await x.run().run();assert.equal(x.store.state.videos.old00000001.hold,'programme_disabled_by_user');assert.equal(x.sent.length,0);
 });
 
-test('after a validator fix, a recently failed summary (old version, already retried) is re-attempted once',async()=>{
- const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
+test('validator version changes never reset an already consumed allowance',async()=>{
+ const x=setup({automaticSummaryRetryOnce:true});let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
  const r=x.run();await r.importTranscript(source(video()));
  await x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='evidence_topic_span';v.summaryFailedAt=now-3*3600000;v.summaryRetried=true;await save();});
- await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');
+ await r.run();assert.equal(calls,0);assert.equal(x.sent.length,0);
 });
 
 test('web-only supplement reuses the stored result, never re-summarizes or sends Telegram, and waits for new videos',async()=>{
@@ -172,15 +176,12 @@ test('finished videos drop their transcript and validation journal after 3 days,
  assert.ok(Array.isArray(fresh.transcript));
 });
 
-test('context-review shortfall gets exactly one more attempt at a later run within 24h',async()=>{
- const x=setup();let calls=0;x.deps.summarizer.summarize=async()=>{calls++;throw Error('insufficient_context_reviewed_items');};
- const r=x.run();await r.importTranscript(source(video()));
- const hold=async(failedAgo)=>x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;v.stage='text_review_required';v.hold='summary_failed_or_uncertain';v.summaryFailure='insufficient_context_reviewed_items';v.summaryFailedAt=now-failedAgo;v.summaryRetried=true;v.summaryFixVersion=SUMMARY_FIX_VERSION;v.firstSeen=now-3*3600000;await save();});
- await hold(30*60000);await r.run();assert.equal(calls,0); // same run window: no extra attempt
- await hold(2*3600000);await r.run();assert.equal(calls,1);
- assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_review_required');assert.equal(x.store.state.videos.Idn_d5ArZvA.summaryLaterRunRetried,true);
- await x.store.exclusive(async(s,save)=>{s.videos.Idn_d5ArZvA.summaryFailedAt=now-2*3600000;await save();});
- await r.run();assert.equal(calls,1);
+test('unknown checkpoint outcome, exhausted video cap, delivery uncertainty and claimed crash are held',async()=>{
+ for(const mutate of [v=>{v.summaryCheckpoint={entries:{one:{status:'inflight'}}};},v=>{v.summarySpentMicros=100;},v=>{v.parts=[{status:'unknown'}];},v=>{v.summaryAutoRetry={attempts:1,status:'inflight'};}]){
+  const x=setup({automaticSummaryRetryOnce:true});let calls=0;x.deps.summarizer.summarize=async()=>{calls++;return result;};
+  await x.run().importTranscript(source(video()));await x.store.exclusive(async(s,save)=>{const v=s.videos.Idn_d5ArZvA;Object.assign(v,{stage:'text_review_required',hold:'summary_failed_or_uncertain',summaryFailure:'insufficient_context_reviewed_items',summarySpentMicros:10,summaryCandidate:{calls:[{status:'completed'}]}});mutate(v);await save();});
+  await x.run().run();await x.run().run();assert.equal(calls,0);assert.equal(x.sent.length,0);
+ }
 });
 
 test('vidIQ caption failure retries once at a later run; uncharged call is refunded',async()=>{

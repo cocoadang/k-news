@@ -128,3 +128,17 @@ test('completed stages from an older prompt do not exhaust the new run call allo
  assert.equal(f.calls.length-before,1);
 });
 
+test('one corrective pass changes generation only and still requires the full semantic audit',async()=>{
+ const checkpoint={},seg=segments(35),f=fake(),s=lunaSummarizer({client:f.client,approved:true});
+ await s.summarize({segments:seg,video,maxCostMicros:10000,checkpoint});
+ const before=f.calls.length,oldKeys=Object.keys(checkpoint.entries);checkpoint.automaticRetryAttempt=1;
+ await s.summarize({segments:seg,video,maxCostMicros:10000,checkpoint});
+ const correction=f.calls.slice(before);
+ assert.ok(correction.some(c=>c.name.startsWith('extract_')&&c.contents.includes('One corrective pass')));
+ assert.ok(oldKeys.every(k=>checkpoint.entries[k]?.status==='completed'));
+ // If the exact same claims recur, the completed audit is reusable; every claim
+ // still has to pass the existing audit rather than gaining a retry exemption.
+ assert.ok(f.calls.some(c=>c.name==='audit'));
+ assert.ok(correction.filter(c=>c.name==='audit').every(c=>!c.contents.includes('One corrective pass')));
+});
+

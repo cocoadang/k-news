@@ -698,7 +698,13 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
         try { ko = (await (getSchedulerCeoRuntime() || ceoRuntime).snapshot() as any).koSummary || null; } catch { ko = null; }
         const lastPollTime = db.getSettings().lastPollTime || null;
         // 콜드 스타트 중(설정 미적재)에는 캐시하지 않아 10분간 잘못된 '미실행' 경고가 고정되지 않게 합니다.
-        opsHealthCache = { at: lastPollTime ? Date.now() : 0, body: buildOpsHealth({ lastPollTime, logs, youtube, ko, config: wallstreetConfig }) };
+        const {mayResumeAnalysis}=await import('./server/analysisAutoRetry');
+        const events=db.getEvents();
+        const analysisRecovery={enabled:db.getSettings().autoAnalyzeWithGemini!==false,limit:1,
+          pending:events.filter(e=>(e.analysisStatus==='failed'&&mayResumeAnalysis(e))||e.analysisAutoRetry?.status==='ready').length,
+          reviewRequired:events.filter(e=>(e.analysisStatus==='failed'&&!mayResumeAnalysis(e))||['inflight','review_required'].includes(e.analysisAutoRetry?.status||'')).length,
+          recovered:events.filter(e=>e.analysisAutoRetry?.status==='recovered').length};
+        opsHealthCache = { at: lastPollTime ? Date.now() : 0, body: buildOpsHealth({ lastPollTime, logs, youtube, ko, config: wallstreetConfig, analysisRecovery }) };
       }
       res.set('Cache-Control', 'no-store').json(opsHealthCache.body);
     } catch {

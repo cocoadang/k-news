@@ -569,7 +569,7 @@ export const firestoreRepo = {
     if (!getIsFirestoreAvailable()) return null;
     const fs = initFirestore();
     if (!fs) return null;
-    const allowed = ['analysisStatus','screening','analysisDeferredReason','analysisError',
+    const allowed = ['analysisStatus','screening','analysisDeferredReason','analysisError','analysisFailureCode','analysisAutoRetry',
       'analysisRetryCount','lastAnalysisAttemptAt','title','category','contentType','importance',
       'isImportant','impact','impactRationale','relatedCompanies','companyImpacts','factualPoints',
       'summaryBulletPoints','investmentImplications','whyItMatters','keyCheckpointsToWatch',
@@ -583,6 +583,8 @@ export const firestoreRepo = {
         if (current.analysisStatus === 'completed' || (!current.analysisStatus && current.importance > 0) ||
             current.isSentToTelegram || current.telegramDispatchStatus === 'sent' ||
             current.updatedAt !== expected.updatedAt || current.analysisStatus !== expected.analysisStatus ||
+            current.analysisAutoRetry?.token !== expected.analysisAutoRetry?.token ||
+            current.analysisAutoRetry?.status !== expected.analysisAutoRetry?.status ||
             (current.analysisRetryCount || 0) !== (expected.analysisRetryCount || 0)) return current;
         const fields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
         for (const key of allowed) if (patch[key] !== undefined) fields[key] = patch[key];

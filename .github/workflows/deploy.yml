@@ -29,6 +29,7 @@ jobs:
       - run: node --import tsx --test src/screenPolling.test.ts
       - run: node --import tsx --test server/openaiClient.test.ts
       - run: node --import tsx --test server/screeningSchema.test.ts
+      - run: node --import tsx --test server/analysisAutoRetry.test.ts
       - run: node --import tsx --test server/keywordMaintenance.test.ts
       - run: node --import tsx --test server/companyRenewal.audit.test.ts
       - run: node --import tsx --test server/approvedKeywordTest.test.ts

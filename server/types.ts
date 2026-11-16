@@ -133,6 +133,8 @@ export interface NewsEvent {
   analysisRetryCount?: number;
   lastAnalysisAttemptAt?: string;
   analysisError?: string;
+  analysisFailureCode?: string;
+  analysisAutoRetry?: {attempts:1;status:'inflight'|'ready'|'recovered'|'review_required';phase:'screen'|'detail';token:string;at:string};
   contentType?: ArticleContentType;
   rawKeywordsMatched?: string[];
   // 기사 묶음 정리로 분리·생성된 카드는 텔레그램 자동 발송에서 제외 (수동 발송은 가능)

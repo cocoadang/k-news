@@ -2632,12 +2632,12 @@ async function runTwoStageRegressionTests() {
     assert.equal(db.getEventById('budget')!.analysisStatus,'pending');
 
     db._setEventsForTesting(Array.from({length:12},(_,i)=>event(`quota-${i}`)));
-    const quota = await runTwoStageAnalysis({now,generate:async()=>{throw new Error('429 RESOURCE_EXHAUSTED');},analyze,commit});
+    const quota = await runTwoStageAnalysis({now,generate:async()=>{throw new Error('AI_HTTP_429');},analyze,commit});
     assert.equal(quota.screeningCalls,1); assert.equal(quota.detailedCalls,0); assert.equal(quota.unassessed,12); assert(quota.isRateLimited);
     assert.equal(db.getEventById('quota-0')!.analysisStatus,'failed');
 
     db._setEventsForTesting([event('high')]);
-    const badDetail = await runTwoStageAnalysis({now,generate,analyze:async()=>{throw new Error('429');},commit});
+    const badDetail = await runTwoStageAnalysis({now,generate,analyze:async()=>{throw new Error('AI_HTTP_429');},commit});
     assert.equal(badDetail.detailedCalls,1); assert(badDetail.accountedTokens>=16000); assert(badDetail.isRateLimited);
     assert.equal(db.getEventById('high')!.analysisStatus,'failed');
     const a1=event('a1'),a2=event('a2'),b1=event('b1');

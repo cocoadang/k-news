@@ -69,11 +69,10 @@ export function getRecentCompanyArticlesForRenewal(
   const matched: { id: string; title: string; snippet: string; timestamp: number }[] = [];
 
   for (const event of events) {
-    const pubTime = event.primarySource?.publishedAt
-      ? new Date(event.primarySource.publishedAt).getTime()
-      : new Date(event.firstSeenAt).getTime();
-
-    if (pubTime < cutoff) continue;
+    const published = Date.parse(event.primarySource?.publishedAt || '');
+    const pubTime = Number.isFinite(published) ? published : Date.parse(event.firstSeenAt);
+    // Invalid/future dates must not silently pass the recent-evidence gate.
+    if (!Number.isFinite(pubTime) || pubTime < cutoff || pubTime > nowMs) continue;
 
     // Check if event relates to this company
     const matchRelated = (event.relatedCompanies || []).some((c) => {

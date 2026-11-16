@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-11-16 Cost reduction (owner authorized implementation and deployment)
+- News/status polling now runs every 60 seconds only on screens that use it; hidden tabs stop and refresh immediately on return. Admin action refreshes stay immediate. Full news search/filter data is retained.
+- Packed news/YouTube responses use content-based weak ETags, returning bodyless 304 on unchanged conditional reads; explicit no-store admin refreshes still return 200 payloads. Compression and existing CDN TTLs stay intact.
+- X recent collection retains every account, current schedule and $5 cap. Paid six-year archive expansion defaults off; stored history/cursors remain. Archive mode requires explicit internal opt-in. No model, evidence/quality validation, keyword schedule, caption quota or delivery guard changes.
+- Billing audit: K-news (total-treat-203800) 2026-11-01 through 15 subtotal KRW 5,992, entirely Gemini API token SKUs. Cloud Run Admin API and Cloud Scheduler API are disabled there. Gemini API traffic for 2026-11-16 00:09–12:09 KST was 0/s throughout. News analysis migration commit a8e89c7 is dated Nov 15 17:10 KST; existing charges are consistent with pre-migration usage, not evidence of an ongoing duplicate server. No API/key/billing services were disabled or deleted.
+- Current runtime project has one news poll schedule (07/10/13/16/19/22 KST) and one YouTube schedule (09/15 KST), both latest executions successful. Other projects' collectors are unrelated and untouched.
+- Added behavioral visibility/timer tests, HTTP conditional delivery tests, and X default-no-archive/history preservation coverage. CI also runs the visibility tests.
+
 ## 2026-11-15 Simplified public/admin UX
 - Owner confirmed all four public menus stay: YouTube, news, CEO and Nasdaq strategy. Public pages now focus on content; refresh/collect, per-news send/reanalysis, YouTube channel tests and CEO translation tools live in authenticated Settings → 운영.
 - Settings is now `AdminSettings.tsx`: 운영 / 기업·키워드 / 자동화·알림. Old `SettingsModal.tsx`, duplicate CEO legacy list, inactive driver menu branch, ineffective display-importance control and outdated infrastructure instructions were removed from the UI. Service connection and keyword rollback remain in collapsed sections.

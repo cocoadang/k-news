@@ -78,10 +78,25 @@ test('monthly cap: requests stop before exceeding it', async () => {
   assert.match(r.notes.join(','), /cap/);
 });
 
+test('default collection keeps every current account and stored history without paid archive expansion', async () => {
+  const m = memStore(), calls: string[] = [];
+  const old: XPost = { id: 'old', username: 'BillAckman', personId: 'bill-ackman', companyId: 'pershing', text: 'Stored history', createdAt: '2025-01-01T00:00:00Z' };
+  m.get().posts.old = old;
+  m.get().accounts.BillAckman = { backfillUntil: old.createdAt };
+  const r = await collectXPosts({ token: 't', store: m.store, fetchImpl: fakeX({}, calls), now: () => NOW, deadline: NOW + 60_000 });
+  assert.equal(r.status, 'x_ok');
+  assert.equal(calls.length, X_ACCOUNTS.length);
+  assert.ok(calls.every(c => c.startsWith('/2/tweets/search/recent?')));
+  assert.deepEqual(m.get().posts.old, old);
+  assert.equal(m.get().accounts.BillAckman.backfillUntil, old.createdAt);
+  assert.equal(m.get().accounts.BillAckman.backfillDone, undefined);
+  assert.equal(m.get().months['2026-11'].usd, 0);
+});
+
 test('backfill goes back with end_time and stops when empty; archive 403 marks unavailable', async () => {
   const m = memStore(); const calls: string[] = [];
   const pages = { 'recent:BillAckman': [{ id: '10', text: 'Recent', created_at: '2026-11-04T10:00:00Z' }], 'all:BillAckman': [{ id: '5', text: 'Older post', created_at: '2025-01-01T00:00:00Z' }] };
-  await collectXPosts({ token: 't', store: m.store, fetchImpl: fakeX(pages, calls), now: () => NOW, deadline: NOW + 60_000, capUsd: 5, accounts: [X_ACCOUNTS[1]] });
+  await collectXPosts({ token: 't', store: m.store, fetchImpl: fakeX(pages, calls), now: () => NOW, deadline: NOW + 60_000, capUsd: 5, accounts: [X_ACCOUNTS[1]], archiveBackfill: true });
   assert.ok(m.get().posts['5']);
   assert.equal(m.get().accounts.BillAckman.backfillUntil, '2025-01-01T00:00:00Z');
   const m2 = memStore();

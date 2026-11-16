@@ -26,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run lint
+      - run: node --import tsx --test src/screenPolling.test.ts
       - run: node --import tsx --test server/openaiClient.test.ts
       - run: node --import tsx --test server/keywordMaintenance.test.ts
       - run: node --import tsx --test server/companyRenewal.audit.test.ts

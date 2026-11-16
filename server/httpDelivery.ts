@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { brotliCompressSync, gzipSync, constants } from 'zlib';
+import { createHash } from 'node:crypto';
 
 /** 브라우저가 지원하는 압축 방식(br 우선, 그다음 gzip) */
 export function pickEncoding(acceptEncoding: string | undefined): 'br' | 'gzip' | null {
@@ -87,16 +88,25 @@ export function serveBuiltApp(app: express.Express, distPath: string) {
   });
 }
 
-export interface PackedJson { at: number; json: Buffer; br: Buffer; gz: Buffer }
+export interface PackedJson { at: number; json: Buffer; br: Buffer; gz: Buffer; etag: string }
 
 /** JSON을 한 번 직렬화하고 br·gzip 압축본까지 미리 만들어 둠 */
 export function packJson(body: unknown, at = Date.now()): PackedJson {
   const json = Buffer.from(JSON.stringify(body));
-  return { at, json, br: brotliCompressSync(json, { params: { [constants.BROTLI_PARAM_QUALITY]: 5, [constants.BROTLI_PARAM_MODE]: constants.BROTLI_MODE_TEXT } }), gz: gzipSync(json, { level: 6 }) };
+  // A weak validator covers equivalent JSON across identity/br/gzip encodings.
+  const etag = `W/"${createHash('sha256').update(json).digest('base64url')}"`;
+  return { at, json, etag, br: brotliCompressSync(json, { params: { [constants.BROTLI_PARAM_QUALITY]: 5, [constants.BROTLI_PARAM_MODE]: constants.BROTLI_MODE_TEXT } }), gz: gzipSync(json, { level: 6 }) };
 }
 
 /** 미리 압축한 JSON 보내기(요청마다 수 MB 직렬화·압축을 반복하지 않음) */
 export function sendPacked(req: express.Request, res: express.Response, p: PackedJson) {
+  res.setHeader('ETag', p.etag);
+  res.vary('Accept-Encoding');
+  // Deliberate admin refreshes must always return the newly built payload.
+  if (res.getHeader('Cache-Control') !== 'no-store' && req.fresh) {
+    res.status(304).end();
+    return;
+  }
   const enc = pickEncoding(req.headers['accept-encoding'] as string | undefined);
   const buf = enc === 'br' ? p.br : enc === 'gzip' ? p.gz : p.json;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');

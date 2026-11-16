@@ -8,9 +8,9 @@ import { brotliDecompressSync, gunzipSync, brotliCompressSync } from 'node:zlib'
 import express from 'express';
 import { jsonCompression, packedCache, pickEncoding, publicCdnHeader, sendPacked, serveBuiltApp } from './httpDelivery';
 
-function raw(port: number, p: string, enc?: string): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: Buffer }> {
+function raw(port: number, p: string, enc?: string, etag?: string): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: Buffer }> {
   return new Promise((resolve, reject) => {
-    http.get({ host: '127.0.0.1', port, path: p, headers: enc ? { 'accept-encoding': enc } : {} }, res => {
+    http.get({ host: '127.0.0.1', port, path: p, headers: { ...(enc ? { 'accept-encoding': enc } : {}), ...(etag ? { 'if-none-match': etag } : {}) } }, res => {
       const chunks: Buffer[] = []; res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode || 0, headers: res.headers, body: Buffer.concat(chunks) }));
     }).on('error', reject);
@@ -105,5 +105,33 @@ test('sendPacked serves the precompressed body for br, gzip and identity', async
     const plain = await raw(port, '/x');
     assert.equal(plain.headers['content-encoding'], undefined);
     assert.equal(JSON.parse(plain.body.toString()).length, 300);
+  } finally { srv.close(); }
+});
+
+test('unchanged packed JSON returns bodyless 304; changed data and admin fresh return complete bodies', async () => {
+  const app = express(); let version = 1;
+  const c = packedCache(async () => ({ version, text: '뉴스'.repeat(300) }), 0);
+  app.get('/x', async (req, res) => {
+    res.setHeader('Cache-Control', req.query.fresh ? 'no-store' : publicCdnHeader(15, 30));
+    sendPacked(req, res, (await c.get()).packed);
+  });
+  const srv = app.listen(0), port = (srv.address() as any).port;
+  try {
+    const first = await raw(port, '/x', 'br');
+    const etag = String(first.headers.etag);
+    assert.match(etag, /^W\/"/);
+    for (const encoding of ['br', 'gzip', undefined]) {
+      const same = await raw(port, '/x', encoding, etag);
+      assert.equal(same.status, 304); assert.equal(same.body.length, 0);
+      assert.equal(same.headers.etag, etag);
+      assert.match(String(same.headers.vary), /Accept-Encoding/);
+    }
+    const fresh = await raw(port, '/x?fresh=1', 'br', etag);
+    assert.equal(fresh.status, 200); assert.equal(fresh.headers['cache-control'], 'no-store');
+    assert.equal(JSON.parse(brotliDecompressSync(fresh.body).toString()).version, 1);
+    version = 2;
+    const changed = await raw(port, '/x', undefined, etag);
+    assert.equal(changed.status, 200); assert.notEqual(changed.headers.etag, etag);
+    assert.equal(JSON.parse(changed.body.toString()).version, 2);
   } finally { srv.close(); }
 });

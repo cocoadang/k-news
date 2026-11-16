@@ -3,7 +3,7 @@
  * - 공식 X API v2(유료, 게시물 1건 읽기 USD 0.005)만 사용. 토큰(X_BEARER_TOKEN)이 없으면 아무것도 하지 않음.
  * - 답글·리트윗 제외, 본인 원글만. 머스크는 Tesla·SpaceX 관련 단어가 있는 글만 검색(검색 결과만 과금).
  * - 월 비용 상한(기본 USD 5)을 넘기지 않도록 요청 전에 최대 비용을 예약하고, 결과 수로 정산합니다.
- * - 최근 7일 검색을 매일 하고, 상한에 여유가 있으면 전체 기록 검색으로 6년 전까지 조금씩 거슬러 올라갑니다.
+ * - 최근 글 수집은 유지. 유료 과거 기록 확장은 기본 중단(저장된 과거 글은 유지).
  */
 import { createHash } from 'node:crypto';
 
@@ -76,7 +76,7 @@ async function search(o: { token: string; fetchImpl: typeof fetch; s: XState; no
   return { ok: true as const, data, newestId: body?.meta?.newest_id as string | undefined, oldestTime: data.length ? data.map(d => d.created_at).sort()[0] as string : undefined };
 }
 
-export async function collectXPosts(o: { token?: string; store: XStore; fetchImpl?: typeof fetch; now: () => number; deadline: number; capUsd?: number; accounts?: XAccount[] }) {
+export async function collectXPosts(o: { token?: string; store: XStore; fetchImpl?: typeof fetch; now: () => number; deadline: number; capUsd?: number; accounts?: XAccount[]; archiveBackfill?: boolean }) {
   if (!o.token) return { status: 'x_not_configured' };
   const f = o.fetchImpl || fetch;
   const cap = o.capUsd ?? X_DEFAULT_CAP_USD;
@@ -104,7 +104,7 @@ export async function collectXPosts(o: { token?: string; store: XStore; fetchImp
       if (r.newestId) st.newestId = r.newestId;
       if (!st.backfillUntil) st.backfillUntil = r.oldestTime || new Date(o.now() - 7 * 86400000).toISOString();
       // 2) 과거 기록(상한의 절반을 넘게 쓰지 않을 때만, 계정당 1회 100건)
-      if (!st.backfillDone && !st.archiveUnavailable && spentUsd(s, o.now()) < cap / 2 && o.now() < o.deadline - 5000) {
+      if (o.archiveBackfill === true && !st.backfillDone && !st.archiveUnavailable && spentUsd(s, o.now()) < cap / 2 && o.now() < o.deadline - 5000) {
         const b = await search({ token: o.token, fetchImpl: f, s, now: o.now(), cap, archive: true, query, endTime: st.backfillUntil, startTime: sixYears.toISOString(), max: 100 });
         if (b.ok) { fetched += b.data.length; b.data.forEach(d => keep(a, d)); if (!b.data.length) st.backfillDone = true; else st.backfillUntil = b.oldestTime; }
         else if (b.reason === 'http_403') st.archiveUnavailable = true;

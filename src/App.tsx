@@ -1,5 +1,6 @@
 import { PageHeader, TelegramSubscribeButton } from './components/ui';
 import { AdminOperations } from './components/AdminOperations';
+import { startVisiblePolling } from './screenPolling';
 import { YoutubeMenu } from './components/YoutubeMenu';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
@@ -107,7 +108,7 @@ export default function App() {
     }
   }, []);
 
-  // 평소(12초 주기)는 CDN·서버 캐시본, 관리자 작업 직후에는 fresh로 바로 새 목록
+  // 평소에는 CDN·서버 캐시본, 관리자 작업 직후에는 fresh로 바로 새 목록
   // 방금 재분석·전송한 건은 2분 동안 화면의 새 값을 유지(캐시된 목록이 잠시 옛 값을 줄 수 있음)
   const pinnedRef = useRef(new Map<string, { at: number; event: NewsEvent }>());
   const pinEvent = (event: NewsEvent) => { pinnedRef.current.set(event.id, { at: Date.now(), event }); };
@@ -144,17 +145,19 @@ export default function App() {
     }
 
     fetchAuthStatus();
-    fetchStatus();
-    fetchEvents();
     fetchCompanies();
+  }, [fetchAuthStatus, fetchCompanies]);
 
-    const interval = setInterval(() => {
-      fetchStatus();
-      fetchEvents();
-    }, 12000);
-
-    return () => clearInterval(interval);
-  }, [fetchAuthStatus, fetchStatus, fetchEvents, fetchCompanies]);
+  // Only refresh data used by the visible screen. Hidden tabs do no polling;
+  // returning to a screen refreshes immediately, including after sleep/resume.
+  useEffect(() => {
+    if (mainView !== 'news' && !isSettingsOpen) return;
+    const refresh = () => {
+      if (mainView === 'news' || isSettingsOpen) void fetchEvents();
+      if (isSettingsOpen) void fetchStatus();
+    };
+    return startVisiblePolling(refresh);
+  }, [mainView, isSettingsOpen, fetchStatus, fetchEvents]);
 
   // Handle Login / Logout
   const handleLoginSuccess = () => {

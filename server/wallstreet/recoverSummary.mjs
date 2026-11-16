@@ -9,7 +9,9 @@ export async function recoverHeldSummary({store,summarizer,config,videoId,now=Da
  return store.exclusive(async(s,save)=>{
   const r=s.videos[videoId];
   if(!r||r.stage!=='text_review_required'||!r.transcript?.length)return {status:'held_summary_required'};
-  const amount=summaryReservation(config,r.transcript),iso=new Date(now).toISOString();
+  const spent=r.summarySpentMicros||0;
+  const amount=summaryReservation(config,r.transcript)-spent,iso=new Date(now).toISOString();
+  if(!Number.isSafeInteger(spent)||spent<0||!Number.isSafeInteger(amount)||amount<=0)return {status:'summary_budget_exceeded'};
   const keys=['text:'+iso.slice(0,10),'text:'+iso.slice(0,7)],limits=[config.dailySummaryMicros,config.monthlySummaryMicros];
   if(keys.some((k,i)=>(s.budgets[k]||0)+amount>limits[i]))return {status:'summary_budget_exceeded'};
   keys.forEach(k=>s.budgets[k]=(s.budgets[k]||0)+amount);
@@ -17,9 +19,9 @@ export async function recoverHeldSummary({store,summarizer,config,videoId,now=Da
   let result;
   try {result=await summarizer.summarize({video:r.video,segments:r.transcript,maxCostMicros:amount,
     checkpoint:r.summaryCheckpoint,saveCheckpoint:save});}
-  catch(error){settleReservation(s,{keys,amount},error.candidate);r.summaryFailure=error.message;
+  catch(error){r.summarySpentMicros=spent+amount-settleReservation(s,{keys,amount},error.candidate);r.summaryFailure=error.message;
     r.summaryCandidate=error.candidate;r.summaryFailedAt=now;await save();return {status:'review_required',failure:error.message};}
-  settleReservation(s,{keys,amount},result.validationJournal);
+  r.summarySpentMicros=spent+amount-settleReservation(s,{keys,amount},result.validationJournal);
   r.parts=splitMessage(renderGroundedBrief(r.video,result)).map(text=>({text,
     hash:createHash('sha256').update(text).digest('hex'),status:'sent',webOnly:true}));
   r.summaryCandidate=result;r.stage='sent';r.recoveredAt=now;r.recoveryDelivery='website_only';

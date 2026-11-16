@@ -1,6 +1,18 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {recoverHeldSummary} from './recoverSummary.mjs';
 const config={summaryReservationMicros:30000,dailySummaryMicros:260000,monthlySummaryMicros:2000000};
+
+test('supervised repair retains the original video cap and charges only new work',async()=>{
+ const s={videos:{v:{stage:'text_review_required',transcript:[{start:0,text:'x'}],summarySpentMicros:1233}},budgets:{}};
+ const store={exclusive:fn=>fn(s,async()=>{})};let allowed;
+ await recoverHeldSummary({store,config,videoId:'v',summarizer:{summarize:async({maxCostMicros})=>{
+  allowed=maxCostMicros;throw Object.assign(Error('insufficient_context_reviewed_items'),{candidate:{calls:[{ceiling:1000,spentMicros:500,status:'completed'}]}});
+ }}});
+ assert.equal(allowed,28767);assert.equal(s.videos.v.summarySpentMicros,1733);
+ assert.ok(Object.values(s.budgets).every(v=>v===500));
+ s.videos.v.summarySpentMicros=30000;
+ assert.equal((await recoverHeldSummary({store,config,videoId:'v',summarizer:{summarize:async()=>{throw Error('must_not_call');}}})).status,'summary_budget_exceeded');
+});
 test('recovery never starts a paid call over budget or for a completed video',async()=>{
  let calls=0;const summarizer={summarize:async()=>{calls++;}};
  const s={videos:{v:{stage:'sent',transcript:[{start:0,text:'x'}]}},budgets:{}};

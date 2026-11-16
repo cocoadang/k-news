@@ -22,7 +22,7 @@ function fake({audit,extract,failStage}={}){
  const calls=[];const client={estimateInputTokens:()=>1000,async generate(args){
   calls.push(args);if(args.name===failStage)throw Error('timeout');
   const payload=JSON.parse(args.contents.slice(args.contents.indexOf('\n')+1));
-  const result=args.name==='audit'?{checks:payload.drafts.map((_,i)=>audit?audit(i):clear(i))}:args.name==='repair'?{items:[]}:
+  const result=args.name==='audit'?{checks:payload.drafts.map((_,i)=>audit?audit(i):clear(i))}:['repair','clarify'].includes(args.name)?{items:[]}:
    {items:extract?extract(payload):payload.blocks.slice(0,4).map(point)};
   return {text:JSON.stringify(result),usage:{input_tokens:1000,output_tokens:300,output_tokens_details:{reasoning_tokens:100}}};
  }};return {client,calls};
@@ -60,7 +60,22 @@ test('short broadcast uses two calls and rejects qualified, unsupported and dupl
  for(const bad of [{supported:false},{duplicateOf:0},{counterStatus:'uncertain'},{sourceIds:['B9999']}]){
   const g=fake({audit:i=>i>1?{...clear(i),...bad}:clear(i)});
   await assert.rejects(lunaSummarizer({client:g.client,approved:true}).summarize({segments:segments(35),video,maxCostMicros:10000}),/insufficient_context_reviewed/);
-  assert.equal(g.calls.length,2);
+  assert.equal(g.calls.length,['supported','counterStatus'].some(k=>k in bad)?3:2);
+ }
+});
+
+test('ambiguous peripheral clause is removed once and the entire result must pass a fresh audit',async()=>{
+ for(const accepted of [true,false]){
+  const calls=[],client={estimateInputTokens:()=>1000,async generate(args){
+   calls.push(args.name);const p=JSON.parse(args.contents.split('\n')[1]);
+   const result=args.name.startsWith('extract_')?{items:p.blocks.slice(0,3).map(point)}:
+    args.name==='clarify'?{items:[point(p.blocks.find(b=>b.text.includes('뉴스 '+p.drafts[0].text.match(/뉴스 (\d+)/)[1]+' ')))]}:
+    {checks:p.drafts.map((_,i)=>({...clear(i),supported:args.name==='audit_qualified'?accepted:i!==1,counterStatus:(args.name==='audit_qualified'?accepted:i!==1)?'clear':'uncertain'}))};
+   return {text:JSON.stringify(result),usage:{input_tokens:1000,output_tokens:200}};
+  }};
+  const run=lunaSummarizer({client,approved:true}).summarize({segments:segments(35),video,maxCostMicros:10000});
+  if(accepted)assert.equal((await run).items.length,3);else await assert.rejects(run,/insufficient_context_reviewed/);
+  assert.deepEqual(calls,['extract_0','audit','clarify','audit_qualified']);
  }
 });
 test('one repair receives only rejected claims and limited evidence; no full draft replay',async()=>{

@@ -7,6 +7,7 @@ export const DISCOVERY_BACKFILL_FROM=Date.parse('2026-10-28T15:00:00Z');
 export function activationFloor(value){const t=value?Date.parse(value):NaN;return Number.isFinite(t)?Math.min(t,DISCOVERY_BACKFILL_FROM):null;}
 export const wallstreetConfig=Object.freeze({enabled,intervalMs:null,activatedAt:activationFloor(process.env.KNEWS_YOUTUBE_ACTIVATED_AT),
   summaryProtocol:'evidence_ids_v1',
+  telegramDigestApproved:true,
   minimumSummaryItems:5,
   acceptMinimumItems:3,
   allowSourceRepair:true,

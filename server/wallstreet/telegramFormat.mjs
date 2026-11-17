@@ -19,6 +19,7 @@ export function telegramHtml(text,{publishedAt}={}){
   const flush=()=>{if(stamps.length){out.push('   ⏱ '+stamps.join('  ·  '));stamps=[];}};
   for(const raw of lines){
     const line=raw.trim();if(!line)continue;
+    if(/^https:\/\/news\.dsoom\.com\/\?video=[\w-]{11}$/.test(line)){flush();out.push(`<a href="${esc(line)}">Dsoom 상세 요약 보기</a>`);continue;}
     const u=line.match(URL_RE);
     if(u){
       const href=esc(line);

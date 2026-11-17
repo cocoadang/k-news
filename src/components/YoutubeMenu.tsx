@@ -23,7 +23,7 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
       if(r.status===401||r.status===403){setStatus('error');return;}
       if(!r.ok)throw Error('read_failed');
       const body=await r.json();if(!Array.isArray(body.videos))throw Error('invalid_response');
-      setVideos(body.videos);setStatus('ready');
+      setVideos(body.videos);const linked=new URLSearchParams(window.location.search).get('video');if(body.videos.some((v:Video)=>v.id===linked))setSelected(linked);setStatus('ready');
     }).catch(e=>{if(e.name!=='AbortError')setStatus('error');});
     return ()=>controller.abort();
   },[isAdmin,version]);

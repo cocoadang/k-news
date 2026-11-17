@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-11-17 Single-message YouTube Telegram digest
+- Detailed website `parts` remain unchanged. The scheduled worker stores a separate durable `telegramParts` outbox, claimed before HTTP; sent and ambiguous outcomes are never replayed. Old partially delivered outboxes remain held for review rather than being silently resent.
+- Future Luna summaries optionally produce a title plus one-sentence digest for every accepted source issue. Exhaustive source-index coverage, classification checks and an independent semantic audit guard merging/meaning preservation. One tighter compression is allowed for oversized drafts. These calls share the original per-video/day/month reservation and durable checkpoint; no spending ceilings are increased.
+- Both raw fallback text and parsed HTML are checked against 4096 UTF-16 units conservatively. If compression cannot fit, semantic audit fails, or remaining budget is insufficient, one sendDocument message retains all issues, labels and timestamp URLs with a Dsoom detail link. No source issue is sliced away. Existing published videos are not backfilled or resent.
+- Dsoom links use `?video=VIDEO_ID`; the YouTube page opens the matching stored detail. Provider wrappers now forward publication date and document metadata to the real Telegram transport.
+- Deployment and main commit were explicitly authorized by the owner in this chat. Prior manual-deploy policy remains in effect for future unrelated changes.
+
 ## 2026-11-16 Future YouTube flow verification
 - `futureRecoveryFlow.test.mjs` exercises newly discovered videos through the production provider factory, OpenAI request adapter, Luna grounding/clarification/audit, transactional store, real schedule gating, budget ledger and Telegram adapter. Only external services are synthetic; no production content or spending is created.
 - Coverage: initial ambiguous clause correction plus full audit; next-slot exactly-one recovery with new runtime instances; continued hold after second rejection; unknown Telegram outcome never resent. Caption acquisition occurs once. Repeated future slots do not re-summarize or resend. Reservations reach but never exceed the existing video/day/month limits.

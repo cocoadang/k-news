@@ -44,6 +44,8 @@ function fixture({repairFirst=false,failAgain=false,unknownDelivery=false}={}){
     assert.match(body.input[1].content,/remove unsupported or ambiguous peripheral clauses/i);
     result={items:repairFirst?[point(p.blocks.find(b=>b.text.includes('뉴스 '+p.drafts[0].text.match(/뉴스 (\d+)/)[1]+' ')))]:[]};
    }else if(name==='audit'||name==='audit_qualified')result={checks:p.drafts.map((x,i)=>check(i,!x.text.includes('외부 선임')))};
+   else if(name==='telegram_digest')result={items:p.source.map(x=>({sourceIndexes:[x.index],title:x.title,text:x.text,kind:x.kind}))};
+   else if(name==='telegram_digest_audit')result={complete:true,faithful:true,classificationCorrect:true,onlySameIssuesMerged:true};
    else throw Error('unexpected_stage_'+name);
    return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(result)}]}],usage:{input_tokens:1000,output_tokens:200}});
   }
@@ -57,7 +59,7 @@ function fixture({repairFirst=false,failAgain=false,unknownDelivery=false}={}){
 test('new discovery automatically uses semantic clarification and unchanged checks before a single delivery',async()=>{
  const x=fixture({repairFirst:true});await x.runtime().run();
  const state=await x.store().read(),r=state.videos[x.video.id];
- assert.equal(r.stage,'sent');assert.deepEqual(x.counts().calls,['extract_0','audit','clarify','audit_qualified']);
+ assert.equal(r.stage,'sent');assert.deepEqual(x.counts().calls,['extract_0','audit','clarify','audit_qualified','telegram_digest','telegram_digest_audit']);
  assert.equal(r.summaryCandidate.items.length,3);assert.ok(r.summaryCandidate.audit.checks.every(c=>c.supported&&c.counterStatus==='clear'&&c.duplicateOf===null));
  await x.runtime().run();x.advance();await x.runtime().run();assert.equal(x.counts().telegram,1);assert.equal(x.counts().captions,1);assert.equal(x.counts().extracts,1);
 });
@@ -80,5 +82,5 @@ test('a second rejected summary stays held across future schedules and never sen
 test('an uncertain Telegram response never sends or summarizes again',async()=>{
  const x=fixture({repairFirst:true,unknownDelivery:true});await x.runtime().run();const before=x.counts();
  for(let i=0;i<4;i++){x.advance();await x.runtime().run();}
- const r=(await x.store().read()).videos[x.video.id];assert.equal(r.parts[0].status,'unknown');assert.deepEqual(x.counts(),before);assert.equal(before.telegram,1);
+ const r=(await x.store().read()).videos[x.video.id];assert.equal(r.telegramParts[0].status,'unknown');assert.deepEqual(x.counts(),before);assert.equal(before.telegram,1);
 });

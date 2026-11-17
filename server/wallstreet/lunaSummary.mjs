@@ -1,4 +1,5 @@
 import {aiCacheMetric} from '../costAiTelemetry.mjs';
+import {summarizeDigest} from './digestSummary.mjs';
 import {createHash} from 'node:crypto';
 import {evidenceBlocks,segmentWindows,filterGroundedCandidates,conservativeClassification,acceptVerification} from './groundedSummary.mjs';
 import {LUNA_MODEL,LUNA_CACHE_WRITE_RATE,LUNA_OUTPUT_RATE,lunaUsageCost} from './lunaClient.mjs';
@@ -23,7 +24,7 @@ function reviewPayload(items){
  const blocks=[...new Map(items.flatMap(x=>x.relatedBlocks).map(x=>[x.id,x])).values()].sort((a,b)=>a.start-b.start);
  return {drafts:items.map((x,index)=>({index,title:x.title||'',text:x.text,kind:x.kind,coreIds:x.contextIds,relatedIds:x.relatedBlocks.map(b=>b.id)})),blocks:compactBlocks(blocks)};
 }
-export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
+export function lunaSummarizer({client,approved=false,acceptMinimumItems=3,telegramDigestApproved=false}){
  const floor=Math.max(3,acceptMinimumItems);
  return {async summarize({segments,video,maxCostMicros,checkpoint={},saveCheckpoint=async()=>{}}){
   if(!approved||!Number.isSafeInteger(maxCostMicros)||maxCostMicros<1||maxCostMicros>50000)throw Error('grounded_budget_config');
@@ -42,10 +43,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    // A timeout/crash may have incurred a charge. Never repeat it automatically.
    if(entry){aiCacheMetric('youtube_checkpoint','pending');throw Error('luna_previous_call_uncertain');}
    aiCacheMetric('youtube_checkpoint','miss');
-   if(journal.calls.length>=windows.length+4)throw Error('luna_call_limit');
+   if(journal.calls.length>=windows.length+(telegramDigestApproved?7:4))throw Error('luna_call_limit');
    // Completed stages with older prompts may coexist with their replacements.
    // Keep that history bounded without charging cache hits against this run's call limit.
-   if(Object.keys(checkpoint.entries).length>=2*(windows.length+4))throw Error('luna_checkpoint_limit');
+   if(Object.keys(checkpoint.entries).length>=2*(windows.length+(telegramDigestApproved?7:4)))throw Error('luna_checkpoint_limit');
    const input=client.estimateInputTokens(args);
    if(!Number.isSafeInteger(input)||input<1||input>250000)throw Error('luna_input_limit');
    // A fresh request may be billed at the cache-write rate for its input.
@@ -141,6 +142,10 @@ export function lunaSummarizer({client,approved=false,acceptMinimumItems=3}){
    }
    if(kept.length<floor)throw Error('insufficient_context_reviewed_items');
    const result=acceptVerification(kept.map(x=>x.item),{checks:kept.map((x,index)=>({...x.check,index}))});
+   if(telegramDigestApproved){
+    try{result.telegramDigest=await summarizeDigest(result.items,call);}
+    catch{result.telegramDigest={verified:false};}
+   }
    journal.candidateCount=candidates.length;journal.repairedCount=rejected.length;journal.omittedCount=items.length-kept.length;
    result.validationJournal=journal;return result;
   }catch(error){error.candidate=journal;throw error;}

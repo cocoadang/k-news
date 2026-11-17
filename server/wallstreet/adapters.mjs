@@ -63,8 +63,17 @@ export function youtubeDiscovery({ apiKey, approved=false, fetcher=fetch,allowed
 export function telegramTransport({token,approved=false,fetcher=fetch}) {
   return {async send(chatId,text,meta={}) {
     required(approved);
-    if(!token || !chatId || text.length>3500) throw Error('invalid_telegram_request');
+    if(!token || !chatId || text.length>4096) throw Error('invalid_telegram_request');
     try {
+      if(meta.document){
+        const form=new FormData();form.set('chat_id',String(chatId));form.set('caption',text.slice(0,1024));
+        form.set('document',new Blob([meta.document],{type:'text/plain;charset=utf-8'}),'youtube-summary.txt');
+        const response=await fetcher(`https://api.telegram.org/bot${token}/sendDocument`,{method:'POST',body:form,signal:AbortSignal.timeout(20000)});
+        const data=await response.json();
+        if(response.ok&&data.ok&&data.result?.message_id)return {status:'sent',messageId:String(data.result.message_id)};
+        if(response.status===429&&data.ok===false)return {status:'rate_limited',definitelyNotSent:true,retryAfterMs:Math.max(60,Number(data.parameters?.retry_after)||60)*1000};
+        return {status:response.status>=400&&response.status<500&&data.ok===false?'rejected':'unknown'};
+      }
       const post=body=>fetcher(`https://api.telegram.org/bot${token}/sendMessage`,{
         method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
         body:JSON.stringify({chat_id:chatId,link_preview_options:{is_disabled:true},...body})});

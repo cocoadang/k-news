@@ -43,7 +43,7 @@ const source=v=>({video:v,text:`YouTube transcript\nVideo ID: ${v.id}\n[0:00] �
 const result={items:Array.from({length:3},()=>({text:'수요 증가',kind:'outlook',speaker:'출연자',segment:0,quote:'수요 증가'}))};
 function setup(overrides={}){const store=memory(),sent=[];const config={enabled:true,projectId:TEXT_PROJECT,paidFallback:false,activatedAt:now-86400000,recipient:'123',deliveryTime:'18:00',summaryApproved:true,deliveryApproved:true,combinedTokenCapVerified:true,summaryReservationMicros:100,dailySummaryMicros:300,monthlySummaryMicros:300,...overrides};const deps={store,config,clock:()=>now,summarizer:{summarize:async()=>result},telegram:{send:async(id,text)=>{sent.push({id,text});return {status:'sent',messageId:sent.length};}}};return {store,sent,deps,run:()=>createTextRuntime(deps)};}
 test('individual video queues persist and no duplicate send under concurrent ticks',async()=>{const x=setup();const r=x.run();await r.importTranscript(source(video()));await r.importTranscript(source(video('annR-E8m5WQ')));await Promise.all([r.run(),r.run()]);assert.equal(x.sent.length,2);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'sent');await r.importTranscript(source(video()));await r.run();assert.equal(x.sent.length,2);});
-test('unknown Telegram delivery never retries',async()=>{const x=setup();let calls=0;x.deps.telegram.send=async()=>{calls++;throw Error('timeout');};const r=x.run();await r.importTranscript(source(video()));await r.run();await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.parts[0].status,'unknown');});
+test('unknown Telegram delivery never retries',async()=>{const x=setup();let calls=0;x.deps.telegram.send=async()=>{calls++;throw Error('timeout');};const r=x.run();await r.importTranscript(source(video()));await r.run();await r.run();assert.equal(calls,1);assert.equal(x.store.state.videos.Idn_d5ArZvA.telegramParts[0].status,'unknown');});
 test('daily budget atomically holds second video, schedule can hold first',async()=>{const x=setup({dailySummaryMicros:100,deliveryTime:'23:00'}),r=x.run();await r.importTranscript(source(video()));await r.importTranscript(source(video('annR-E8m5WQ')));await Promise.all([r.run(),r.run()]);assert.equal(x.sent.length,0);assert.equal(x.store.state.videos['annR-E8m5WQ'].hold,'text_budget');});
 test('discovery without authorized caption collector waits, no title summary',async()=>{const x=setup();x.deps.discovery={list:async c=>Object.assign(c===video().channelId?[video()]:[],{coverageComplete:false})};await x.run().run();assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_waiting');assert.equal(x.sent.length,0);});
 test('reject transcript mismatch, unsupported number and unverified cap',async()=>{assert.throws(()=>parseUiTranscript(source(video()).text,video('annR-E8m5WQ')));assert.throws(()=>renderBrief(video(),[{start:0,text:'수요 증가'}],{items:result.items.map(x=>({...x,text:'수요 99% 증가'}))}));const x=setup({combinedTokenCapVerified:false}),r=x.run();await r.importTranscript(source(video()));await r.run();assert.equal(x.sent.length,0);assert.equal(x.store.state.videos.Idn_d5ArZvA.stage,'text_summary');});
@@ -58,13 +58,13 @@ test('Luna retry policy persists checkpoint, disables immediate and later full-v
  await x.run().run();assert.equal(calls,1);
 });
 
-test('split outbox persists confirmed prefix and never repeats uncertain suffix',async()=>{
+test('long detailed publication sends a single digest and never repeats it',async()=>{
   const x=setup();let calls=0;
   x.deps.summarizer.summarize=async()=>({items:Array.from({length:5},()=>({text:'a'.repeat(690),kind:'fact',speaker:'host',segment:0,quote:'a'.repeat(690)}))});
   x.deps.telegram.send=async()=>{calls++;return calls===1?{status:'sent',messageId:'one'}:{status:'unknown'};};
   const r=x.run(),v=video();await r.importTranscript({video:v,text:`YouTube transcript\nVideo ID: ${v.id}\n[0:00] ${'a'.repeat(690)}`,provenance:{method:'youtube_ui',videoId:v.id}});
   await r.run();await x.run().run();const parts=x.store.state.videos[v.id].parts;
-  assert.equal(parts.length,2);assert.ok(parts.every(p=>p.text.length<4096));assert.equal(parts[0].status,'sent');assert.equal(parts[1].status,'unknown');assert.equal(calls,2);
+  assert.equal(parts.length,2);assert.ok(parts.every(p=>p.text.length<4096));assert.ok(parts.every(p=>p.status==='sent'));assert.equal(calls,1);assert.equal(x.store.state.videos[v.id].telegramParts.length,1);
 });
 
 test('caption waiting expires without model or delivery side effects',async()=>{

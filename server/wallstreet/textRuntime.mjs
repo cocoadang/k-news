@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {telegramDigest} from './telegramDigest.mjs';
 import {isApprovedDeliveryRecipient} from './publicChannel.mjs';
 import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
@@ -194,12 +195,22 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(c.deliveryApproved!==true||!telegram||(c.deliveryMode!=='immediate'&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(c.deliveryTime||''))){r.hold='delivery_approval_time_required';continue;}
           if(!isApprovedDeliveryRecipient(c.recipient)||(c.deliveryMode!=='immediate'&&!due(now,c.deliveryTime)))continue;
           delete r.hold;
-          for(const p of r.parts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
-            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt});}catch{result={status:'unknown'};}
+          if(r.channelTest?.recipient===r.recipient){
+            if(r.channelTest.status==='sent'){for(const p of r.parts)p.status='sent';r.stage='sent';await save();continue;}
+            r.hold='channel_delivery_requires_review';await save();continue;
+          }
+          if(!r.telegramParts){
+            if(r.parts.some(p=>p.status!=='pending')){r.hold='legacy_delivery_requires_review';await save();continue;}
+            try{r.telegramParts=[{...telegramDigest(r.parts.map(p=>p.text.replace(/^\[\d+\/\d+\]\n/u,'')).join('\n'),r.video,r.summaryCandidate?.telegramDigest),status:'pending'}];}
+            catch{r.hold='telegram_digest_requires_review';await save();continue;}
+            await save();
+          }
+          for(const p of r.telegramParts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
+            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt,document:p.document});}catch{result={status:'unknown'};}
             if(result.status==='sent'&&result.messageId){p.status='sent';p.messageId=String(result.messageId);}
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;
-          }if(r.parts.every(p=>p.status==='sent')){r.stage='sent';await save();}
+          }if(r.telegramParts.every(p=>p.status==='sent')){for(const p of r.parts)p.status='sent';r.stage='sent';await save();}
         }
         // Web-only supplement of already-sent summaries: runs after new videos, reuses the stored result and only
         // rewrites claims held for a missing caveat (no full re-summary, never Telegram). Skipped if a new video still awaits its summary.

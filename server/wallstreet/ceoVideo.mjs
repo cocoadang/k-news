@@ -102,9 +102,9 @@ export async function runCeoVideoStep({s,save,now,c,discovery,supadata,extractor
   const cfg=c.ceoVideo;if(!cfg?.enabled||!discovery||!supadata||!extractor)return {status:'ceo_video_disabled'};
   s.ceoVideos ||= {};s.ceoVideoBudget ||= {days:{},months:{},spend:{}};
   const B=s.ceoVideoBudget,day=kstDay(now),month=day.slice(0,7);
-  if(!s.ceoVideoLastDiscovery||now-s.ceoVideoLastDiscovery>=6*3600000){
+  if(s.ceoVideoDiscoveryVersion!==2||!s.ceoVideoLastDiscovery||now-s.ceoVideoLastDiscovery>=6*3600000){
     for(const ch of CEO_CHANNELS){try{for(const v of await discovery.list(ch.id)){const m=matchCeoVideo(v);if(m&&!s.ceoVideos[v.id])s.ceoVideos[v.id]={video:v,...m,official:ch.official,stage:'waiting',firstSeen:now};}}catch{}}
-    s.ceoVideoLastDiscovery=now;await save();
+    s.ceoVideoLastDiscovery=now;s.ceoVideoDiscoveryVersion=2;await save();
   }
   const waiting=Object.values(s.ceoVideos).filter(r=>r.stage==='waiting').sort((a,b)=>(b.official-a.official)||(b.video.publishedAt-a.video.publishedAt));
   const r=waiting[0];if(!r)return {status:'ceo_video_none'};

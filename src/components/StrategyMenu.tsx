@@ -13,6 +13,7 @@ const COLORS: Record<string, string> = {old: '#e0a040', b3325: '#4c9be8', mubot:
 const ORDER = ['old', 'b3325', 'mubot', 'qqq'];
 const LABELS = (): Record<string, string> => ({tripod: tr('트라이팟', 'Tripod'), old: '5/10/20', b3325: '3/25', mubot: tr('무한매수 20분할', 'Infinite Buying (20 splits)'), qqq: tr('QQQ 적립', 'QQQ DCA')});
 const RULES = (): Record<string, string> => ({
+  tripod: tr('250일선 대비 +1% 이상이면 VIX 평균 28 미만 및 52주 낙폭 9% 이내에서 TQQQ, 그 외는 QQQ·QLD. −5% 이하에서는 VIX 평균 18 미만이면 QQQ·QLD, 그 외는 현금. 중간 구간에서는 직전 신호 유지.', 'At +1% or above vs. the 250-day MA, use TQQQ if average VIX is below 28 and drawdown is at most 9%; otherwise use QQQ/QLD. At −5% or below, use QQQ/QLD if average VIX is below 18; otherwise use cash. In between, retain the previous signal.'),
   b3325: tr('하락폭 3% 미만 SGOV · 3~25% QQQ · 25% 이상 TQQQ(+SGOV를 1/6씩 이동) · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <3% SGOV · 3–25% QQQ · ≥25% TQQQ (+move SGOV in 1/6 steps) · at a new high TQQQ→QQQ'),
   old: tr('하락폭 5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20% 이상 TQQQ · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <5% SGOV · 5–10% SCHD · 10–20% QQQ · ≥20% TQQQ · at a new high TQQQ→QQQ'),
   mubot: tr('라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식', 'Approximation of Laoer\'s Infinite Buying V4.0 (TQQQ, 20 splits)'),
@@ -167,9 +168,16 @@ function LiveSection({live}: {live: Live}) {
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
+  const [reading, setReading] = useState<TripodSignal | null>(null);
+  const [signalLoading, setSignalLoading] = useState(true);
   useEffect(() => {
     const controller = new AbortController();
     const refresh = () => {
+      fetch('/api/market/tripod', {signal: controller.signal})
+        .then(response => response.ok ? response.json() as Promise<TripodSignal> : null)
+        .then(result => { if (!controller.signal.aborted) setReading(result); })
+        .catch(() => { if (!controller.signal.aborted) setReading(null); })
+        .finally(() => { if (!controller.signal.aborted) setSignalLoading(false); });
       fetch('/api/market/tripod-portfolio', {signal: controller.signal})
         .then(response => response.ok ? response.json() : null)
         .then(result => { if (result && !controller.signal.aborted) setTripod(result); })
@@ -180,6 +188,7 @@ function LiveSection({live}: {live: Live}) {
     return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
   const tracked = tripod?.start === live.start && tripod.asOf >= tripodLiveSeed.asOf ? tripod : tripodLiveSeed.start === live.start ? tripodLiveSeed : null;
+  const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
   const same = (a?: [string, number][], b?: [string, number][]) => !!a && !!b && a.length === b.length && a.every((p, i) => p[0] === b[i][0] && Math.abs(p[1] - b[i][1]) < 1e-9);
   const sameAsQqq = same(live.virtual.b3325?.series, live.virtual.qqq?.series);
   const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label) + (k === 'qqq' && sameAsQqq ? t(' (지금은 3/25와 같음)', ' (same as 3/25 for now)') : ''), color: COLORS[k],
@@ -199,18 +208,30 @@ function LiveSection({live}: {live: Live}) {
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD'), t('다음 매수', 'Next buy')]}>
         {order.map(k => { const v = live.virtual[k]; return <tr key={k}><td className={tdL}><Dot k={k}/>{k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label)}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
           <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
-        <tr><td className={tdL}><Dot k="tripod"/>{label('tripod')}</td><td className={td}>{pct(tracked?.twr)}</td><td className={td}>{pct(tracked?.mdd)}</td><td className={td}><a href="#tripod-signal">{t('신호 보기', 'View signal')}</a></td></tr>
+        <tr>
+          <td className={tdL}><Dot k="tripod"/>{label('tripod')}
+            {tracked && tracked.asOf !== live.asOf && <span className="block text-xs font-normal text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</span>}
+          </td>
+          <td className={td}>{pct(tracked?.twr)}</td>
+          <td className={td}>{pct(tracked?.mdd)}</td>
+          <td className={td}>
+            <span role="status">{reading ? allocations[reading.state] : signalLoading ? t('불러오는 중', 'Loading') : t('신호 없음', 'Signal unavailable')}</span>
+            {reading && <details className="mt-1 text-xs text-slate-400">
+              <summary className="cursor-pointer">{t('신호 기준', 'Signal as of')} {dot(reading.asOf)}</summary>
+              <div>{t('250일선 대비', 'vs. 250-day MA')} {pct(reading.distance)}</div>
+              <div>{t('52주 낙폭', '52-week drawdown')} {pct(-reading.drawdown)}</div>
+              <div>{t('VIX 10일 평균', 'VIX 10-day average')} {reading.vix.toFixed(2)}</div>
+            </details>}
+          </td>
+        </tr>
       </Table></div>
-      {tracked && tracked.asOf !== live.asOf && <p className="mt-2 text-xs text-slate-400">{t('트라이팟 평가 기준', 'Tripod marked through')} {dot(tracked.asOf)}</p>}
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
-      <TripodLive/>
       <div className="mt-3 border-t border-slate-800 pt-3">
         <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
         <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
-          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">3/25</dt><dd>{t('3% 미만 SGOV · 3% 이상 25% 미만 QQQ · 25% 이상 TQQQ', '<3% SGOV · 3% to <25% QQQ · ≥25% TQQQ')}</dd></div>
-          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">5/10/20</dt><dd>{t('5% 미만 SGOV · 5% 이상 10% 미만 SCHD · 10% 이상 20% 미만 QQQ · 20% 이상 TQQQ', '<5% SGOV · 5% to <10% SCHD · 10% to <20% QQQ · ≥20% TQQQ')}</dd></div>
-          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">{label('mubot')}</dt><dd>{t('TQQQ 매수 자금을 20회분으로 나누고, 라오어 무한매수 V4.0을 바탕으로 한 규칙에 따라 분할 매수합니다.', 'Split the TQQQ buying budget into 20 parts and purchase in installments using rules based on Laoer’s Infinite Buying V4.0.')}</dd></div>
-          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">{label('qqq')}</dt><dd>{t('매달 첫 거래일에 같은 금액으로 QQQ를 매수합니다.', 'Buy the same dollar amount of QQQ on the first trading day of each month.')}</dd></div>
+          {['b3325', 'old', 'mubot', 'qqq', 'tripod'].map(key => <div key={key} className="grid grid-cols-[minmax(5rem,auto)_1fr] gap-x-2 sm:grid-cols-[11rem_1fr]">
+            <dt className="font-medium text-slate-200">{label(key)}</dt><dd>{RULES()[key]}</dd>
+          </div>)}
         </dl>
       </div>
     </div>
@@ -248,7 +269,6 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         ? <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={`${tdL} text-slate-400`} colSpan={3}>{s.na}</td></tr>
         : <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={cls(s.irr, bI)}>{pct(s.irr)}</td><td className={cls(s.irrLiq, bL)}>{pct(s.irrLiq)}</td><td className={cls(s.mdd, bM)}>{pct(s.mdd)}</td><td className={`${td} ${mh}`}>{won(s.final)} ({won(s.invested)})</td></tr>; })}
     </Table></div>
-    {includeTripod && <p className="mt-2 text-xs text-slate-400">{t('트라이팟은 세전 기준으로 계산했습니다.', 'Tripod figures are pre-tax.')} {comparison.data === 'Mixed synthetic' && t('상장 전 합성 ETF 수익률 포함.', 'Includes synthetic pre-listing ETF returns.')}</p>}
     <div className="mt-4"><LineChart lines={lines} yFormat={v => won(v)} ariaLabel={t('백테스트 자산 곡선', 'Backtest equity curve')}/></div>
     <details className="mt-3 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('매년 1월 시작 결과', 'Starting each January')} ({bt.startRange[0]}–{bt.startRange[1]})</summary>
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('시작연도 평균', 'Avg by start yr'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5-yr avg'), t('5년 최저', '5-yr min'), t('5년 QQQ 이김', 'Beat QQQ (5-yr)')]} mobileHide={[2, 4]}>
@@ -267,39 +287,11 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('계산 기준', 'Method')}</summary>
       <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-400">
-        {order.map(k => <li key={k}><Dot k={k}/>{label(k)}: {RULES()[k]}</li>)}
+        {primaryOrder.map(k => <li key={k}><Dot k={k}/>{label(k)}: {RULES()[k]}
+          {k === 'tripod' && <> · {t('세전 IRR 제공', 'Pre-tax IRR available')}{comparison.data === 'Mixed synthetic' && t(' · 상장 전 합성 ETF 수익률 포함', ' · Includes synthetic pre-listing ETF returns')}</>}
+        </li>)}
         {(lang === 'en' ? ASSUMPTIONS_EN : bt.assumptions || []).map((a, i) => <li key={i}>· {a}</li>)}
       </ul>
     </details>
   </div>;
 }
-
-function TripodLive() {
-  const {t} = useLang();
-  const [reading, setReading] = useState<TripodSignal | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const controller = new AbortController();
-    const refresh = () => {
-      fetch('/api/market/tripod', {signal: controller.signal})
-        .then(response => response.ok ? response.json() as Promise<TripodSignal> : Promise.reject(new Error('Tripod unavailable')))
-        .then(result => { if (!controller.signal.aborted) setReading(result); })
-        .catch(() => { if (!controller.signal.aborted) setReading(null); })
-        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    };
-    refresh();
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 600_000);
-    return () => { controller.abort(); window.clearInterval(timer); };
-  }, []);
-  const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
-  return <section id="tripod-signal" className="mt-4 border-t border-slate-800 pt-3">
-    <h3 className="text-sm font-semibold text-white">{t('트라이팟 · 실전 신호', 'Tripod · Live signal')}</h3>
-    <p className="mt-1 text-sm text-slate-300" role="status">{reading ? allocations[reading.state] : loading ? t('불러오는 중', 'Loading') : t('종가 신호를 불러오지 못했습니다.', 'Closing signal unavailable.')}</p>
-    {reading && <p className="mt-1 text-xs text-slate-400">
-      {t('미국 종가', 'US close')} {dot(reading.asOf)} · {t('250일선 대비', 'vs. 250-day MA')} {pct(reading.distance)} ·
-      {' '}{t('52주 낙폭', '52-week drawdown')} {pct(-reading.drawdown)} · {t('VIX 10일 평균', 'VIX 10-day average')} {reading.vix.toFixed(2)}
-    </p>}
-    <p className="mt-2 text-xs text-slate-400">{t('250일선 대비 +1% 이상이면 VIX 평균 28 미만 및 52주 낙폭 9% 이내에서 TQQQ, 그 외는 QQQ·QLD. −5% 이하에서는 VIX 평균 18 미만이면 QQQ·QLD, 그 외는 현금. 중간 구간에서는 직전 신호 유지.', 'At +1% or above vs. the 250-day MA, use TQQQ if average VIX is below 28 and drawdown is at most 9%; otherwise use QQQ/QLD. At −5% or below, use QQQ/QLD if average VIX is below 18; otherwise use cash. In between, retain the previous signal.')}</p>
-  </section>;
-}
-

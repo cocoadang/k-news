@@ -117,7 +117,7 @@ export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
     ['ray-dalio','bridgewater','ray-dalio'], ['bill-ackman','pershing','ackman'],
     ['sam-altman','openai','altman'], ['dario-amodei','anthropic','dario|amodei'],
   ].map(([personId,companyId,slug]): DiscoveryProvider => ({
-    id:'cnbc-interviews-'+personId,companyId,personId,name:'CNBC 인터뷰 원문 · '+personId,
+    id:'cnbc-interviews-v2-'+personId,companyId,personId,name:'CNBC 인터뷰 원문 · '+personId,
     index:'https://pressroom.versantmedia.com/cnbc/press-releases',mode:'archive',
     host:'pressroom.versantmedia.com',articlePath:new RegExp('^/cnbc/press-releases/(?=[^/]*(?:'+slug+'))[^/]+$'),interview:true,
     ...(personId==='dario-amodei'?{seedUrls:['https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-exclusive-transcript-anthropic-co-founders-dario-and-daniela-amodei-speak']}:{}),
@@ -308,7 +308,14 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   // 이미지 전사 속 흰색 OCR 텍스트는 범용 추출에서 제외하고 기존 SEC 전용 검증기에만 맡깁니다.
   if (p.id === 'tesla-sec' && /font-size\s*:\s*1pt|color\s*:\s*(?:white|#fff(?:fff)?)\b/i.test(html) && /<img\b/i.test(html)) return null;
   const title = htmlToText((p.authored ? metaValue(html, ['og:title'])?.replace(/^(?:Dario Amodei|Sam Altman|Ray Dalio)\s*[—–-]\s*/, '') : '') || /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
-  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored || p.interview ? authoredDate(html) : null));
+  // Publisher layouts can have >4KB of markup between the heading and date.
+  // Bound the visible header text, not the markup bytes, and require one unique date.
+  const heading = html.search(/<h1\b/i);
+  const interviewDates = p.interview && heading >= 0
+    ? [...new Set(extractAbsoluteDates(htmlToText(html.slice(heading)).slice(0,800)).filter(d=>d.precision==='day').map(d=>d.value))]
+    : [];
+  const interviewDate = interviewDates.length===1 ? interviewDates[0]+'T00:00:00.000Z' : null;
+  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.interview ? interviewDate : p.authored ? authoredDate(html) : null));
   if (!title || !publishedAt || Date.parse(publishedAt) > now + 86400000) return null;
   const articleBlocks = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)].map(m => m[1]);
   const mainBlocks = [...html.matchAll(/<main\b[^>]*>([\s\S]*?)<\/main>/gi)].map(m => m[1]);

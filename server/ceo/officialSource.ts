@@ -401,7 +401,8 @@ export async function loadDiscoveredArticles(o: {
   const articles: SourceArticle[] = [], reports: FeedReport[] = [], removed: string[] = [];
   const providers = o.providers || DISCOVERY_PROVIDERS;
   const offset = Number.isInteger(state.nextProvider) ? Math.max(0, state.nextProvider! % Math.max(1, providers.length)) : 0;
-  const ordered = [...providers.slice(offset), ...providers.slice(0, offset)];
+  const ordered = [...providers.slice(offset), ...providers.slice(0, offset)].sort((a,b) =>
+    Number(!!b.seedUrls?.length) - Number(!!a.seedUrls?.length) || Number(!!b.interview) - Number(!!a.interview));
   const coverage = new Map<string, Set<string>>();
   const addCoverage = (key: string, day: string) => { if (!coverage.has(key)) coverage.set(key, new Set()); coverage.get(key)!.add(day); };
   for (const s of o.existing) { const day = statementReferenceDate(s)?.value || s.evidence.map(e => documentPublishedAt(e)?.slice(0, 10)).find(Boolean); if (day && (Date.parse(day) || 0) >= five.getTime() && Date.parse(day) <= now + 86400000) addCoverage(s.companyId + '|' + s.topicId, day); }
@@ -447,12 +448,14 @@ export async function loadDiscoveredArticles(o: {
         }
         // 신규·과거 후보를 상한 안에서 차례로 처리합니다. lastmod는 순위에만 쓰며 발행일로 쓰지 않습니다.
         const priority = (c: DiscoveryCandidate) => /message-ceo|sundar|pichai|earnings|financial-results|satya|nadella|coreai|core-ai|why-what|prioritizing-security/i.test(c.url) ? 1 : 0;
-        stream.pending = [...entries.values()].sort((a, b) => priority(b) - priority(a) || (Date.parse(b.modified || '') || 0) - (Date.parse(a.modified || '') || 0)).slice(0, DISCOVERY_LIMITS.pendingPerStream);
+        stream.pending = [...entries.values()].sort((a, b) => Number(!!p.seedUrls?.includes(b.url)) - Number(!!p.seedUrls?.includes(a.url)) || priority(b) - priority(a) || (Date.parse(b.modified || '') || 0) - (Date.parse(a.modified || '') || 0)).slice(0, DISCOVERY_LIMITS.pendingPerStream);
         if (url === p.index) stream.updatedAt = now;
       } catch (e: any) { indexFailed = true; report.ok = false; report.error = String(e?.message || e).slice(0, 150); }
     }
     let read = 0;
-    while (stream.pending.length && read < DISCOVERY_LIMITS.articlesPerCompany && (usedByCompany.get(p.companyId) || 0) < DISCOVERY_LIMITS.articlesPerCompany * (p.companyId === 'tsla' ? 2 : 1) && o.now() < deadline) {
+    // Give each verified interview source one turn within the unchanged company quota.
+    const maxReads = p.seedUrls?.some(u => !stream.checked[u]?.ok) ? 1 : DISCOVERY_LIMITS.articlesPerCompany;
+    while (stream.pending.length && read < maxReads && (usedByCompany.get(p.companyId) || 0) < DISCOVERY_LIMITS.articlesPerCompany * (p.companyId === 'tsla' ? 2 : 1) && o.now() < deadline) {
       const c = stream.pending.shift()!; read++; usedByCompany.set(p.companyId, (usedByCompany.get(p.companyId) || 0) + 1);
       if (o.knownUrls?.has(c.url)) continue;
       try {

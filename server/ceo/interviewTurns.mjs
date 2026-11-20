@@ -1,7 +1,7 @@
 // Deterministic speaker boundaries. Unknown speakers always end the preceding turn.
 const key=s=>s.replace(/\s+/g,' ').trim().toUpperCase();
 export function interviewTurns(text) {
-  const re=/(^|\n)[ \t]*([A-Z][A-Za-z.'’\-]*(?:[ \t]+[A-Z][A-Za-z.'’\-]*){0,4})(?:[ \t]*\(\d{1,2}:\d{2}(?::\d{2})?\))?[ \t]*(?::[ \t]*|(?=\n))/g;
+  const re=/(^|\n)[ \t]*([A-Z][A-Za-z.'’\-]*(?:[ \t]+[A-Z][A-Za-z.'’\-]*){0,4})(?:[ \t]*\(\d{1,2}:\d{2}(?::\d{2})?\)[ \t]*:?[ \t]*|[ \t]*(?::[ \t]*|(?=\n)))/g;
   const marks=[...text.matchAll(re)].map(m=>({label:key(m[2]),at:m.index,start:m.index+m[0].length}));
   return marks.map((m,i)=>({label:m.label,body:text.slice(m.start,marks[i+1]?.at??text.length).trim(),labelText:text.slice(m.at,m.start).trim()}));
 }

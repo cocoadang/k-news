@@ -17,3 +17,10 @@ test('no labels fails closed; quoted third party text and long reproductions exc
  const q=ownInterviewQuotes('DARIO AMODEI: '+('We expect continued progress in safety and technology over the next several years. '.repeat(20)),['Dario Amodei']);
  assert.ok(q.reduce((n,x)=>n+x.quote.split(/\s+/).length,0)<=25);
 });
+
+test('inline timestamp speaker markers end at the timestamp, including other guests',()=>{
+ const text='Dario Amodei (00:03:22) Our research strategy emphasizes measurable improvements in safety and reliability.\nLex Fridman (00:04:12) What will happen to the next generation of these models?\nAmanda Askell (02:42:53) This answer belongs to another guest and must never be assigned to Dario.';
+ const q=ownInterviewQuotes(text,['Dario Amodei']);
+ assert.equal(q.length,1);assert.match(q[0].quote,/research/);
+ assert.ok(!q.some(x=>/generation|another guest/.test(x.quote)));
+});

@@ -169,15 +169,12 @@ function LiveSection({live}: {live: Live}) {
   const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label) + (k === 'qqq' && sameAsQqq ? t(' (지금은 3/25와 같음)', ' (same as 3/25 for now)') : ''), color: COLORS[k],
     dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
-  const nb = live.virtual.b3325, no = live.virtual.old;
   return <>
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
       <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
       <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
       <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
       <QqqRsiCard/>
-      <Kpi title={t('3/25 구간', '3/25 bucket')} value={bucketName(nb?.bucket) || '—'}/>
-      <Kpi title={t('5/10/20 구간', '5/10/20 bucket')} value={bucketName(no?.bucket) || '—'}/>
     </div>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>
@@ -188,10 +185,12 @@ function LiveSection({live}: {live: Live}) {
       </Table></div>
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
       <div className="mt-3 border-t border-slate-800 pt-3">
-        <h3 className="text-sm font-semibold text-slate-200">{t('낙폭별 매수 구간', 'Buy allocation by drawdown')}</h3>
+        <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
         <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
-          <div className="grid grid-cols-[4rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">3/25</dt><dd>{t('3% 미만 SGOV · 3% 이상 25% 미만 QQQ · 25% 이상 TQQQ', '<3% SGOV · 3% to <25% QQQ · ≥25% TQQQ')}</dd></div>
-          <div className="grid grid-cols-[4rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">5/10/20</dt><dd>{t('5% 미만 SGOV · 5% 이상 10% 미만 SCHD · 10% 이상 20% 미만 QQQ · 20% 이상 TQQQ', '<5% SGOV · 5% to <10% SCHD · 10% to <20% QQQ · ≥20% TQQQ')}</dd></div>
+          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">3/25</dt><dd>{t('3% 미만 SGOV · 3% 이상 25% 미만 QQQ · 25% 이상 TQQQ', '<3% SGOV · 3% to <25% QQQ · ≥25% TQQQ')}</dd></div>
+          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">5/10/20</dt><dd>{t('5% 미만 SGOV · 5% 이상 10% 미만 SCHD · 10% 이상 20% 미만 QQQ · 20% 이상 TQQQ', '<5% SGOV · 5% to <10% SCHD · 10% to <20% QQQ · ≥20% TQQQ')}</dd></div>
+          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">{label('mubot')}</dt><dd>{t('TQQQ 매수 자금을 20회분으로 나누고, 라오어 무한매수 V4.0을 바탕으로 한 규칙에 따라 분할 매수합니다.', 'Split the TQQQ buying budget into 20 parts and purchase in installments using rules based on Laoer’s Infinite Buying V4.0.')}</dd></div>
+          <div className="grid grid-cols-[minmax(5rem,auto)_1fr] sm:grid-cols-[11rem_1fr] gap-x-2"><dt className="font-medium text-slate-200">{label('qqq')}</dt><dd>{t('매달 첫 거래일에 같은 금액으로 QQQ를 매수합니다.', 'Buy the same dollar amount of QQQ on the first trading day of each month.')}</dd></div>
         </dl>
       </div>
     </div>

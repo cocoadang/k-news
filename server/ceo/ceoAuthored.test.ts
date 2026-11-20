@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DISCOVERY_PROVIDERS, DISCOVERY_YEARS, DiscoveryProvider, discoveredArticle, extractDiscoveredQuotes, parseDiscoveryIndex } from './officialSource';
+import { loadDiscoveredArticles, DISCOVERY_PROVIDERS, DISCOVERY_YEARS, DiscoveryProvider, discoveredArticle, extractDiscoveredQuotes, parseDiscoveryIndex } from './officialSource';
 import { availableNano, emptyKoState, KO_HARD_LIMIT_NANO } from './koLedger';
 import { koPriority } from './koPriority';
 import { CEO_PERSONS, CEO_ROLES } from './registry';
@@ -109,4 +109,20 @@ test('publisher sibling interview retains Dario and distinguishes publication fr
  assert.ok(a);const rows=await extractDiscoveredQuotes(a);
  assert.equal(rows.length,1);assert.match(rows[0].quoteText!,/capital/);
  assert.equal(rows[0].spokenAt.value,null);assert.equal(rows[0].referenceDate?.value,'2026-11-19');
+});
+
+test('verified interview seeds share three company reads before generic corporate backlog',async()=>{
+ const ids=['anthropic-news','amodei-dwarkesh-interviews','amodei-lex-interviews','cnbc-interviews-dario-amodei'];
+ const providers=ids.map(id=>DISCOVERY_PROVIDERS.find(p=>p.id===id)!);
+ const seeds=new Set(providers.flatMap(p=>p.seedUrls||[])),calls:string[]=[];
+ const page='<meta property="article:published_time" content="2026-11-19"><h1>Fictional capital interview</h1><p>DARIO AMODEI: We intend to fund future growth through several different sources of capital.</p><p>HOST: What will happen in the coming year as new products enter the market?</p>';
+ const now=Date.parse('2026-11-20T00:00:00Z');
+ const r=await loadDiscoveredArticles({providers,existing:[],now:()=>now,deadline:now+120000,parseFeed:async()=>[],fetchText:async url=>{
+   calls.push(url);if(seeds.has(url))return page;
+   return '<urlset><url><loc>https://www.anthropic.com/news/fictional-corporate-backlog</loc></url></urlset>';
+ }});
+ assert.equal(r.articles.length,3,JSON.stringify(r.reports));
+ assert.ok([...seeds].every(url=>r.articles.some(a=>a.url===url)));
+ assert.ok(!calls.includes('https://www.anthropic.com/news/fictional-corporate-backlog'));
+ assert.equal(r.reports.reduce((n,p)=>n+p.matchedExisting,0),3);
 });

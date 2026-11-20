@@ -235,7 +235,7 @@ test('pending legacy attachment becomes a text outbox and an uncertain suffix is
   record.telegramParts=[{text:'old caption',document:'old attachment',status:'pending'}];
   const messages=[];
   x.deps.telegram.send=async(_id,text,meta)=>{
-    assert.equal(meta.plainText,true);
+    assert.ok(meta.entities.length);
     messages.push(text);
     return messages.length===1?{status:'sent',messageId:'first'}:{status:'unknown'};
   };

@@ -200,7 +200,8 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             r.hold='channel_delivery_requires_review';await save();continue;
           }
           const pendingDocument=r.telegramParts?.length===1&&r.telegramParts[0].status==='pending'&&r.telegramParts[0].document;
-          if(!r.telegramParts||pendingDocument){
+          const pendingPlain=r.telegramParts?.length&&r.telegramParts.every(part=>part.status==='pending'&&part.plainText);
+          if(!r.telegramParts||pendingDocument||pendingPlain){
             if(r.parts.some(p=>p.status!=='pending')){r.hold='legacy_delivery_requires_review';await save();continue;}
             try{
               const nextAt=r.telegramParts?.[0]?.nextAt;
@@ -211,7 +212,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             await save();
           }
           for(const p of r.telegramParts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
-            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt,plainText:p.plainText});}catch{result={status:'unknown'};}
+            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt,plainText:p.plainText,entities:p.entities});}catch{result={status:'unknown'};}
             if(result.status==='sent'&&result.messageId){p.status='sent';p.messageId=String(result.messageId);}
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;

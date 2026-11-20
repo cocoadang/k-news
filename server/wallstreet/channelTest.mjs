@@ -16,7 +16,7 @@ export async function sendStoredChannelTest({store,telegram,videoId,clock=Date.n
     record.channelTest=outbox;await save();
     for(const part of outbox.parts){
       part.status='inflight';await save();
-      let result;try{result=await telegram.send(PUBLIC_CHANNEL_ID,part.text,{publishedAt:video.publishedAt,plainText:part.plainText});}catch{result={status:'unknown'};}
+      let result;try{result=await telegram.send(PUBLIC_CHANNEL_ID,part.text,{publishedAt:video.publishedAt,plainText:part.plainText,entities:part.entities});}catch{result={status:'unknown'};}
       if(result.status==='sent'&&result.messageId){part.status='sent';part.messageId=String(result.messageId);await save();}
       else{part.status=result.status==='rejected'?'rejected':'unknown';outbox.status='review_required';await save();return {status:'review_required'};}
     }

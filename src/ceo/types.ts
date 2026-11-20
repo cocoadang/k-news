@@ -123,7 +123,7 @@ export interface CeoStatement {
    */
   referenceDate?: StatementReferenceDate;
   /** 선별 공식 페이지 종류: 실적 통화 발언문 / 본인 작성글 / 회사 발표문 안 인용 / SEC 제출 문서 속 편집된 인터뷰 전사. 피드·IR 기록은 생략 */
-  sourceType?: 'call_remarks' | 'authored_post' | 'press_release' | 'filed_transcript';
+  sourceType?: 'call_remarks' | 'authored_post' | 'press_release' | 'filed_transcript' | 'interview_transcript';
   /** 작성자·귀속·연결 문구 근거 (선별 공식 페이지) */
   provenance?: StatementProvenance[];
   /** 당시 직책 판단에 쓴 날짜: 발언일(기본) / 발언일 미상일 때 본문 근거가 확인된 작성일·발표일 */
@@ -149,7 +149,7 @@ export interface StatementReferenceDate {
   value: string;
   precision: DatePrecision;
   /** spoken: 발언일 / released: 서면 공식 발표문 발표일 / written: 본인 작성글 작성일 / video: 문서에 적힌 영상 게시일(발언일 아님) */
-  basis: 'spoken' | 'released' | 'written' | 'video';
+  basis: 'spoken' | 'released' | 'written' | 'video' | 'posted';
 }
 
 export type ComparisonVerdict =

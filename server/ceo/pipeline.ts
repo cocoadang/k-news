@@ -60,7 +60,7 @@ export interface RawStatement {
   context?: { text: string; excerpts: string[] };
   eventKey?: string;
   /** 선별 공식 페이지 종류와 작성자·귀속·연결 근거 */
-  sourceType?: 'call_remarks' | 'authored_post' | 'press_release' | 'filed_transcript';
+  sourceType?: 'call_remarks' | 'authored_post' | 'press_release' | 'filed_transcript' | 'interview_transcript';
   provenance?: StatementProvenance[];
   /** 기준일 (서면 공식 발표문 등) */
   referenceDate?: StatementReferenceDate;

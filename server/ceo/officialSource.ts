@@ -354,7 +354,7 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
   let rows: RawStatement[] = interviewHost ? ownInterviewQuotes(a.body, person.nameVariants).map(q => ({
     speaker:{name:person.nameVariants[0]},topicId:discoveryTopic(q.quote),
     spokenAt:{value:null,precision:'unknown' as const,basisType:'none' as const,basis:'인터뷰 공개일만 확인; 실제 녹화·발언일은 미상'},
-    kind:'direct_quote' as const,quoteText:q.quote,quoteLanguage:'en',summaryKo:'',excerpts:[q.excerpt],
+    kind:'direct_quote' as const,sourceType:'interview_transcript' as const,quoteText:q.quote,quoteLanguage:'en',summaryKo:'',excerpts:[q.excerpt],
     provenance:[{label:'인터뷰 원문의 화자 표지',excerpt:q.label}],
     ...(a.publishedAt?{referenceDate:{value:a.publishedAt.slice(0,10),precision:'day' as const,basis:'posted' as const}}:{}),
   })) : await createQuoteExtractor([person]).extract(a);

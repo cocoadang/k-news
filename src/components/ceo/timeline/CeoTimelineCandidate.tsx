@@ -6,7 +6,7 @@ import { useLang, tr, getLang } from '../../../i18n';
 type Item = { statement: any; matchedTerms: string[]; date: { value: string | null; basis: string; label: string }; metrics: string[] };
 
 const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : tr('날짜 미확인', 'Date unconfirmed'));
-const DATE_BASIS_EN: Record<string, string> = { spoken: 'Spoken', released: 'Press release', written: 'Posted', reported: 'Reported', video: 'Video posted', unknown: 'Date unconfirmed' };
+const DATE_BASIS_EN: Record<string, string> = { posted: 'Interview published · recording date unknown', spoken: 'Spoken', released: 'Press release', written: 'Posted', reported: 'Reported', video: 'Video posted', unknown: 'Date unconfirmed' };
 const month = (d: string) => d.slice(0, 7).replace('-', '.');
 
 function Metrics({ values }: { values: string[] }) {

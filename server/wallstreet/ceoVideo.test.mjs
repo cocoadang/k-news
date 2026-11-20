@@ -1,6 +1,7 @@
+import '../ceo/interviewTurns.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {matchCeoVideo,verifyQuotes,transcriptBlocks,runCeoVideoStep,ceoVideoStatements,createCeoQuoteExtractor} from './ceoVideo.mjs';
+import {matchCeoVideo,verifyQuotes,transcriptBlocks,runCeoVideoStep,ceoVideoStatements,createCeoQuoteExtractor,CEO_PEOPLE,ceoVideoDiscovery} from './ceoVideo.mjs';
 
 // Fictional videos and transcripts only.
 const v=(id,title,extra={})=>({id,title,channelId:'UCrp_UI8XtuYfpiqluWLD7Lw',channelTitle:'CNBC Television',publishedAt:Date.parse('2026-10-29T12:00:00Z'),durationSeconds:900,...extra});
@@ -59,4 +60,20 @@ test('CEO videos leave the last two daily caption credits for programme summarie
   const supadata={balance:async()=>({organizationId:'org',maximum:100,remaining:88}),get:async()=>{gets++;return {status:'unavailable'};}};
   const r=await runCeoVideoStep({s,save:async()=>{},now,c:cfg,discovery,supadata,extractor:{extract:async()=>({items:[]})}});
   assert.equal(r.status,'ceo_video_supadata_reserved_for_programmes');assert.equal(gets,0);
+});
+
+test('all eight people are eligible and Daniela alone is never Dario',()=>{
+  assert.equal(CEO_PEOPLE.length,8);
+  const titles=['Sam Altman interview','Dario and Daniela Amodei interview','Ray Dalio interview','Bill Ackman interview','Jensen Huang interview','Satya Nadella interview','Sundar Pichai interview','Elon Musk Tesla interview'];
+  assert.equal(new Set(titles.map(t=>matchCeoVideo(v('abcdefghijk',t))?.personId)).size,8);
+  assert.equal(matchCeoVideo(v('abcdefghijk','Daniela Amodei interview')),null);
+  assert.equal(matchCeoVideo(v('abcdefghijk','Dario Amodei long interview',{durationSeconds:19320})).personId,'dario-amodei');
+});
+test('handle channels resolve via the official API and retain canonical channel ID',async()=>{
+  const requests=[];
+  const fetcher=async u=>{requests.push(u);const path=u.pathname.split('/').pop();return {ok:true,json:async()=>({items:path==='channels'?[{id:'canonical',contentDetails:{relatedPlaylists:{uploads:'uploads'}}}]:path==='playlistItems'?[{contentDetails:{videoId:'abcdefghijk'}}]:[{id:'abcdefghijk',snippet:{title:'Sam Altman interview',publishedAt:new Date(now).toISOString(),channelTitle:'OpenAI',liveBroadcastContent:'none'},contentDetails:{duration:'PT15M'},status:{privacyStatus:'public'}}]})};};
+  const out=await ceoVideoDiscovery({apiKey:'fictional',fetcher,clock:()=>now}).list('@OpenAI');
+  assert.equal(requests[0].searchParams.get('forHandle'),'OpenAI');
+  assert.equal(requests[0].searchParams.has('id'),false);
+  assert.equal(out[0].channelId,'canonical');
 });

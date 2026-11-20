@@ -1,3 +1,4 @@
+import { ownInterviewQuotes } from './interviewTurns.mjs';
 /**
  * 공식 출처 원문 어댑터 (CEO 모듈 전용, 읽기만).
  * - 대상 피드: 기존 수집기 목록(OFFICIAL_AND_REGULATORY_FEEDS) 중 등록 CEO가 있는 회사의 공식 피드만 (수정·추가 없음)
@@ -88,7 +89,7 @@ export async function loadOfficialArticles(
 export interface DiscoveryCandidate { url: string; modified?: string; title?: string; filedAt?: string }
 export interface DiscoveryStream { pending: DiscoveryCandidate[]; indexes: string[]; indexChecked?: Record<string, number>; checked: Record<string, { at: number; modified: string; ok: boolean }>; updatedAt: number }
 export interface DiscoveryState { version: 1; streams: Record<string, DiscoveryStream>; nextProvider?: number }
-export const DISCOVERY_VERSION = '1';
+export const DISCOVERY_VERSION = '2';
 export const DISCOVERY_LIMITS = { articlesPerCompany: 3, indexesPerStream: 2, pendingPerStream: 180, checkedPerStream: 2000, quotesPerArticle: 6, seconds: 45 };
 /** 수집 범위: 최근 6년 (사용자 요청 2026-11-07, 이전: 3년/비교 부족 시 5년) */
 export const DISCOVERY_YEARS = 6;
@@ -101,8 +102,27 @@ export interface DiscoveryProvider { id: string; companyId: string; personId: st
   /** 본인 공식 채널(사이트 전체가 본인 글): 작성자 = 이 인물. 문단을 본인 작성 발언으로 씀 */
   authored?: boolean;
   /** 수집 범위(년). 없으면 DISCOVERY_YEARS(6). 본인 블로그·에세이·서한은 10년(사용자 요청 2026-11-08) */
-  years?: number }
+  years?: number;
+  interview?: boolean;
+  seedUrls?: string[] }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
+  // Corporate statements: only explicitly attributed quotes, never all company prose.
+  { id:'openai-news', companyId:'openai', personId:'sam-altman', name:'OpenAI 공식 발표', index:'https://openai.com/sitemap.xml', mode:'sitemap', host:'openai.com', articlePath:/^\/index\// },
+  { id:'anthropic-news', companyId:'anthropic', personId:'dario-amodei', name:'Anthropic 공식 발표', index:'https://www.anthropic.com/sitemap.xml', mode:'sitemap', host:'www.anthropic.com', articlePath:/^\/news\// },
+  { id:'amodei-dwarkesh-interviews', companyId:'anthropic', personId:'dario-amodei', name:'Dwarkesh Podcast 인터뷰 원문', index:'https://www.dwarkesh.com/sitemap.xml', mode:'sitemap', host:'www.dwarkesh.com', articlePath:/^\/p\/dario-amodei(?:-\d+)?$/, interview:true, seedUrls:['https://www.dwarkesh.com/p/dario-amodei-2'] },
+  { id:'amodei-lex-interviews', companyId:'anthropic', personId:'dario-amodei', name:'Lex Fridman 인터뷰 원문', index:'https://lexfridman.com/dario-amodei-transcript/', mode:'archive', host:'lexfridman.com', articlePath:/^\/dario-amodei-transcript\/?$/, interview:true, seedUrls:['https://lexfridman.com/dario-amodei-transcript/'] },
+  ...[
+    ['jensen-huang','nvda','jensen|huang'], ['satya-nadella','msft','satya|nadella'],
+    ['sundar-pichai','googl','sundar|pichai'], ['elon-musk','tsla','elon|musk'],
+    ['ray-dalio','bridgewater','ray-dalio'], ['bill-ackman','pershing','ackman'],
+    ['sam-altman','openai','altman'], ['dario-amodei','anthropic','dario|amodei'],
+  ].map(([personId,companyId,slug]): DiscoveryProvider => ({
+    id:'cnbc-interviews-'+personId,companyId,personId,name:'CNBC 인터뷰 원문 · '+personId,
+    index:'https://pressroom.versantmedia.com/cnbc/press-releases',mode:'archive',
+    host:'pressroom.versantmedia.com',articlePath:new RegExp('^/cnbc/press-releases/(?=[^/]*(?:'+slug+'))[^/]+$'),interview:true,
+    ...(personId==='dario-amodei'?{seedUrls:['https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-exclusive-transcript-anthropic-co-founders-dario-and-daniela-amodei-speak']}:{}),
+  })),
+
   { id: 'google', companyId: 'googl', personId: 'sundar-pichai', name: 'Google 공식 블로그', index: 'https://blog.google/en-us/sitemap.xml', mode: 'sitemap', host: 'blog.google', articlePath: /\/(?:company-news|inside-google|technology|products)\// },
   { id: 'microsoft', companyId: 'msft', personId: 'satya-nadella', name: 'Microsoft 공식 블로그', index: 'https://blogs.microsoft.com/sitemap_index.xml', mode: 'sitemap', host: 'blogs.microsoft.com', articlePath: /\/blog\/\d{4}\/\d{2}\/\d{2}\// },
   { id: 'nvidia', companyId: 'nvda', personId: 'jensen-huang', name: 'NVIDIA 공식 뉴스룸', index: 'https://nvidianews.nvidia.com/sitemap.xml', mode: 'sitemap', host: 'nvidianews.nvidia.com', articlePath: /^\/news\// },
@@ -288,7 +308,7 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
   // 이미지 전사 속 흰색 OCR 텍스트는 범용 추출에서 제외하고 기존 SEC 전용 검증기에만 맡깁니다.
   if (p.id === 'tesla-sec' && /font-size\s*:\s*1pt|color\s*:\s*(?:white|#fff(?:fff)?)\b/i.test(html) && /<img\b/i.test(html)) return null;
   const title = htmlToText((p.authored ? metaValue(html, ['og:title'])?.replace(/^(?:Dario Amodei|Sam Altman|Ray Dalio)\s*[—–-]\s*/, '') : '') || /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] || metaValue(html, ['og:title']) || (p.id === 'tesla-sec' ? /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] : '') || '');
-  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored ? authoredDate(html) : null));
+  const publishedAt = p.id === 'tesla-sec' && filedAt && /^\d{4}-\d\d-\d\d$/.test(filedAt) && partialToInterval(filedAt) ? `${filedAt}T00:00:00.000Z` : (discoveryPublishedAt(html) || (p.authored || p.interview ? authoredDate(html) : null));
   if (!title || !publishedAt || Date.parse(publishedAt) > now + 86400000) return null;
   const articleBlocks = [...html.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/gi)].map(m => m[1]);
   const mainBlocks = [...html.matchAll(/<main\b[^>]*>([\s\S]*?)<\/main>/gi)].map(m => m[1]);
@@ -329,7 +349,15 @@ export function discoveredArticle(p: DiscoveryProvider, url: string, html: strin
 export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStatement[]> {
   const person = CEO_PERSONS.find(p => p.personId === a.discoveryPersonId);
   if (!person || !a.discoveryCompanyId) return [];
-  let rows = await createQuoteExtractor([person]).extract(a);
+  // Transcripts: exact speaker labels, publication date remains distinct from spoken date.
+  const interviewHost = ['pressroom.versantmedia.com','www.dwarkesh.com','lexfridman.com'].includes(new URL(a.url).hostname);
+  let rows: RawStatement[] = interviewHost ? ownInterviewQuotes(a.body, person.nameVariants).map(q => ({
+    speaker:{name:person.nameVariants[0]},topicId:discoveryTopic(q.quote),
+    spokenAt:{value:null,precision:'unknown' as const,basisType:'none' as const,basis:'인터뷰 공개일만 확인; 실제 녹화·발언일은 미상'},
+    kind:'direct_quote' as const,sourceType:'interview_transcript' as const,quoteText:q.quote,quoteLanguage:'en',summaryKo:'',excerpts:[q.excerpt],
+    provenance:[{label:'인터뷰 원문의 화자 표지',excerpt:q.label}],
+    ...(a.publishedAt?{referenceDate:{value:a.publishedAt.slice(0,10),precision:'day' as const,basis:'posted' as const}}:{}),
+  })) : await createQuoteExtractor([person]).extract(a);
   if (a.discoveryAuthor) {
     const marker = a.body.indexOf(a.discoveryAuthor.excerpt);
     // 본인 공식 채널 글(블로그·에세이·서한) → 머리 줄 이후 본문 전체가 본인 글
@@ -391,6 +419,8 @@ export async function loadDiscoveredArticles(o: {
     const cutoff = new Date(now); cutoff.setUTCHours(0, 0, 0, 0); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - years);
     const report: FeedReport = { feedName: `${p.name} · 최근 ${years}년`, feedUrl: p.index, ok: true, itemsInFeed: 0, matchedExisting: 0, withBody: 0, kind: 'discovery' }; reports.push(report);
     const request = (url: string) => o.fetchText(url, { deadline: Math.min(deadline, o.now() + 6000) });
+    // Verified historical sources use the same bounded queue and request cache.
+    for (const url of p.seedUrls || []) if (discoveryArticleAllowed(p,url) && !stream.checked[url] && !stream.pending.some(x=>x.url===url)) stream.pending.push({url});
     const indexes = stream.updatedAt < now - 20 * 3600000 ? [p.index, ...stream.indexes] : [...stream.indexes];
     let indexFailed = false;
     for (const url of [...new Set(indexes)].slice(0, DISCOVERY_LIMITS.indexesPerStream)) {

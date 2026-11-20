@@ -97,3 +97,16 @@ test('authored blog post passes the full pipeline (date and channel provenance v
   assert.equal(built.dataset.statements.length, 2);
   assert.ok(built.dataset.statements.every((s: any) => s.personId === 'sam-altman' && s.companyId === 'openai' && s.evidence[0].articlePublishedAt?.startsWith('2025-06-10')));
 });
+
+test('all eight people have a publisher transcript route; corporate prose is not authored',()=>{
+ for(const p of CEO_PERSONS) assert.ok(DISCOVERY_PROVIDERS.some(s=>s.personId===p.personId&&s.interview),p.personId);
+ for(const id of ['openai-news','anthropic-news']) assert.equal(!!DISCOVERY_PROVIDERS.find(p=>p.id===id)?.authored,false);
+});
+test('publisher sibling interview retains Dario and distinguishes publication from speaking date',async()=>{
+ const p=DISCOVERY_PROVIDERS.find(p=>p.id==='cnbc-interviews-dario-amodei')!;
+ const url='https://pressroom.versantmedia.com/cnbc/press-releases/dario-amodei-interview';
+ const a=discoveredArticle(p,url,'<meta property="article:published_time" content="2026-11-19"><h1>Fictional interview test</h1><p>November 19, 2026</p><p>DARIO AMODEI: We intend to fund future growth through several different sources of capital.</p><p>DANIELA AMODEI: We intend to triple revenue over the coming year.</p><p>SORKIN: What is your plan for the next round of funding?</p>',Date.parse('2026-11-20'))!;
+ assert.ok(a);const rows=await extractDiscoveredQuotes(a);
+ assert.equal(rows.length,1);assert.match(rows[0].quoteText!,/capital/);
+ assert.equal(rows[0].spokenAt.value,null);assert.equal(rows[0].referenceDate?.value,'2026-11-19');
+});

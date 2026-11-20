@@ -61,7 +61,7 @@ const pubText = (e: Pick<StatementEvidence, 'publishedAtBasis' | 'articlePublish
 
 /** 선별 공식 페이지 종류 배지 */
 const SOURCE_TYPE_LABEL: Record<NonNullable<CeoStatement['sourceType']>, string> = {
-  call_remarks: '실적 통화 발언문', authored_post: '본인 작성글', press_release: '공식 발표문 안 인용', filed_transcript: 'SEC 제출 문서',
+  interview_transcript: '인터뷰 공개 원문', call_remarks: '실적 통화 발언문', authored_post: '본인 작성글', press_release: '공식 발표문 안 인용', filed_transcript: 'SEC 제출 문서',
 };
 const ORIGINAL_LABEL = (s: CeoStatement) => s.sourceType === 'authored_post' ? '본인 작성글 원문' : s.sourceType === 'press_release' ? '발표문 안 인용 원문'
   : s.sourceType === 'filed_transcript' ? 'SEC 문서 속 인용 원문' : '직접 인용 원문';

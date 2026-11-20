@@ -6,6 +6,11 @@ import {reserveSupadata,refundSupadata} from './supadata.mjs';
 
 // 채널 ID는 2026-10-30 YouTube 채널 페이지에서 확인한 값
 export const CEO_CHANNELS=Object.freeze([
+  {id:'@OpenAI',name:'OpenAI',official:true},
+  {id:'UCrDwWp7EBBv4NwvScIpBDOA',name:'Anthropic',official:true},
+  {id:'@principlesbyraydalio',name:'Principles by Ray Dalio',official:true},
+  {id:'@lexfridman',name:'Lex Fridman',official:false},
+  {id:'@DwarkeshPatel',name:'Dwarkesh Patel',official:false},
   {id:'UCHuiy8bXnmK5nisYHUd1J5g',name:'NVIDIA',official:true},
   {id:'UCFtEEv80fQVKkD4h1PF-Xqw',name:'Microsoft',official:true},
   {id:'UCK8sQmJBp8GCxrOtXWBpyEA',name:'Google',official:true},
@@ -18,6 +23,10 @@ export const CEO_CHANNELS=Object.freeze([
 ]);
 const TESLA=/\b(?:Tesla|Optimus|Cybercab|Robotaxi|FSD|Cybertruck|Megapack)\b/i, SPACEX=/\b(?:SpaceX|Starship|Starlink)\b/i;
 export const CEO_PEOPLE=Object.freeze([
+  {personId:'sam-altman',name:'Sam Altman',re:/\bSam\s+Altman\b|\bOpenAI(?:'s)?\s+CEO\b/i,company:()=> 'openai'},
+  {personId:'dario-amodei',name:'Dario Amodei',re:/\bDario\s+(?:and\s+Daniela\s+)?Amodei\b|\bAnthropic(?:'s)?\s+CEO\b/i,company:()=> 'anthropic'},
+  {personId:'ray-dalio',name:'Ray Dalio',re:/\bRay\s+Dalio\b/i,company:()=> 'bridgewater'},
+  {personId:'bill-ackman',name:'Bill Ackman',re:/\bBill\s+Ackman\b|\bWilliam\s+(?:A\.\s+)?Ackman\b/i,company:()=> 'pershing'},
   {personId:'jensen-huang',name:'Jensen Huang',re:/\bJensen\s+Huang\b|\bNvidia(?:'s)?\s+(?:CEO\s+)?Huang\b/i,company:()=> 'nvda'},
   {personId:'satya-nadella',name:'Satya Nadella',re:/\bNadella\b/i,company:()=> 'msft'},
   {personId:'sundar-pichai',name:'Sundar Pichai',re:/\bPichai\b/i,company:()=> 'googl'},
@@ -28,7 +37,7 @@ const COMMENTARY=/\b(?:reacts?|reaction|explained|analysis|breakdown|what .* mea
 
 export function matchCeoVideo(v){
   if(!v||!/^[\w-]{11}$/.test(v.id)||typeof v.title!=='string'||COMMENTARY.test(v.title))return null;
-  if(!Number.isFinite(v.durationSeconds)||v.durationSeconds<300||v.durationSeconds>4*3600)return null;
+  if(!Number.isFinite(v.durationSeconds)||v.durationSeconds<300||v.durationSeconds>6*3600)return null;
   for(const p of CEO_PEOPLE){if(!p.re.test(v.title))continue;const companyId=p.company(v.title,v.channelId);if(companyId)return {personId:p.personId,personName:p.name,companyId};}
   return null;
 }
@@ -40,14 +49,14 @@ export function ceoVideoDiscovery({apiKey,fetcher=fetch,clock=Date.now,maxAgeMs=
     const get=async(resource,params)=>{const url=new URL('https://www.googleapis.com/youtube/v3/'+resource);for(const [k,v]of Object.entries(params))url.searchParams.set(k,String(v));
       let r;try{r=await fetcher(url,{headers:{'X-Goog-Api-Key':apiKey},signal:AbortSignal.timeout(20000)});}catch{throw Error('ceo_discovery_network');}
       if(!r.ok)throw Error('ceo_discovery_http_'+r.status);const d=await r.json();if(!Array.isArray(d.items))throw Error('ceo_discovery_shape');return d;};
-    const ch=await get('channels',{part:'contentDetails,snippet',id:channelId});const c=ch.items[0];const playlist=c?.contentDetails?.relatedPlaylists?.uploads;
+    const ch=await get('channels',{part:'contentDetails,snippet',...(channelId.startsWith('@')?{forHandle:channelId.slice(1)}:{id:channelId})});const c=ch.items[0];const playlist=c?.contentDetails?.relatedPlaylists?.uploads;
     if(!playlist)throw Error('ceo_discovery_channel');
     const pl=await get('playlistItems',{part:'contentDetails',playlistId:playlist,maxResults:50});
     const now=clock(),ids=pl.items.map(x=>x.contentDetails?.videoId).filter(id=>/^[\w-]{11}$/.test(id||''));if(!ids.length)return [];
     const vd=await get('videos',{part:'snippet,contentDetails,status',id:ids.join(',')});
     return vd.items.flatMap(x=>{const publishedAt=Date.parse(x.snippet?.publishedAt),d=x.contentDetails?.duration?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
       if(!d||!Number.isFinite(publishedAt)||now-publishedAt>maxAgeMs||x.status?.privacyStatus!=='public'||x.snippet?.liveBroadcastContent!=='none')return [];
-      return [{id:x.id,channelId,channelTitle:x.snippet.channelTitle||c.snippet?.title||'',title:x.snippet.title||'',publishedAt,durationSeconds:Number(d[1]||0)*3600+Number(d[2]||0)*60+Number(d[3]||0)}];});
+      return [{id:x.id,channelId:c.id||channelId,channelTitle:x.snippet.channelTitle||c.snippet?.title||'',title:x.snippet.title||'',publishedAt,durationSeconds:Number(d[1]||0)*3600+Number(d[2]||0)*60+Number(d[3]||0)}];});
   }};
 }
 
@@ -93,9 +102,9 @@ export async function runCeoVideoStep({s,save,now,c,discovery,supadata,extractor
   const cfg=c.ceoVideo;if(!cfg?.enabled||!discovery||!supadata||!extractor)return {status:'ceo_video_disabled'};
   s.ceoVideos ||= {};s.ceoVideoBudget ||= {days:{},months:{},spend:{}};
   const B=s.ceoVideoBudget,day=kstDay(now),month=day.slice(0,7);
-  if(!s.ceoVideoLastDiscovery||now-s.ceoVideoLastDiscovery>=6*3600000){
+  if(s.ceoVideoDiscoveryVersion!==2||!s.ceoVideoLastDiscovery||now-s.ceoVideoLastDiscovery>=6*3600000){
     for(const ch of CEO_CHANNELS){try{for(const v of await discovery.list(ch.id)){const m=matchCeoVideo(v);if(m&&!s.ceoVideos[v.id])s.ceoVideos[v.id]={video:v,...m,official:ch.official,stage:'waiting',firstSeen:now};}}catch{}}
-    s.ceoVideoLastDiscovery=now;await save();
+    s.ceoVideoLastDiscovery=now;s.ceoVideoDiscoveryVersion=2;await save();
   }
   const waiting=Object.values(s.ceoVideos).filter(r=>r.stage==='waiting').sort((a,b)=>(b.official-a.official)||(b.video.publishedAt-a.video.publishedAt));
   const r=waiting[0];if(!r)return {status:'ceo_video_none'};

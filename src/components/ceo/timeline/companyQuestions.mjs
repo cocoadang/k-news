@@ -108,6 +108,7 @@ export function effectiveDate(statement) {
   if (rd?.precision === 'day' && valid(rd.value)) {
     if (rd.basis === 'spoken') return { value: rd.value, basis: 'spoken', label: '발언일' };
     if (rd.basis === 'released') return { value: rd.value, basis: 'released', label: '보도자료 발표일' };
+    if (rd.basis === 'posted') return { value: rd.value, basis: 'posted', label: '인터뷰 공개일 · 발언일 미상' };
     if (rd.basis === 'written') return { value: rd.value, basis: 'written', label: '게시일' };
     if (rd.basis === 'reported') return { value: rd.value, basis: 'reported', label: '기사 보도일' };
     if (rd.basis === 'video') return { value: rd.value, basis: 'video', label: '영상 게시일' };

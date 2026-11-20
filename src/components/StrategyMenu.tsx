@@ -13,7 +13,7 @@ const COLORS: Record<string, string> = {old: '#e0a040', b3325: '#4c9be8', mubot:
 const ORDER = ['old', 'b3325', 'mubot', 'qqq'];
 const LABELS = (): Record<string, string> => ({tripod: tr('트라이팟', 'Tripod'), old: '5/10/20', b3325: '3/25', mubot: tr('무한매수 20분할', 'Infinite Buying (20 splits)'), qqq: tr('QQQ 적립', 'QQQ DCA')});
 const RULES = (): Record<string, string> => ({
-  tripod: tr('250일선 대비 +1% 이상이면 VIX 평균 28 미만 및 52주 낙폭 9% 이내에서 TQQQ, 그 외는 QQQ·QLD. −5% 이하에서는 VIX 평균 18 미만이면 QQQ·QLD, 그 외는 현금. 중간 구간에서는 직전 신호 유지.', 'At +1% or above vs. the 250-day MA, use TQQQ if average VIX is below 28 and drawdown is at most 9%; otherwise use QQQ/QLD. At −5% or below, use QQQ/QLD if average VIX is below 18; otherwise use cash. In between, retain the previous signal.'),
+  tripod: tr('250일선 대비 +1% 이상이면 VIX 평균 28 미만 및 52주 낙폭 9% 이내에서 TQQQ 100%, 그 외는 QQQ·QLD 각 50%. −5% 이하에서는 VIX 평균 18 미만이면 QQQ·QLD 각 50%, 그 외는 현금 100%. 중간 구간에서는 직전 신호 유지.', 'At +1% or above vs. the 250-day MA, use 100% TQQQ if average VIX is below 28 and drawdown is at most 9%; otherwise split 50/50 between QQQ and QLD. At −5% or below, split 50/50 between QQQ and QLD if average VIX is below 18; otherwise use 100% cash. In between, retain the previous signal.'),
   b3325: tr('하락폭 3% 미만 SGOV · 3~25% QQQ · 25% 이상 TQQQ(+SGOV를 1/6씩 이동) · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <3% SGOV · 3–25% QQQ · ≥25% TQQQ (+move SGOV in 1/6 steps) · at a new high TQQQ→QQQ'),
   old: tr('하락폭 5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20% 이상 TQQQ · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <5% SGOV · 5–10% SCHD · 10–20% QQQ · ≥20% TQQQ · at a new high TQQQ→QQQ'),
   mubot: tr('라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식', 'Approximation of Laoer\'s Infinite Buying V4.0 (TQQQ, 20 splits)'),
@@ -189,9 +189,7 @@ function LiveSection({live}: {live: Live}) {
   }, []);
   const tracked = tripod?.start === live.start && tripod.asOf >= tripodLiveSeed.asOf ? tripod : tripodLiveSeed.start === live.start ? tripodLiveSeed : null;
   const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
-  const same = (a?: [string, number][], b?: [string, number][]) => !!a && !!b && a.length === b.length && a.every((p, i) => p[0] === b[i][0] && Math.abs(p[1] - b[i][1]) < 1e-9);
-  const sameAsQqq = same(live.virtual.b3325?.series, live.virtual.qqq?.series);
-  const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label) + (k === 'qqq' && sameAsQqq ? t(' (지금은 3/25와 같음)', ' (same as 3/25 for now)') : ''), color: COLORS[k],
+  const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label), color: COLORS[k],
     dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
   if (tracked) lines.push({key: 'tripod', label: label('tripod'), color: COLORS.tripod, points: tracked.series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))});
@@ -287,9 +285,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('계산 기준', 'Method')}</summary>
       <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-400">
-        {primaryOrder.map(k => <li key={k}><Dot k={k}/>{label(k)}: {RULES()[k]}
-          {k === 'tripod' && <> · {t('세전 IRR 제공', 'Pre-tax IRR available')}{comparison.data === 'Mixed synthetic' && t(' · 상장 전 합성 ETF 수익률 포함', ' · Includes synthetic pre-listing ETF returns')}</>}
-        </li>)}
+        {primaryOrder.map(k => <li key={k}><Dot k={k}/>{label(k)}: {RULES()[k]}</li>)}
         {(lang === 'en' ? ASSUMPTIONS_EN : bt.assumptions || []).map((a, i) => <li key={i}>· {a}</li>)}
       </ul>
     </details>

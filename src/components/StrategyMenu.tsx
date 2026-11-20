@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {PageHeader, chipClass} from './ui';
-import {tripodResults} from './tripodBacktest';
+import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
 import type {TripodSignal} from '../../server/tripod';
 import {useLang, tr, getLang} from '../i18n';
 
@@ -9,9 +9,9 @@ import {useLang, tr, getLang} from '../i18n';
 //  · 실전 추적: Firestore kswealth_public/strategy (공개 읽기, 금액·계좌 정보 없음)
 const BACKTEST_URL = 'https://asset.dsoom.com/strategy-backtest.json';
 const LIVE_URL = 'https://firestore.googleapis.com/v1/projects/busan-redevelopment/databases/(default)/documents/kswealth_public/strategy';
-const COLORS: Record<string, string> = {old: '#e0a040', b3325: '#4c9be8', mubot: '#e06a70', qqq: '#a07ee6'};
+const COLORS: Record<string, string> = {old: '#e0a040', b3325: '#4c9be8', mubot: '#e06a70', qqq: '#a07ee6', tripod: '#39c9a0'};
 const ORDER = ['old', 'b3325', 'mubot', 'qqq'];
-const LABELS = (): Record<string, string> => ({old: '5/10/20', b3325: '3/25', mubot: tr('무한매수 20분할', 'Infinite Buying (20 splits)'), qqq: tr('QQQ 적립', 'QQQ DCA')});
+const LABELS = (): Record<string, string> => ({tripod: tr('트라이팟', 'Tripod'), old: '5/10/20', b3325: '3/25', mubot: tr('무한매수 20분할', 'Infinite Buying (20 splits)'), qqq: tr('QQQ 적립', 'QQQ DCA')});
 const RULES = (): Record<string, string> => ({
   b3325: tr('하락폭 3% 미만 SGOV · 3~25% QQQ · 25% 이상 TQQQ(+SGOV를 1/6씩 이동) · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <3% SGOV · 3–25% QQQ · ≥25% TQQQ (+move SGOV in 1/6 steps) · at a new high TQQQ→QQQ'),
   old: tr('하락폭 5% 미만 SGOV · 5~10% SCHD · 10~20% QQQ · 20% 이상 TQQQ · 전고점 돌파 시 TQQQ→QQQ', 'Drawdown <5% SGOV · 5–10% SCHD · 10–20% QQQ · ≥20% TQQQ · at a new high TQQQ→QQQ'),
@@ -133,9 +133,7 @@ export function StrategyMenu() {
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}
     {status === 'error' && <p role="alert">{t('자료를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.', 'Could not load data. Please refresh in a moment.')}</p>}
     {live && <LiveSection live={live}/>}
-    {!live && status !== 'loading' && <div className={card}><TripodLive/></div>}
     {bt && variant && <BacktestSection key={lang} bt={bt} variant={variant} setVariant={setVariant}/>}
-    <TripodBacktest/>
   </section>;
 }
 
@@ -168,11 +166,26 @@ function LiveSection({live}: {live: Live}) {
   const {t, lang} = useLang();
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
+  const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => {
+      fetch('/api/market/tripod-portfolio', {signal: controller.signal})
+        .then(response => response.ok ? response.json() : null)
+        .then(result => { if (result && !controller.signal.aborted) setTripod(result); })
+        .catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 600_000);
+    return () => { controller.abort(); window.clearInterval(timer); };
+  }, []);
+  const tracked = tripod?.start === live.start && tripod.asOf >= tripodLiveSeed.asOf ? tripod : tripodLiveSeed.start === live.start ? tripodLiveSeed : null;
   const same = (a?: [string, number][], b?: [string, number][]) => !!a && !!b && a.length === b.length && a.every((p, i) => p[0] === b[i][0] && Math.abs(p[1] - b[i][1]) < 1e-9);
   const sameAsQqq = same(live.virtual.b3325?.series, live.virtual.qqq?.series);
   const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label) + (k === 'qqq' && sameAsQqq ? t(' (지금은 3/25와 같음)', ' (same as 3/25 for now)') : ''), color: COLORS[k],
     dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
+  if (tracked) lines.push({key: 'tripod', label: label('tripod'), color: COLORS.tripod, points: tracked.series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))});
   return <>
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
       <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
@@ -186,7 +199,9 @@ function LiveSection({live}: {live: Live}) {
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD'), t('다음 매수', 'Next buy')]}>
         {order.map(k => { const v = live.virtual[k]; return <tr key={k}><td className={tdL}><Dot k={k}/>{k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label)}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
           <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
+        <tr><td className={tdL}><Dot k="tripod"/>{label('tripod')}</td><td className={td}>{pct(tracked?.twr)}</td><td className={td}>{pct(tracked?.mdd)}</td><td className={td}><a href="#tripod-signal">{t('신호 보기', 'View signal')}</a></td></tr>
       </Table></div>
+      {tracked && tracked.asOf !== live.asOf && <p className="mt-2 text-xs text-slate-400">{t('트라이팟 평가 기준', 'Tripod marked through')} {dot(tracked.asOf)}</p>}
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
       <TripodLive/>
       <div className="mt-3 border-t border-slate-800 pt-3">
@@ -206,8 +221,13 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const {t, lang} = useLang();
   const vName = (k: string, v: Variant) => (lang === 'en' && VARIANT_EN[k] ? VARIANT_EN[k][0] : v.name);
   const vDesc = (k: string, v: Variant) => (lang === 'en' && VARIANT_EN[k] ? VARIANT_EN[k][1] : v.desc.trim());
-  const order = bt.order || ORDER, V = bt.variants[variant] || Object.values(bt.variants)[0], S = V.strategies;
-  const ok = order.filter(k => S[k] && !S[k].na);
+  const order = bt.order || ORDER, V = bt.variants[variant] || Object.values(bt.variants)[0];
+  const comparison = tripodVariants[variant];
+  const includeTripod = comparison && comparison.start === V.period[0] && comparison.end === V.period[1]
+    && V.strategies.qqq?.invested === comparison.invested && bt.monthly === 1_000_000;
+  const primaryOrder = includeTripod ? [...order, 'tripod'] : order;
+  const S: Record<string, Strat> = includeTripod ? {...V.strategies, tripod: {...comparison, label: 'Tripod', note: ''}} : V.strategies;
+  const ok = primaryOrder.filter(k => S[k] && !S[k].na);
   const best = (f: (k: string) => number | undefined) => Math.max(...ok.map(f).filter((v): v is number => num(v) !== null));
   const bI = best(k => S[k].irr), bL = best(k => S[k].irrLiq), bM = best(k => S[k].mdd);
   const cls = (v: number | undefined, b: number) => `${td} ${v === b ? 'font-bold text-white' : ''}`;
@@ -216,7 +236,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     const inv = S[ok[0]]?.curve || [];
     ls.push({key: 'inv', label: t('넣은 돈', 'Contributed'), color: '#94a3b8', dashed: true, points: inv.map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[2]}))});
     return ls;
-  }, [variant]);
+  }, [bt, variant, lang]);
   const M = bt.summary;
   return <div className={card}>
     <h2 className="text-base font-semibold text-white">{lang === 'en' ? `Backtest — start at a crisis low, add ${won(bt.monthly)} every month` : `백테스트 — 위기 저점에서 시작해 매달 ${Math.round(bt.monthly / 1e4)}만 원 적립`}</h2>
@@ -224,10 +244,11 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
       <button key={k} type="button" className={chipClass(k === variant)} aria-pressed={k === variant} onClick={() => setVariant(k)}>{vName(k, v)}</button>)}</div>
     <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span> · {vDesc(variant, V)}</p>
     <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]} mobileHide={[4]}>
-      {order.map(k => { const s = S[k]; if (!s) return null; return s.na
+      {primaryOrder.map(k => { const s = S[k]; if (!s) return null; return s.na
         ? <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={`${tdL} text-slate-400`} colSpan={3}>{s.na}</td></tr>
         : <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={cls(s.irr, bI)}>{pct(s.irr)}</td><td className={cls(s.irrLiq, bL)}>{pct(s.irrLiq)}</td><td className={cls(s.mdd, bM)}>{pct(s.mdd)}</td><td className={`${td} ${mh}`}>{won(s.final)} ({won(s.invested)})</td></tr>; })}
     </Table></div>
+    {includeTripod && <p className="mt-2 text-xs text-slate-400">{t('트라이팟은 세전 기준으로 계산했습니다.', 'Tripod figures are pre-tax.')} {comparison.data === 'Mixed synthetic' && t('상장 전 합성 ETF 수익률 포함.', 'Includes synthetic pre-listing ETF returns.')}</p>}
     <div className="mt-4"><LineChart lines={lines} yFormat={v => won(v)} ariaLabel={t('백테스트 자산 곡선', 'Backtest equity curve')}/></div>
     <details className="mt-3 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('매년 1월 시작 결과', 'Starting each January')} ({bt.startRange[0]}–{bt.startRange[1]})</summary>
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('시작연도 평균', 'Avg by start yr'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5-yr avg'), t('5년 최저', '5-yr min'), t('5년 QQQ 이김', 'Beat QQQ (5-yr)')]} mobileHide={[2, 4]}>
@@ -271,7 +292,7 @@ function TripodLive() {
     return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
   const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
-  return <section className="mt-4 border-t border-slate-800 pt-3">
+  return <section id="tripod-signal" className="mt-4 border-t border-slate-800 pt-3">
     <h3 className="text-sm font-semibold text-white">{t('트라이팟 · 실전 신호', 'Tripod · Live signal')}</h3>
     <p className="mt-1 text-sm text-slate-300" role="status">{reading ? allocations[reading.state] : loading ? t('불러오는 중', 'Loading') : t('종가 신호를 불러오지 못했습니다.', 'Closing signal unavailable.')}</p>
     {reading && <p className="mt-1 text-xs text-slate-400">
@@ -282,28 +303,3 @@ function TripodLive() {
   </section>;
 }
 
-function TripodBacktest() {
-  const {t} = useLang();
-  const [start, setStart] = useState('2020');
-  const starts = tripodResults.filter(row => row[1] === 'Tripod');
-  const shown = tripodResults.filter(row => row[0].startsWith(start));
-  return <section className={card}>
-    <h2 className="text-base font-semibold text-white">{t('백테스트 · 트라이팟 vs 3/25 B', 'Backtest · Tripod vs 3/25 B')}</h2>
-    <p className="mt-1 text-sm text-slate-400">{t('초기 1억 원 · 다음 달부터 월 100만 원 · 2026.11.19 미국 종가까지 · 세전', '₩100M upfront · ₩1M/month from the following month · through Nov 19, 2026 US close · pre-tax')}</p>
-    <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-300">
-      {t('시작 연도', 'Start year')}
-      <select value={start} onChange={event => setStart(event.target.value)} className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2">
-        {starts.map(([date]) => <option key={date} value={date.slice(0, 4)}>{date.slice(0, 4)}</option>)}
-      </select>
-    </label>
-    <p className="mt-2 text-xs text-slate-400">{t('시작일', 'Start date')} {dot(shown[0][0])}</p>
-    <div className="mt-2"><Table head={[t('전략', 'Strategy'), 'XIRR', 'MDD', t('최종 평가액', 'Final value'), t('데이터', 'Data')]}>
-      {shown.map(([, strategy, xirr, mdd, final, source]) => <tr key={strategy}>
-        <td className={tdL}>{strategy === 'Tripod' ? t('트라이팟', 'Tripod') : strategy}</td>
-        <td className={td}>{pct(xirr)}</td><td className={td}>{pct(mdd)}</td><td className={td}>{won(final)}</td>
-        <td className={td}>{source === 'Mixed synthetic' ? t('합성 포함', 'Mixed synthetic') : source === 'ETF proxy only' ? t('BIL 대체', 'BIL proxy') : t('실제 ETF', 'Actual ETF')}</td>
-      </tr>)}
-    </Table></div>
-    <p className="mt-2 text-xs text-slate-400">{t('전일 종가 신호로 다음 거래일 종가 체결 · 매수·매도 각 0.25% · MDD는 납입 효과 제외 · 환율 고정', 'Prior-close signal, next-close trade · 0.25% fee per buy or sell · cash-flow-adjusted MDD · fixed FX')}</p>
-  </section>;
-}

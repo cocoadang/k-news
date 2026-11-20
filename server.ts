@@ -1,7 +1,7 @@
 import {costHttpTelemetry} from './server/costTelemetry';
 import { resolveOpenAIModel } from './server/openaiClient';
 import 'dotenv/config';
-import { fetchTripod } from './server/tripod';
+import { fetchTripod, fetchTripodPortfolio } from './server/tripod';
 import { fetchQqqRsi } from './server/qqqRsi';
 import express from 'express';
 import path from 'path';
@@ -682,6 +682,17 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     const { sendTelegramMessage } = await import('./server/telegram');
     await sendTelegramMessage(token, chatId, text);
   };
+
+  const tripodPortfolioCache = packedCache(fetchTripodPortfolio, 10 * 60_000);
+  app.get('/api/market/tripod-portfolio', async (req, res) => {
+    try {
+      const {packed} = await tripodPortfolioCache.get();
+      res.setHeader('Cache-Control', publicCdnHeader(300, 60));
+      sendPacked(req, res, packed);
+    } catch {
+      res.status(503).set('Cache-Control', 'no-store').json({error: 'Tripod tracking unavailable'});
+    }
+  });
 
   const tripodCache = packedCache(fetchTripod, 10 * 60_000);
   app.get('/api/market/tripod', async (req, res) => {

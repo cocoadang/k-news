@@ -9,10 +9,10 @@ function setup(){
 }
 test('published summary sends to fixed channel once under concurrency, retaining private receipts and budgets',async()=>{
  const x=setup(),sent=[];const original=structuredClone(x.state.videos.abcdefghijk.parts);
- const opts={...x,videoId:'abcdefghijk',telegram:{async send(id,text){sent.push({id,text});assert.ok(text.length<3500);return {status:'sent',messageId:String(sent.length)};}}};
+ const opts={...x,videoId:'abcdefghijk',telegram:{async send(id,text){sent.push({id,text});assert.ok(text.length<=4096);return {status:'sent',messageId:String(sent.length)};}}};
  const results=await Promise.all([sendStoredChannelTest(opts),sendStoredChannelTest(opts)]);
  assert.equal(results[0].status,'sent');assert.equal(results[1].status,'already_sent');
- assert.equal(sent.length,1);assert.ok(sent.every(x=>x.id===PUBLIC_CHANNEL_ID));assert.match(sent[0].text,/첨부파일/);assert.ok(x.state.videos.abcdefghijk.channelTest.parts[0].document.includes('저장된 검증 요약'));
+ assert.ok(sent.length>1);assert.ok(sent.every(x=>x.id===PUBLIC_CHANNEL_ID));assert.match(sent[0].text,/저장된 검증 요약/);assert.ok(x.state.videos.abcdefghijk.channelTest.parts.every(p=>p.plainText&&!p.document));
  assert.deepEqual(x.state.videos.abcdefghijk.parts,original);assert.equal(x.state.videos.abcdefghijk.recipient,'123');assert.deepEqual(x.state.budgets,{fixed:123});
 });
 test('uncertain or rejected delivery cannot be repeated; invalid/unpublished videos never send',async()=>{

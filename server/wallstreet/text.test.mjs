@@ -223,3 +223,28 @@ test('web-only full re-summary: replaces the web view only with more points, nev
 });
 
 
+
+test('pending legacy attachment becomes a text outbox and an uncertain suffix is never replayed',async()=>{
+  const x=setup(),v=video(),r=x.run();
+  await r.importTranscript(source(v));
+  const record=x.store.state.videos[v.id];
+  const issues=Array.from({length:20},(_,index)=>'▌이슈 '+index+'\n• '+index+' '+('내용 '.repeat(120)));
+  record.stage='text_delivery';
+  record.recipient='123';
+  record.parts=issues.map(text=>({text,status:'pending'}));
+  record.telegramParts=[{text:'old caption',document:'old attachment',status:'pending'}];
+  const messages=[];
+  x.deps.telegram.send=async(_id,text,meta)=>{
+    assert.equal(meta.plainText,true);
+    messages.push(text);
+    return messages.length===1?{status:'sent',messageId:'first'}:{status:'unknown'};
+  };
+  await r.run();
+  await x.run().run();
+  assert.equal(messages.length,2);
+  assert.match(messages[0],/^\[1\//);
+  assert.match(messages[1],/^\[2\//);
+  assert.equal(x.store.state.videos[v.id].telegramParts[0].messageId,'first');
+  assert.equal(x.store.state.videos[v.id].telegramParts[1].status,'unknown');
+  assert.ok(x.store.state.videos[v.id].telegramParts.every(part=>!part.document));
+});

@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {telegramDigest} from './telegramDigest.mjs';
+import {telegramOutbox} from './telegramDigest.mjs';
 import {isApprovedDeliveryRecipient} from './publicChannel.mjs';
 import {PROGRAMMES,matchProgrammes} from './programmes.mjs';
 import {validateTranscript,splitMessage} from './core.mjs';
@@ -199,14 +199,19 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
             if(r.channelTest.status==='sent'){for(const p of r.parts)p.status='sent';r.stage='sent';await save();continue;}
             r.hold='channel_delivery_requires_review';await save();continue;
           }
-          if(!r.telegramParts){
+          const pendingDocument=r.telegramParts?.length===1&&r.telegramParts[0].status==='pending'&&r.telegramParts[0].document;
+          if(!r.telegramParts||pendingDocument){
             if(r.parts.some(p=>p.status!=='pending')){r.hold='legacy_delivery_requires_review';await save();continue;}
-            try{r.telegramParts=[{...telegramDigest(r.parts.map(p=>p.text.replace(/^\[\d+\/\d+\]\n/u,'')).join('\n'),r.video,r.summaryCandidate?.telegramDigest),status:'pending'}];}
+            try{
+              const nextAt=r.telegramParts?.[0]?.nextAt;
+              r.telegramParts=telegramOutbox(r.parts.map(p=>p.text.replace(/^\[\d+\/\d+\]\n/u,'')).join('\n'),r.video,r.summaryCandidate?.telegramDigest);
+              if(nextAt)r.telegramParts[0].nextAt=nextAt;
+            }
             catch{r.hold='telegram_digest_requires_review';await save();continue;}
             await save();
           }
           for(const p of r.telegramParts){if(p.status==='sent')continue;if(p.status!=='pending'||p.nextAt>now)break;
-            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt,document:p.document});}catch{result={status:'unknown'};}
+            p.status='inflight';await save();let result;try{result=await telegram.send(r.recipient,p.text,{publishedAt:r.video?.publishedAt,plainText:p.plainText});}catch{result={status:'unknown'};}
             if(result.status==='sent'&&result.messageId){p.status='sent';p.messageId=String(result.messageId);}
             else if(result.status==='rate_limited'&&result.definitelyNotSent===true){p.status='pending';p.nextAt=now+Math.max(60000,Number(result.retryAfterMs)||0);}
             else p.status='unknown';await save();if(p.status!=='sent')break;

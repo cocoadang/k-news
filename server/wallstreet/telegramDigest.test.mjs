@@ -76,3 +76,19 @@ test('reviewed publication uses numbered topics and ignores review notes and tim
   assert.doesNotMatch(part.text,/자막 전체|다음 문장|주가 반응|https:/);
   assert.throws(()=>telegramDigest('방송 자막을 검토해 정리했습니다.',video),/digest_topics_required/);
 });
+
+test('legacy topic labels become bold titles without repeating them in the summary',()=>{
+  const source=[
+    '• 경계할 비교: 2018년 차트와 유사하다고 소개했습니다.',
+    'https://www.youtube.com/watch?v=Idn_d5ArZvA&t=3s',
+    '• 하락 위험: 유가를 위험 변수로 지목했습니다.',
+    'https://www.youtube.com/watch?v=Idn_d5ArZvA&t=58s',
+    '▌기존 제목',
+    '• 방송 내용: 이미 제목이 저장됐습니다.',
+  ].join('\n');
+  const [part]=telegramDigest(source,video).parts;
+  assert.match(part.text,/1\. 경계할 비교\n2018년 차트와 유사하다고 소개했습니다\. · 0:03/);
+  assert.match(part.text,/2\. 하락 위험\n유가를 위험 변수로 지목했습니다\. · 0:58/);
+  assert.match(part.text,/3\. 기존 제목\n방송 내용:/);
+  assert.ok(part.entities.some(e=>e.type==='bold'&&part.text.slice(e.offset,e.offset+e.length)==='2. 하락 위험'));
+});

@@ -77,7 +77,13 @@ export function telegramDigest(text,video,summary){
   append(header,'\n');
   append(header,'영상 보기',{type:'text_link',url:watch});
 
-  const topics=unique.map(item=>({...item,sentence:oneLine(item.text,1400)})).filter(item=>item.sentence);
+  const topics=unique.map(item=>{
+    // Older summaries store their topic label at the start of the bullet.
+    const inlineTitle=!item.title&&item.text.match(/^([\p{L}][\p{L}\p{N}\p{Zs}·/&()‘’'–-]{0,39})[:：]\s+(.+)$/su);
+    const title=inlineTitle?inlineTitle[1].trim():item.title;
+    const sentence=oneLine(inlineTitle?inlineTitle[2]:item.text,1400);
+    return {...item,title,sentence};
+  }).filter(item=>item.sentence);
   if(!topics.length)throw Error('digest_topics_required');
   const issues=topics.map((item,index)=>{
     const issue=block();

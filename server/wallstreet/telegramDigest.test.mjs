@@ -53,3 +53,26 @@ test('bold labels and hidden links use UTF-16 offsets and the summary stays on o
   assert.match(part.text,/😀 첫 문장입니다\. · 0:59/);
   assert.doesNotMatch(part.text,/https:|다음 문장/);
 });
+
+test('reviewed publication uses numbered topics and ignores review notes and timestamp captions',()=>{
+  const source=[
+    '10월 29일 월가 뉴스레터 상세 요약',
+    '확보한 45분 분량 자막 전체를 검토해 다시 정리했습니다.',
+    '',
+    '1. 알파벳 시간외 하락',
+    '방송은 알파벳 주가가 시간외에서 약 9% 하락했다고 전했습니다. 다음 문장입니다.',
+    '03:27 주가 반응',
+    'https://www.youtube.com/watch?v=Idn_d5ArZvA&t=207s',
+    '',
+    '2. 마이크로소프트 실적',
+    '방송은 애저 성장률을 48%로 소개했습니다.',
+    '03:58 마이크로소프트',
+    'https://www.youtube.com/watch?v=Idn_d5ArZvA&t=238s',
+  ].join('\n');
+  const {parts:[part],itemCount}=telegramDigest(source,video);
+  assert.equal(itemCount,2);
+  assert.match(part.text,/1\. 알파벳 시간외 하락\n방송은 알파벳 주가가 시간외에서 약 9% 하락했다고 전했습니다\. · 3:27/);
+  assert.match(part.text,/2\. 마이크로소프트 실적\n방송은 애저 성장률을 48%로 소개했습니다\. · 3:58/);
+  assert.doesNotMatch(part.text,/자막 전체|다음 문장|주가 반응|https:/);
+  assert.throws(()=>telegramDigest('방송 자막을 검토해 정리했습니다.',video),/digest_topics_required/);
+});

@@ -26,8 +26,12 @@ function joinBlocks(blocks){
 }
 function oneLine(value,max){
   const clean=String(value).replace(/\s+/gu,' ').trim();
-  const sentence=sentenceSegmenter.segment(clean)[Symbol.iterator]().next().value?.segment.trim()||'';
-  return boundedLine(sentence,max);
+  for(const {segment} of sentenceSegmenter.segment(clean)){
+    const sentence=segment.trim();
+    if(!sentence||/^(?:확보한 .*자막|(?:영상|방송|자막)(?:을|를| 전체를).*검토)|(?:요약|정리)(?:했|하였)습니다[.!]?$/u.test(sentence))continue;
+    return boundedLine(sentence,max);
+  }
+  return '';
 }
 function boundedLine(value,max){
   const clean=String(value).replace(/\s+/gu,' ').trim();
@@ -44,11 +48,19 @@ export function telegramDigest(text,video,summary){
   const items=[];let title='',current;
   for(const raw of String(text).split(/\r?\n/)){
     const line=raw.trim();
+    const numbered=line.match(/^\d+[.)]\s+(.+)$/u);
+    if(numbered){
+      current={title:numbered[1],text:'',label:'',links:[]};
+      items.push(current);
+      continue;
+    }
     if(line.startsWith('▌')){title=line.slice(1).trim();continue;}
     const match=line.match(/^•\s*(\[[^\]]+\])?\s*(.+)$/u);
     if(match){current={title,text:match[2],label:match[1]||'',links:[]};items.push(current);title='';continue;}
-    if(current&&timestampPattern.test(line))current.links.push(line);
-    else if(current&&line&&!/^\[\d+\/\d+\]$/.test(line))current.text+='\n'+line;
+    if(!current||!line)continue;
+    if(timestampPattern.test(line)){current.links.push(line);continue;}
+    if(/^(?:\[\d+\/\d+\]$|(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\s|$)|https?:\/\/)/u.test(line))continue;
+    current.text+=(current.text?'\n':'')+line;
   }
   const verified=summary?.verified===true&&Array.isArray(summary.items)&&summary.items.length>0;
   if(verified)items.splice(0,items.length,...summary.items.map(item=>({title:item.title,text:item.text,label:item.kind==='outlook'?'[출연자의 해석·전망]':'[방송에서 소개한 내용]',links:item.starts.map(start=>`https://www.youtube.com/watch?v=${video.id}&t=${Math.floor(start)}s`)})));
@@ -65,10 +77,12 @@ export function telegramDigest(text,video,summary){
   append(header,'\n');
   append(header,'영상 보기',{type:'text_link',url:watch});
 
-  const issues=unique.map((item,index)=>{
+  const topics=unique.map(item=>({...item,sentence:oneLine(item.text,1400)})).filter(item=>item.sentence);
+  if(!topics.length)throw Error('digest_topics_required');
+  const issues=topics.map((item,index)=>{
     const issue=block();
     append(issue,`${index+1}. ${boundedLine(item.title||'방송 이슈',300)}`,{type:'bold'});
-    append(issue,'\n'+oneLine(item.text,1400));
+    append(issue,'\n'+item.sentence);
     // The first available timestamp provides a direct jump for each topic.
     const stamp=item.links.map(link=>link.match(timestampPattern)).find(link=>link?.[1]===video.id);
     if(stamp){
@@ -77,17 +91,11 @@ export function telegramDigest(text,video,summary){
     }
     return issue;
   });
-  if(!issues.length){
-    const fallback=block();
-    const prose=String(text).split(/\r?\n/u).filter(line=>!/^\s*(?:\[\d+\/\d+\]|https?:\/\/)/u.test(line)&&line.trim()!==video.title).join(' ');
-    append(fallback,oneLine(prose,1400));
-    if(fallback.text)issues.push(fallback);
-  }
   const detail=block();
   append(detail,'Dsoom 상세 요약 보기',{type:'text_link',url:`https://news.dsoom.com/?video=${video.id}`});
   const blocks=[header,...issues,detail];
   const body=joinBlocks(blocks);
-  if(body.text.length<=TELEGRAM_MESSAGE_LIMIT&&body.entities.length<=TELEGRAM_ENTITY_LIMIT)return {parts:[body],itemCount:unique.length||null};
+  if(body.text.length<=TELEGRAM_MESSAGE_LIMIT&&body.entities.length<=TELEGRAM_ENTITY_LIMIT)return {parts:[body],itemCount:topics.length};
   const pages=[];
   let page=[],size=0,entityCount=0;
   for(const item of blocks){
@@ -104,7 +112,7 @@ export function telegramDigest(text,video,summary){
     const prefix=`[${index+1}/${pages.length}]\n`;
     return {text:prefix+part.text,entities:part.entities.map(entity=>({...entity,offset:entity.offset+prefix.length}))};
   });
-  return {parts,itemCount:unique.length||null};
+  return {parts,itemCount:topics.length};
 }
 
 export function telegramOutbox(text,video,summary){

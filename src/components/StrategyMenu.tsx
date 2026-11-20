@@ -1,5 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {PageHeader, chipClass} from './ui';
+import {tripodResults} from './tripodBacktest';
+import type {TripodSignal} from '../../server/tripod';
 import {useLang, tr, getLang} from '../i18n';
 
 // 나스닥 전략 비교 — 자료 출처는 KS Wealth OS(asset.dsoom.com)
@@ -131,7 +133,9 @@ export function StrategyMenu() {
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}
     {status === 'error' && <p role="alert">{t('자료를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.', 'Could not load data. Please refresh in a moment.')}</p>}
     {live && <LiveSection live={live}/>}
+    {!live && status !== 'loading' && <div className={card}><TripodLive/></div>}
     {bt && variant && <BacktestSection key={lang} bt={bt} variant={variant} setVariant={setVariant}/>}
+    <TripodBacktest/>
   </section>;
 }
 
@@ -184,6 +188,7 @@ function LiveSection({live}: {live: Live}) {
           <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
       </Table></div>
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
+      <TripodLive/>
       <div className="mt-3 border-t border-slate-800 pt-3">
         <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
         <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
@@ -246,4 +251,59 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
       </ul>
     </details>
   </div>;
+}
+
+function TripodLive() {
+  const {t} = useLang();
+  const [reading, setReading] = useState<TripodSignal | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => {
+      fetch('/api/market/tripod', {signal: controller.signal})
+        .then(response => response.ok ? response.json() as Promise<TripodSignal> : Promise.reject(new Error('Tripod unavailable')))
+        .then(result => { if (!controller.signal.aborted) setReading(result); })
+        .catch(() => { if (!controller.signal.aborted) setReading(null); })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    };
+    refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 600_000);
+    return () => { controller.abort(); window.clearInterval(timer); };
+  }, []);
+  const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
+  return <section className="mt-4 border-t border-slate-800 pt-3">
+    <h3 className="text-sm font-semibold text-white">{t('트라이팟 · 실전 신호', 'Tripod · Live signal')}</h3>
+    <p className="mt-1 text-sm text-slate-300" role="status">{reading ? allocations[reading.state] : loading ? t('불러오는 중', 'Loading') : t('종가 신호를 불러오지 못했습니다.', 'Closing signal unavailable.')}</p>
+    {reading && <p className="mt-1 text-xs text-slate-400">
+      {t('미국 종가', 'US close')} {dot(reading.asOf)} · {t('250일선 대비', 'vs. 250-day MA')} {pct(reading.distance)} ·
+      {' '}{t('52주 낙폭', '52-week drawdown')} {pct(-reading.drawdown)} · {t('VIX 10일 평균', 'VIX 10-day average')} {reading.vix.toFixed(2)}
+    </p>}
+    <p className="mt-2 text-xs text-slate-400">{t('250일선 대비 +1% 이상이면 VIX 평균 28 미만 및 52주 낙폭 9% 이내에서 TQQQ, 그 외는 QQQ·QLD. −5% 이하에서는 VIX 평균 18 미만이면 QQQ·QLD, 그 외는 현금. 중간 구간에서는 직전 신호 유지.', 'At +1% or above vs. the 250-day MA, use TQQQ if average VIX is below 28 and drawdown is at most 9%; otherwise use QQQ/QLD. At −5% or below, use QQQ/QLD if average VIX is below 18; otherwise use cash. In between, retain the previous signal.')}</p>
+  </section>;
+}
+
+function TripodBacktest() {
+  const {t} = useLang();
+  const [start, setStart] = useState('2020');
+  const starts = tripodResults.filter(row => row[1] === 'Tripod');
+  const shown = tripodResults.filter(row => row[0].startsWith(start));
+  return <section className={card}>
+    <h2 className="text-base font-semibold text-white">{t('백테스트 · 트라이팟 vs 3/25 B', 'Backtest · Tripod vs 3/25 B')}</h2>
+    <p className="mt-1 text-sm text-slate-400">{t('초기 1억 원 · 다음 달부터 월 100만 원 · 2026.11.19 미국 종가까지 · 세전', '₩100M upfront · ₩1M/month from the following month · through Nov 19, 2026 US close · pre-tax')}</p>
+    <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-300">
+      {t('시작 연도', 'Start year')}
+      <select value={start} onChange={event => setStart(event.target.value)} className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2">
+        {starts.map(([date]) => <option key={date} value={date.slice(0, 4)}>{date.slice(0, 4)}</option>)}
+      </select>
+    </label>
+    <p className="mt-2 text-xs text-slate-400">{t('시작일', 'Start date')} {dot(shown[0][0])}</p>
+    <div className="mt-2"><Table head={[t('전략', 'Strategy'), 'XIRR', 'MDD', t('최종 평가액', 'Final value'), t('데이터', 'Data')]}>
+      {shown.map(([, strategy, xirr, mdd, final, source]) => <tr key={strategy}>
+        <td className={tdL}>{strategy === 'Tripod' ? t('트라이팟', 'Tripod') : strategy}</td>
+        <td className={td}>{pct(xirr)}</td><td className={td}>{pct(mdd)}</td><td className={td}>{won(final)}</td>
+        <td className={td}>{source === 'Mixed synthetic' ? t('합성 포함', 'Mixed synthetic') : source === 'ETF proxy only' ? t('BIL 대체', 'BIL proxy') : t('실제 ETF', 'Actual ETF')}</td>
+      </tr>)}
+    </Table></div>
+    <p className="mt-2 text-xs text-slate-400">{t('전일 종가 신호로 다음 거래일 종가 체결 · 매수·매도 각 0.25% · MDD는 납입 효과 제외 · 환율 고정', 'Prior-close signal, next-close trade · 0.25% fee per buy or sell · cash-flow-adjusted MDD · fixed FX')}</p>
+  </section>;
 }

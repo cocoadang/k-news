@@ -103,7 +103,7 @@ test('all eight people have a publisher transcript route; corporate prose is not
  for(const id of ['openai-news','anthropic-news']) assert.equal(!!DISCOVERY_PROVIDERS.find(p=>p.id===id)?.authored,false);
 });
 test('publisher sibling interview retains Dario and distinguishes publication from speaking date',async()=>{
- const p=DISCOVERY_PROVIDERS.find(p=>p.id==='cnbc-interviews-dario-amodei')!;
+ const p=DISCOVERY_PROVIDERS.find(p=>p.id==='cnbc-interviews-v2-dario-amodei')!;
  const url='https://pressroom.versantmedia.com/cnbc/press-releases/dario-amodei-interview';
  const a=discoveredArticle(p,url,'<meta property="article:published_time" content="2026-11-19"><h1>Fictional interview test</h1><p>November 19, 2026</p><p>DARIO AMODEI: We intend to fund future growth through several different sources of capital.</p><p>DANIELA AMODEI: We intend to triple revenue over the coming year.</p><p>SORKIN: What is your plan for the next round of funding?</p>',Date.parse('2026-11-20'))!;
  assert.ok(a);const rows=await extractDiscoveredQuotes(a);
@@ -112,7 +112,7 @@ test('publisher sibling interview retains Dario and distinguishes publication fr
 });
 
 test('verified interview seeds share three company reads before generic corporate backlog',async()=>{
- const ids=['anthropic-news','amodei-dwarkesh-interviews','amodei-lex-interviews','cnbc-interviews-dario-amodei'];
+ const ids=['anthropic-news','amodei-dwarkesh-interviews','amodei-lex-interviews','cnbc-interviews-v2-dario-amodei'];
  const providers=ids.map(id=>DISCOVERY_PROVIDERS.find(p=>p.id===id)!);
  const seeds=new Set(providers.flatMap(p=>p.seedUrls||[])),calls:string[]=[];
  const page='<meta property="article:published_time" content="2026-11-19"><h1>Fictional capital interview</h1><p>DARIO AMODEI: We intend to fund future growth through several different sources of capital.</p><p>HOST: What will happen in the coming year as new products enter the market?</p>';
@@ -125,4 +125,11 @@ test('verified interview seeds share three company reads before generic corporat
  assert.ok([...seeds].every(url=>r.articles.some(a=>a.url===url)));
  assert.ok(!calls.includes('https://www.anthropic.com/news/fictional-corporate-backlog'));
  assert.equal(r.reports.reduce((n,p)=>n+p.matchedExisting,0),3);
+});
+
+test('publisher date survives markup padding beyond the old 4000-byte header window',()=>{
+ const p=DISCOVERY_PROVIDERS.find(p=>p.id==='cnbc-interviews-v2-dario-amodei')!;
+ const html='<h1>Fictional transcript with a large layout</h1><div data-layout="'+('x'.repeat(5000))+'"></div><p>November 19, 2026</p><p>DARIO AMODEI: Our investment strategy emphasizes sustainable business growth and reliable service for customers.</p><p>HOST: What will you be doing next year as the market changes?</p>';
+ const a=discoveredArticle(p,'https://pressroom.versantmedia.com/cnbc/press-releases/dario-amodei-test',html,Date.parse('2026-11-20'));
+ assert.ok(a);assert.equal(a.publishedAt,'2026-11-19T00:00:00.000Z');
 });

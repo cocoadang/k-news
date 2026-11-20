@@ -1,6 +1,7 @@
 import {costHttpTelemetry} from './server/costTelemetry';
 import { resolveOpenAIModel } from './server/openaiClient';
 import 'dotenv/config';
+import { fetchQqqRsi } from './server/qqqRsi';
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
@@ -680,6 +681,17 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     const { sendTelegramMessage } = await import('./server/telegram');
     await sendTelegramMessage(token, chatId, text);
   };
+
+  const qqqRsiCache = packedCache(fetchQqqRsi, 10 * 60_000);
+  app.get('/api/market/qqq-rsi', async (req, res) => {
+    try {
+      const { packed } = await qqqRsiCache.get();
+      res.setHeader('Cache-Control', publicCdnHeader(300, 60));
+      sendPacked(req, res, packed);
+    } catch {
+      res.status(503).set('Cache-Control', 'no-store').json({ error: 'QQQ RSI unavailable' });
+    }
+  });
 
   // 운영 점검용 공개 요약: 숫자/상태만(비밀값·IP·로그 원문 없음). Firestore 읽기를 줄이려고 10분 캐시.
   let opsHealthCache: { at: number; body: any } | null = null;

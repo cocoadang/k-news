@@ -176,6 +176,11 @@ const indicatorRatingKo: Record<string, string> = {
   'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕',
 };
 
+function annualEntryRate(count: number, start: string, end: string) {
+  const years = (Date.parse(end) - Date.parse(start)) / (86_400_000 * 365.2425);
+  return (count / years).toFixed(2);
+}
+
 function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   const {t, lang} = useLang();
   const history = indicatorHistory[indicator];
@@ -184,10 +189,11 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
     <p className="mt-1 text-xs text-slate-400">{history.start}~{history.end} · {t('평균', 'Mean')} {history.mean.toFixed(2)} · {t('마지막 관측값', 'Last observation')} {history.close.toFixed(2)} ({t('평균 대비', 'vs. mean')} {formattedDelta})</p>
-    <div className="mt-2 text-xs sm:text-sm"><Table head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
+    <div className="mt-2 text-xs sm:text-sm"><Table head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
       {history.rows.map(([threshold, count, date, median]) => <tr key={threshold}>
         <th scope="row" className={`${tdL} font-medium`}>{lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold}</th>
         <td className={td}>{count.toLocaleString()}</td>
+        <td className={td}>{annualEntryRate(count, history.start, history.end)}{t('회/년', '/year')}</td>
         <td className={td}>{date ?? '—'}</td>
         <td className={td}>{median === null ? '—' : t(`${median}일`, `${median} days`)}</td>
       </tr>)}
@@ -311,18 +317,22 @@ function LiveSection({live}: {live: Live}) {
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
         <div className="mt-2 text-xs sm:text-sm"><Table head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
+          t('발생 횟수', 'Entries'),
           t('발생 빈도', 'Frequency'),
-          t('간격 중앙값', 'Median interval'),
+          t('최근 도달일', 'Last entry'),
+          t('간격 중앙값', 'Median gap'),
         ]}>
-          {[
-            [10, 35, 1.2, t('약 7개월', '≈7 months')],
-            [20, 8, 5.1, t('약 2.8년', '≈2.8 years')],
-            [30, 4, 10.2, t('약 9.5년', '≈9.5 years')],
-            [40, 1, null, '—'],
-            [50, 1, null, '—'],
-          ].map(([threshold, count, years, median]) => <tr key={threshold}>
+          {([
+            [10, 35, '2026-11-02', t('약 7개월', '≈7 months')],
+            [20, 8, '2025-04-04', t('약 2.8년', '≈2.8 years')],
+            [30, 4, '2022-06-13', t('약 9.5년', '≈9.5 years')],
+            [40, 1, '2000-11-20', '—'],
+            [50, 1, '2000-12-20', '—'],
+          ] as const).map(([threshold, count, date, median]) => <tr key={threshold}>
             <th scope="row" className={`${tdL} font-medium`}>−{threshold}%</th>
-            <td className={td}>{years === null ? t('기간 중 1회', '1 in period') : t(`${count}회 · ${years}년당 1회`, `${count} · 1 per ${years} years`)}</td>
+            <td className={td}>{count}</td>
+            <td className={td}>{annualEntryRate(count, '1986-01-02', '2026-11-20')}{t('회/년', '/year')}</td>
+            <td className={td}>{date}</td>
             <td className={td}>{median}</td>
           </tr>)}
         </Table></div>

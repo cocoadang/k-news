@@ -167,9 +167,7 @@ function LiveSection({live}: {live: Live}) {
   const {t, lang} = useLang();
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
-  const [rulesPinned, setRulesPinned] = useState(false);
-  const [rulesHovered, setRulesHovered] = useState(false);
-  const rulesOpen = rulesPinned || rulesHovered;
+  const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
   const [reading, setReading] = useState<TripodSignal | null>(null);
   const [signalLoading, setSignalLoading] = useState(true);
@@ -196,6 +194,21 @@ function LiveSection({live}: {live: Live}) {
     dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
   if (tracked) lines.push({key: 'tripod', label: label('tripod'), color: COLORS.tripod, points: tracked.series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))});
+  const strategyButton = (key: string, name: React.ReactNode) => {
+    if (!RULES()[key]) return <><Dot k={key}/>{name}</>;
+    const expanded = activeRule === key;
+    return <button type="button" aria-expanded={expanded} aria-controls={`live-rule-${key}`}
+      className="inline-flex min-h-7 cursor-pointer select-none items-center rounded text-left hover:text-cyan-300 focus-visible:outline focus-visible:outline-cyan-400"
+      onClick={() => setActiveRule(expanded ? null : key)}>
+      <Dot k={key}/>{name}
+      <span aria-hidden="true" className="ml-1 text-xs text-slate-400">{expanded ? '▴' : '▾'}</span>
+    </button>;
+  };
+  const ruleRow = (key: string) => <tr id={`live-rule-${key}`} hidden={activeRule !== key}>
+    <td colSpan={4} className="border-b border-slate-800/70 bg-slate-900 px-3 py-2 text-left text-xs leading-5 text-slate-300">
+      {RULES()[key]}
+    </td>
+  </tr>;
   return <>
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
       <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
@@ -204,50 +217,22 @@ function LiveSection({live}: {live: Live}) {
       <QqqRsiCard/>
     </div>
     <div className={card}>
-      <div className="relative z-10 w-fit"
-        onPointerEnter={event => { if (event.pointerType === 'mouse') setRulesHovered(true); }}
-        onPointerLeave={() => setRulesHovered(false)}
-        onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRulesPinned(false); }}
-        onKeyDown={event => { if (event.key === 'Escape' && rulesOpen) { event.stopPropagation(); setRulesPinned(false); setRulesHovered(false); } }}>
-        <h2 className="text-base font-semibold text-white">
-          <button type="button" aria-expanded={rulesOpen} aria-controls="live-buying-rules"
-            className="inline-flex cursor-pointer items-center gap-2 rounded text-left hover:text-cyan-300 focus-visible:outline focus-visible:outline-cyan-400"
-            onClick={() => { if (rulesPinned) setRulesHovered(false); setRulesPinned(!rulesPinned); }}>
-            {t('실전 추적', 'Live tracking')}
-            <span aria-hidden="true" className="text-xs text-slate-400">{rulesOpen ? '▴' : '▾'}</span>
-          </button>
-        </h2>
-        <div id="live-buying-rules" hidden={!rulesOpen} className="absolute left-0 top-full w-[min(40rem,calc(100vw-4.5rem))] pt-2">
-          <div className="max-h-[45vh] overflow-auto rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-xl">
-            <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
-            <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
-              {['b3325', 'old', 'mubot', 'qqq', 'tripod'].map(key => <div key={key} className="grid grid-cols-[minmax(5rem,auto)_1fr] gap-x-2 sm:grid-cols-[11rem_1fr]">
-                <dt className="font-medium text-slate-200">{label(key)}</dt><dd>{RULES()[key]}</dd>
-              </div>)}
-            </dl>
-          </div>
-        </div>
-      </div>
+      <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>
       <p className="mt-1 text-sm text-slate-400">{lang === 'en' ? <>Virtual accounts adding the same amount on the first trading day of each month since {dot(live.start)} · as of {dot(live.asOf)}{m.stale ? ' · indicators delayed' : ''}</> : <>{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}{m.stale ? ' · 지표 갱신 지연' : ''}</>}</p>
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD'), t('다음 매수', 'Next buy')]}>
-        {order.map(k => { const v = live.virtual[k]; return <tr key={k}><td className={tdL}><Dot k={k}/>{k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label)}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
-          <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>; })}
+        {order.map(k => { const v = live.virtual[k]; return <React.Fragment key={k}><tr><td className={tdL}>{strategyButton(k, k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label))}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
+          <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>{ruleRow(k)}</React.Fragment>; })}
         <tr>
-          <td className={tdL}><Dot k="tripod"/>{label('tripod')}
+          <td className={tdL}>{strategyButton('tripod', label('tripod'))}
             {tracked && tracked.asOf !== live.asOf && <span className="block text-xs font-normal text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</span>}
           </td>
           <td className={td}>{pct(tracked?.twr)}</td>
           <td className={td}>{pct(tracked?.mdd)}</td>
           <td className={td}>
             <span role="status">{reading ? allocations[reading.state] : signalLoading ? t('불러오는 중', 'Loading') : t('신호 없음', 'Signal unavailable')}</span>
-            {reading && <details className="mt-1 text-xs text-slate-400">
-              <summary className="cursor-pointer">{t('신호 기준', 'Signal as of')} {dot(reading.asOf)}</summary>
-              <div>{t('250일선 대비', 'vs. 250-day MA')} {pct(reading.distance)}</div>
-              <div>{t('52주 낙폭', '52-week drawdown')} {pct(-reading.drawdown)}</div>
-              <div>{t('VIX 10일 평균', 'VIX 10-day average')} {reading.vix.toFixed(2)}</div>
-            </details>}
           </td>
         </tr>
+        {ruleRow('tripod')}
       </Table></div>
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
 

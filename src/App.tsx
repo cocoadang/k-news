@@ -13,6 +13,7 @@ import { AdminSettings as SettingsModal } from './components/AdminSettings';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { CeoMenu } from './components/ceo/CeoMenu';
 import { StrategyMenu } from './components/StrategyMenu';
+import { SystemHealthMenu } from './components/SystemHealthMenu';
 import { useLang } from './i18n';
 import { NewsEvent, SystemStatus, MonitorSettings, NewsCategory, CompanyProfile, AuthStatus } from './types';
 import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function App() {
 
   // Toast Notification
   // 상단 메뉴: 뉴스 피드 / CEO 발언 (CEO 발언은 읽기 전용 API /api/ceo/dataset, 예시 데이터 대체 없음)
-  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube' | 'strategy'>('youtube');
+  const [mainView, setMainView] = useState<'news' | 'ceo' | 'youtube' | 'strategy' | 'system'>('youtube');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -507,8 +508,8 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
-        <nav className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
-          {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')]] as const).map(([key, label]) => (
+        <nav className="mb-4 grid grid-cols-5 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+          {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')], ['system', t('미국 시스템', 'US System')]] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -526,6 +527,8 @@ export default function App() {
           <CeoMenu key={viewVersion} isAdmin={false} />
         ) : mainView === 'strategy' ? (
           <StrategyMenu key={viewVersion} />
+        ) : mainView === 'system' ? (
+          <SystemHealthMenu />
         ) : (<>
         <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} actions={<TelegramSubscribeButton />} />
         {/* Multi-Company Tab Bar (Scrollable chips) */}

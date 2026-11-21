@@ -1,7 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {PageHeader, chipClass} from './ui';
 import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
-import type {TripodSignal} from '../../server/tripod';
 import {useLang, tr, getLang} from '../i18n';
 
 // 나스닥 전략 비교 — 자료 출처는 KS Wealth OS(asset.dsoom.com)
@@ -52,7 +51,6 @@ const won = (v: unknown) => { const n = num(v); if (n === null) return '—'; co
   return sign + (a >= 1e8 ? `${(a / 1e8).toFixed(2)}억` : `${Math.round(a / 1e4).toLocaleString('ko-KR')}만`); };
 const dot = (d: string) => d.replace(/-/g, '.');
 const label = (k: string, fallback?: string) => LABELS()[k] || fallback || k;
-const bucketName = (b?: string | null) => (b === 'QQQM' ? 'QQQ' : b || null); // QQQM·QQQ는 같은 지수라 QQQ로 통일
 
 function Dot({k}: {k: string}) { return <span className="mr-2 inline-block h-2.5 w-2.5 shrink-0 rounded-full align-middle" style={{background: COLORS[k]}} aria-hidden="true"/>; }
 
@@ -249,16 +247,9 @@ function LiveSection({live}: {live: Live}) {
   };
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
-  const [reading, setReading] = useState<TripodSignal | null>(null);
-  const [signalLoading, setSignalLoading] = useState(true);
   useEffect(() => {
     const controller = new AbortController();
     const refresh = () => {
-      fetch('/api/market/tripod', {signal: controller.signal})
-        .then(response => response.ok ? response.json() as Promise<TripodSignal> : null)
-        .then(result => { if (!controller.signal.aborted) setReading(result); })
-        .catch(() => { if (!controller.signal.aborted) setReading(null); })
-        .finally(() => { if (!controller.signal.aborted) setSignalLoading(false); });
       fetch('/api/market/tripod-portfolio', {signal: controller.signal})
         .then(response => response.ok ? response.json() : null)
         .then(result => { if (result && !controller.signal.aborted) setTripod(result); })
@@ -269,7 +260,6 @@ function LiveSection({live}: {live: Live}) {
     return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
   const tracked = tripod?.start === live.start && tripod.asOf >= tripodLiveSeed.asOf ? tripod : tripodLiveSeed.start === live.start ? tripodLiveSeed : null;
-  const allocations = {'3x': 'TQQQ 100%', '1.5x': 'QQQ 50% · QLD 50%', cash: t('현금 100%', 'Cash 100%')};
   const lines: Line[] = order.map(k => ({key: k, label: label(k, live.virtual[k].label), color: COLORS[k],
     dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined,
     points: live.virtual[k].series.map(([d, u]) => ({t: Date.parse(d), y: u * 100}))}));
@@ -285,7 +275,7 @@ function LiveSection({live}: {live: Live}) {
     </button>;
   };
   const ruleRow = (key: string) => <tr id={`live-rule-${key}`} hidden={activeRule !== key}>
-    <td colSpan={4} className="border-b border-slate-800/70 bg-slate-900 px-3 py-2 text-left text-xs leading-5 text-slate-300">
+    <td colSpan={3} className="border-b border-slate-800/70 bg-slate-900 px-3 py-2 text-left text-xs leading-5 text-slate-300">
       {RULES()[key]}
     </td>
   </tr>;
@@ -348,35 +338,25 @@ function LiveSection({live}: {live: Live}) {
       <div className="mt-3 space-y-2 sm:hidden" aria-label={t('모바일 전략별 실전 추적', 'Mobile strategy tracking')}>
         {[...order, 'tripod'].map(k => {
           const v = k === 'tripod' ? null : live.virtual[k];
-          const next = k === 'tripod' ? (reading ? allocations[reading.state] : signalLoading ? t('불러오는 중', 'Loading') : t('신호 없음', 'Unavailable'))
-            : k === 'mubot' && v?.mubot ? `${v.mubot.mode === 'R' ? 'R ' : ''}T ${v.mubot.T}/20` : bucketName(v?.bucket) || (k === 'qqq' ? 'QQQ' : '—');
-          return <div key={k} className="min-w-0 rounded-lg border border-slate-700/80 bg-slate-950/60 p-3">
-            <div className="flex min-w-0 items-start justify-between gap-2">
+          return <div key={k} className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2">
               <div className="min-w-0 text-sm font-semibold leading-5 break-keep">{strategyButton(k, label(k, v?.label))}</div>
-            </div>
-            <div className="mt-1 grid grid-cols-3 gap-2">
-              <div><div className="text-xs text-slate-400">{t('수익률', 'Return')}</div><div className="mt-1 text-base font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.twr : v?.twr)}</div></div>
-              <div><div className="text-xs text-slate-400">{t('최대낙폭', 'Max DD')}</div><div className="mt-1 text-base font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.mdd : v?.mdd)}</div></div>
-              <div className="min-w-0"><div className="text-xs text-slate-400">{t('다음 매수', 'Next buy')}</div><div className="mt-1 break-words text-sm font-semibold leading-5 text-cyan-200">{next}</div></div>
-            </div>
-            {activeRule === k && <p id={`mobile-live-rule-${k}`} className="mt-3 border-t border-slate-800 pt-3 text-xs leading-5 text-slate-300">{RULES()[k]}</p>}
-            {k === 'tripod' && tracked && tracked.asOf !== live.asOf && <p className="mt-2 text-xs text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</p>}
+            <div><div className="text-xs text-slate-400">{t('수익률', 'Return')}</div><div className="text-sm font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.twr : v?.twr)}</div></div>
+            <div><div className="text-xs text-slate-400">{t('최대낙폭', 'Max DD')}</div><div className="text-sm font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.mdd : v?.mdd)}</div></div>
+            {activeRule === k && <p id={`mobile-live-rule-${k}`} className="col-span-full border-t border-slate-800 py-2 text-xs leading-5 text-slate-300">{RULES()[k]}</p>}
+            {k === 'tripod' && tracked && tracked.asOf !== live.asOf && <p className="col-span-full pb-2 text-xs text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</p>}
           </div>;
         })}
       </div>
-      <div className="mt-3 hidden sm:block"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD'), t('다음 매수', 'Next buy')]}>
+      <div className="mt-3 hidden sm:block"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD')]}>
 
         {order.map(k => { const v = live.virtual[k]; return <React.Fragment key={k}><tr><td className={tdL}>{strategyButton(k, k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label))}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
-          <td className={td}>{k === 'mubot' && v.mubot ? <>{v.mubot.mode === 'R' ? t('리버스 ', 'Reverse ') : ''}T {v.mubot.T}<span className="hidden sm:inline">/20</span></> : bucketName(v.bucket) || (k === 'qqq' ? 'QQQ' : '—')}</td></tr>{ruleRow(k)}</React.Fragment>; })}
+          </tr>{ruleRow(k)}</React.Fragment>; })}
         <tr>
           <td className={tdL}>{strategyButton('tripod', label('tripod'))}
             {tracked && tracked.asOf !== live.asOf && <span className="block text-xs font-normal text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</span>}
           </td>
           <td className={td}>{pct(tracked?.twr)}</td>
           <td className={td}>{pct(tracked?.mdd)}</td>
-          <td className={td}>
-            <span role="status">{reading ? allocations[reading.state] : signalLoading ? t('불러오는 중', 'Loading') : t('신호 없음', 'Signal unavailable')}</span>
-          </td>
         </tr>
         {ruleRow('tripod')}
       </Table></div>

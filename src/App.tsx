@@ -508,14 +508,14 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
-        <nav className="mb-4 grid grid-cols-5 gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+        <nav className="mb-4 grid grid-cols-6 gap-1 sm:grid-cols-5 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
           {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')], ['system', t('미국 시스템', 'US System')]] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
               aria-current={mainView === key ? 'page' : undefined}
               onClick={() => setMainView(key)}
-              className={`flex-1 sm:flex-none min-h-[40px] rounded-lg px-1.5 sm:px-4 text-[13px] sm:text-sm whitespace-nowrap font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+              className={`${key === 'strategy' || key === 'system' ? 'col-span-3' : 'col-span-2'} sm:col-span-1 min-w-0 min-h-11 rounded-lg px-1 sm:px-4 text-xs sm:text-sm leading-tight break-keep font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                 mainView === key ? 'bg-cyan-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
             >
               {label}

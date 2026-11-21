@@ -167,6 +167,9 @@ function LiveSection({live}: {live: Live}) {
   const {t, lang} = useLang();
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
+  const [rulesPinned, setRulesPinned] = useState(false);
+  const [rulesHovered, setRulesHovered] = useState(false);
+  const rulesOpen = rulesPinned || rulesHovered;
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
   const [reading, setReading] = useState<TripodSignal | null>(null);
   const [signalLoading, setSignalLoading] = useState(true);
@@ -201,7 +204,30 @@ function LiveSection({live}: {live: Live}) {
       <QqqRsiCard/>
     </div>
     <div className={card}>
-      <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>
+      <div className="relative z-10 w-fit"
+        onPointerEnter={event => { if (event.pointerType === 'mouse') setRulesHovered(true); }}
+        onPointerLeave={() => setRulesHovered(false)}
+        onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRulesPinned(false); }}
+        onKeyDown={event => { if (event.key === 'Escape' && rulesOpen) { event.stopPropagation(); setRulesPinned(false); setRulesHovered(false); } }}>
+        <h2 className="text-base font-semibold text-white">
+          <button type="button" aria-expanded={rulesOpen} aria-controls="live-buying-rules"
+            className="inline-flex cursor-pointer items-center gap-2 rounded text-left hover:text-cyan-300 focus-visible:outline focus-visible:outline-cyan-400"
+            onClick={() => { if (rulesPinned) setRulesHovered(false); setRulesPinned(!rulesPinned); }}>
+            {t('실전 추적', 'Live tracking')}
+            <span aria-hidden="true" className="text-xs text-slate-400">{rulesOpen ? '▴' : '▾'}</span>
+          </button>
+        </h2>
+        <div id="live-buying-rules" hidden={!rulesOpen} className="absolute left-0 top-full w-[min(40rem,calc(100vw-4.5rem))] pt-2">
+          <div className="max-h-[45vh] overflow-auto rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-xl">
+            <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
+            <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
+              {['b3325', 'old', 'mubot', 'qqq', 'tripod'].map(key => <div key={key} className="grid grid-cols-[minmax(5rem,auto)_1fr] gap-x-2 sm:grid-cols-[11rem_1fr]">
+                <dt className="font-medium text-slate-200">{label(key)}</dt><dd>{RULES()[key]}</dd>
+              </div>)}
+            </dl>
+          </div>
+        </div>
+      </div>
       <p className="mt-1 text-sm text-slate-400">{lang === 'en' ? <>Virtual accounts adding the same amount on the first trading day of each month since {dot(live.start)} · as of {dot(live.asOf)}{m.stale ? ' · indicators delayed' : ''}</> : <>{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}{m.stale ? ' · 지표 갱신 지연' : ''}</>}</p>
       <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('수익률', 'Return'), t('최대낙폭', 'Max DD'), t('다음 매수', 'Next buy')]}>
         {order.map(k => { const v = live.virtual[k]; return <tr key={k}><td className={tdL}><Dot k={k}/>{k === 'mubot' ? <>{t('무한매수', 'Infinite Buying')}<span className="hidden sm:inline">{t(' 20분할', ' (20)')}</span></> : label(k, v.label)}</td><td className={td}>{pct(v.twr)}</td><td className={td}>{pct(v.mdd)}</td>
@@ -224,14 +250,7 @@ function LiveSection({live}: {live: Live}) {
         </tr>
       </Table></div>
       <div className="mt-4"><LineChart lines={lines} yFormat={v => v.toFixed(1)} height={220} showHint={false} ariaLabel={t('실전 추적 가상 계좌 단위가치', 'Live tracking unit value')}/></div>
-      <div className="mt-3 border-t border-slate-800 pt-3">
-        <h3 className="text-sm font-semibold text-slate-200">{t('전략별 매수 방법', 'Buying rules by strategy')}</h3>
-        <dl className="mt-2 space-y-1.5 text-xs leading-5 text-slate-400">
-          {['b3325', 'old', 'mubot', 'qqq', 'tripod'].map(key => <div key={key} className="grid grid-cols-[minmax(5rem,auto)_1fr] gap-x-2 sm:grid-cols-[11rem_1fr]">
-            <dt className="font-medium text-slate-200">{label(key)}</dt><dd>{RULES()[key]}</dd>
-          </div>)}
-        </dl>
-      </div>
+
     </div>
   </>;
 }

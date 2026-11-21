@@ -1,7 +1,6 @@
 import { chipClass, chipCountClass } from './ui';
 import React from 'react';
 import { CompanyProfile, NewsEvent } from '../types';
-import { Globe } from 'lucide-react';
 import { useLang } from '../i18n';
 
 interface CompanyTabsProps {
@@ -20,7 +19,6 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
   const { t } = useLang();
   // Count events for each company
   const getEventCount = (companyId: string) => {
-    if (companyId === 'all') return events.length;
     const target = companyId.toLowerCase();
     return events.filter(e => {
       const inRelated = e.relatedCompanies?.some(c =>
@@ -41,22 +39,8 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
   const enabledCompanies = companies.filter(c => c.enabled);
 
   return (
-    <div className="mb-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-none">
+    <div role="group" aria-label={t('기업 선택', 'Select company')} className="min-w-0 overflow-x-auto scrollbar-none">
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
-        {/* ALL Tab */}
-        <button
-          onClick={() => onSelectCompany('all')}
-          className={chipClass(selectedCompany === 'all')}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>{t('전체', 'All')}</span>
-          <span
-            className={chipCountClass}
-          >
-            {getEventCount('all')}
-          </span>
-        </button>
-
         {/* Company specific tabs */}
         {enabledCompanies.map(comp => {
           const isSelected = selectedCompany === comp.id;
@@ -65,7 +49,9 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
           return (
             <button
               key={comp.id}
-              onClick={() => onSelectCompany(comp.id)}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelectCompany(isSelected ? 'all' : comp.id)}
               className={chipClass(isSelected)}
             >
               <span

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { companyQuestions, displayText } from './companyQuestions.mjs';
+import { companyQuestions, displayText, effectiveDate } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
 
@@ -94,6 +94,11 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   // 목록은 최신순(날짜 미확인은 맨 아래). 분류·비교 로직은 그대로 오래된 순 데이터를 씁니다.
   const newestFirst = [...items].sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''));
 
+  const latestUnclassified = result.other
+    .map((statement: any) => ({ statement, date: effectiveDate(statement) }))
+    .filter(item => item.date.value)
+    .sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''))[0];
+
   const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
   const pickQuestion = (id: string) => setQuestionId(id);
 
@@ -106,6 +111,12 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </div>
     </header>
 
+    {latestUnclassified && <div className="tl-card mb-4">
+      <h2 className="mb-2 text-sm font-semibold">{t('최근 수집 자료 · 질문 미분류', 'Latest unclassified material')}</h2>
+      <p className="tl-muted mb-2">{fmt(latestUnclassified.date.value)} · {lang === 'en' ? DATE_BASIS_EN[latestUnclassified.date.basis] || latestUnclassified.date.label : latestUnclassified.date.label}</p>
+      <Body s={latestUnclassified.statement} />
+      <div className="tl-foot"><Source s={latestUnclassified.statement} /></div>
+    </div>}
     {!result.questions.length ? <p className="tl-empty">{t('이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.', 'No classified statements for this person and company yet.')}</p> :
     <div className="tl-layout">
       <nav className="tl-questions" aria-label={t('비교할 질문', 'Questions to compare')}>

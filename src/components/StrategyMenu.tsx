@@ -278,7 +278,7 @@ function LiveSection({live}: {live: Live}) {
     if (!RULES()[key]) return <><Dot k={key}/>{name}</>;
     const expanded = activeRule === key;
     return <button type="button" aria-expanded={expanded} aria-controls={`live-rule-${key} mobile-live-rule-${key}`}
-      className="inline-flex min-h-7 cursor-pointer select-none items-center rounded text-left hover:text-cyan-300 focus-visible:outline focus-visible:outline-cyan-400"
+      className="inline-flex min-h-11 sm:min-h-7 max-w-full cursor-pointer select-none items-center rounded text-left hover:text-cyan-300 focus-visible:outline focus-visible:outline-cyan-400"
       onClick={() => setActiveRule(expanded ? null : key)}>
       <Dot k={key}/>{name}
       <span aria-hidden="true" className="ml-1 text-xs text-slate-400">{expanded ? '▴' : '▾'}</span>
@@ -352,12 +352,12 @@ function LiveSection({live}: {live: Live}) {
             : k === 'mubot' && v?.mubot ? `${v.mubot.mode === 'R' ? 'R ' : ''}T ${v.mubot.T}/20` : bucketName(v?.bucket) || (k === 'qqq' ? 'QQQ' : '—');
           return <div key={k} className="min-w-0 rounded-lg border border-slate-700/80 bg-slate-950/60 p-3">
             <div className="flex min-w-0 items-start justify-between gap-2">
-              <div className="min-w-0 flex-1 text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{strategyButton(k, label(k, v?.label))}</div>
-              <span className="max-w-[48%] shrink-0 text-right text-xs leading-5 text-cyan-200 [overflow-wrap:anywhere]">{next}</span>
+              <div className="min-w-0 text-sm font-semibold leading-5 break-keep">{strategyButton(k, label(k, v?.label))}</div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-1 grid grid-cols-3 gap-2">
               <div><div className="text-xs text-slate-400">{t('수익률', 'Return')}</div><div className="mt-1 text-base font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.twr : v?.twr)}</div></div>
               <div><div className="text-xs text-slate-400">{t('최대낙폭', 'Max DD')}</div><div className="mt-1 text-base font-semibold tabular-nums">{pct(k === 'tripod' ? tracked?.mdd : v?.mdd)}</div></div>
+              <div className="min-w-0"><div className="text-xs text-slate-400">{t('다음 매수', 'Next buy')}</div><div className="mt-1 break-words text-sm font-semibold leading-5 text-cyan-200">{next}</div></div>
             </div>
             {activeRule === k && <p id={`mobile-live-rule-${k}`} className="mt-3 border-t border-slate-800 pt-3 text-xs leading-5 text-slate-300">{RULES()[k]}</p>}
             {k === 'tripod' && tracked && tracked.asOf !== live.asOf && <p className="mt-2 text-xs text-slate-400">{t('평가 기준', 'Valued through')} {dot(tracked.asOf)}</p>}

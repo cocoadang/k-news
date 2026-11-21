@@ -15,7 +15,7 @@ import { CeoMenu } from './components/ceo/CeoMenu';
 import { StrategyMenu } from './components/StrategyMenu';
 import { SystemHealthMenu } from './components/SystemHealthMenu';
 import { useLang } from './i18n';
-import { NewsEvent, SystemStatus, MonitorSettings, NewsCategory, CompanyProfile, AuthStatus } from './types';
+import { NewsEvent, SystemStatus, MonitorSettings, CompanyProfile, AuthStatus } from './types';
 import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -32,10 +32,6 @@ export default function App() {
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [minImportance, setMinImportance] = useState<number>(0);
-  const [selectedImpact, setSelectedImpact] = useState<string>('all');
-  const [onlyTelegramSent, setOnlyTelegramSent] = useState<boolean | null>(null);
 
   // Modals
   const [detailEvent, setDetailEvent] = useState<NewsEvent | null>(null);
@@ -402,33 +398,7 @@ export default function App() {
       }
     }
 
-    // 2. Category Filter
-    if (selectedCategory !== 'all' && e.category !== selectedCategory) {
-      return false;
-    }
-
-    // 3. Importance Filter
-    // 상세 분석 전 기사는 importance가 0이므로, 간단 평가(잠정) 점수도 함께 반영합니다.
-    // 카드에는 "간단 평가 N★"로 잠정 점수임이 표시됩니다.
-    if (minImportance > 0) {
-      const provisionalScore = e.analysisStatus !== 'completed' ? (e.screening?.score ?? 0) : 0;
-      const effectiveImportance = Math.max(e.importance || 0, provisionalScore);
-      if (effectiveImportance < minImportance) {
-        return false;
-      }
-    }
-
-    // 4. Impact Filter
-    if (selectedImpact !== 'all' && e.impact !== selectedImpact) {
-      return false;
-    }
-
-    // 5. Telegram Filter
-    if (onlyTelegramSent !== null && e.isSentToTelegram !== onlyTelegramSent) {
-      return false;
-    }
-
-    // 6. Search query
+    // Search query
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
       const matchTitle = e.title.toLowerCase().includes(q) || e.originalTitle.toLowerCase().includes(q);
@@ -454,23 +424,6 @@ export default function App() {
     });
   }, [filteredEvents]);
 
-  const categoriesList: NewsCategory[] = [
-    'IPO / 주식',
-    '기업가치 / 자금조달',
-    '실적 / 재무',
-    'AI 가속기 / 반도체',
-    'AI 모델 / Agent',
-    '클라우드 / 데이터센터',
-    '자율주행 / Robotaxi',
-    'Starship / 우주인프라',
-    'Starlink / 통신',
-    '국방 / 정부계약',
-    '규제 / 반독점',
-    '에너지 / 배터리',
-    '공급망 / CAPEX',
-    '경쟁사 / 시장점유율',
-    '기타',
-  ];
 
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white font-sans">
@@ -531,39 +484,10 @@ export default function App() {
           <SystemHealthMenu />
         ) : (<>
         <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} actions={<TelegramSubscribeButton />} />
-        {/* Multi-Company Tab Bar (Scrollable chips) */}
-        <CompanyTabs
-          companies={companies}
-          selectedCompany={selectedCompany}
-          onSelectCompany={setSelectedCompany}
-          events={events}
-        />
-
-        {/* Filter and Search Bar */}
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          minImportance={minImportance}
-          setMinImportance={setMinImportance}
-          selectedImpact={selectedImpact}
-          setSelectedImpact={setSelectedImpact}
-          onlyTelegramSent={onlyTelegramSent}
-          setOnlyTelegramSent={setOnlyTelegramSent}
-          categories={categoriesList}
-          totalResults={sortedAndFilteredEvents.length}
-          onResetFilters={() => {
-            setSearchQuery('');
-            setSelectedCategory('all');
-            setMinImportance(0);
-            setSelectedImpact('all');
-            setOnlyTelegramSent(null);
-            setSelectedCompany('all');
-          }}
-        />
-
-
+        <div className="mb-3 flex min-w-0 items-center gap-2 sm:mb-4 sm:gap-3">
+          <CompanyTabs companies={companies} selectedCompany={selectedCompany} onSelectCompany={setSelectedCompany} events={events} />
+          <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        </div>
 
         {/* Events Feed */}
         {sortedAndFilteredEvents.length === 0 ? (

@@ -138,6 +138,74 @@ export function StrategyMenu() {
   </section>;
 }
 
+// Historical daily-close snapshot. The current market cards update independently.
+const indicatorHistory = {
+  vix: {
+    start: '1990-01-02', end: '2026-11-20', mean: 19.42, close: 35.89,
+    rows: [
+      ["≥ 20",258,"2026-11-16",15],
+      ["≥ 25",171,"2026-11-19",21],
+      ["≥ 30",94,"2026-11-20",26],
+      ["≥ 40",33,"2025-04-10",21],
+    ],
+  },
+  fear: {
+    start: '2021-02-01', end: '2026-11-20', mean: 46.84, close: 9.67,
+    rows: [
+      ["extreme fear",39,"2026-11-19",21],
+      ["fear",88,"2026-11-09",14],
+      ["neutral",90,"2026-10-12",14],
+      ["greed",60,"2026-08-27",21],
+      ["extreme greed",13,"2025-07-23",57],
+    ],
+  },
+  rsi: {
+    start: '2016-12-12', end: '2026-11-20', mean: 56.21, close: 26.63,
+    rows: [
+      ["≤ 20",0,null,null],
+      ["≤ 30",18,"2026-11-20",109],
+      ["≥ 70",64,"2026-05-21",22],
+      ["≥ 80",13,"2026-05-14",150],
+    ],
+  },
+} as const;
+
+type IndicatorHistoryKey = keyof typeof indicatorHistory;
+
+const indicatorRatingKo: Record<string, string> = {
+  'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕',
+};
+
+function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
+  const {t, lang} = useLang();
+  const history = indicatorHistory[indicator];
+  const delta = history.close - history.mean;
+  const formattedDelta = `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}`;
+  return <section id="indicator-history" className={`${card} col-span-full`}>
+    <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
+    <p className="mt-1 text-xs text-slate-400">{history.start}~{history.end} · {t('평균', 'Mean')} {history.mean.toFixed(2)} · {t('마지막 관측값', 'Last observation')} {history.close.toFixed(2)} ({t('평균 대비', 'vs. mean')} {formattedDelta})</p>
+    <div className="mt-2 text-xs sm:text-sm"><Table head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
+      {history.rows.map(([threshold, count, date, median]) => <tr key={threshold}>
+        <th scope="row" className={`${tdL} font-medium`}>{lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold}</th>
+        <td className={td}>{count.toLocaleString()}</td>
+        <td className={td}>{date ?? '—'}</td>
+        <td className={td}>{median === null ? '—' : t(`${median}일`, `${median} days`)}</td>
+      </tr>)}
+    </Table></div>
+    <p className="mt-2 text-xs leading-5 text-slate-400">{t('구간에 처음 진입한 날을 집계합니다. 연속 체류는 1회이며, 간격은 달력일 기준입니다.', 'Each entry into a band counts once. Consecutive sessions in the same band count as one entry. Gaps use calendar days.')}</p>
+    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다. 위 카드의 실시간 표시값과 관측 시점이 다를 수 있습니다.', 'Uses archived CNN daily observations. Their observation times can differ from the live card above.')}</p>}
+  </section>;
+}
+
+function IndicatorHistoryButton({label, open, onToggle}: {label: string; open: boolean; onToggle: () => void}) {
+  return <button type="button" aria-expanded={open} aria-controls={open ? 'indicator-history' : undefined}
+    aria-label={label}
+    className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
+    onClick={onToggle}>
+    <span aria-hidden="true" className="absolute right-2 top-2 text-xs">{open ? '▴' : '▾'}</span>
+  </button>;
+}
+
 function QqqRsiCard() {
   const {t} = useLang();
   const [reading, setReading] = useState<{value: number; asOf: string} | null>(null);
@@ -168,6 +236,11 @@ function LiveSection({live}: {live: Live}) {
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
   const [drawdownsOpen, setDrawdownsOpen] = useState(false);
+  const [activeIndicator, setActiveIndicator] = useState<IndicatorHistoryKey | null>(null);
+  const toggleIndicator = (indicator: IndicatorHistoryKey) => {
+    setDrawdownsOpen(false);
+    setActiveIndicator(current => current === indicator ? null : indicator);
+  };
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
   const [reading, setReading] = useState<TripodSignal | null>(null);
@@ -217,13 +290,23 @@ function LiveSection({live}: {live: Live}) {
         <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
           aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
           className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
-          onClick={() => setDrawdownsOpen(open => !open)}>
+          onClick={() => { setActiveIndicator(null); setDrawdownsOpen(open => !open); }}>
           <span aria-hidden="true" className="absolute right-2 top-2 text-xs">{drawdownsOpen ? '▴' : '▾'}</span>
         </button>
       </div>
-      <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
-      <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
-      <QqqRsiCard/>
+      <div className="relative min-w-0">
+        <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
+        <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
+      </div>
+      <div className="relative min-w-0">
+        <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
+        <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
+      </div>
+      <div className="relative min-w-0">
+        <QqqRsiCard/>
+        <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
+      </div>
+      {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
         <div className="mt-2 text-xs sm:text-sm"><Table head={[

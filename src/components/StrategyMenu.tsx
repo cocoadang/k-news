@@ -167,6 +167,7 @@ function LiveSection({live}: {live: Live}) {
   const {t, lang} = useLang();
   const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
+  const [drawdownsOpen, setDrawdownsOpen] = useState(false);
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
   const [reading, setReading] = useState<TripodSignal | null>(null);
@@ -211,10 +212,42 @@ function LiveSection({live}: {live: Live}) {
   </tr>;
   return <>
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-      <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
+      <div className="relative min-w-0">
+        <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
+        <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
+          aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
+          className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
+          onClick={() => setDrawdownsOpen(open => !open)}>
+          <span aria-hidden="true" className="absolute right-2 top-2 text-xs">{drawdownsOpen ? '▴' : '▾'}</span>
+        </button>
+      </div>
       <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
       <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
       <QqqRsiCard/>
+      <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
+        <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
+        <div className="mt-2 text-xs sm:text-sm"><Table head={[
+          t('전고점 대비 하락폭', 'Drawdown from peak'),
+          t('발생 빈도', 'Frequency'),
+          t('간격 중앙값', 'Median interval'),
+        ]}>
+          {[
+            [10, 35, 1.2, t('약 7개월', '≈7 months')],
+            [20, 8, 5.1, t('약 2.8년', '≈2.8 years')],
+            [30, 4, 10.2, t('약 9.5년', '≈9.5 years')],
+            [40, 1, null, '—'],
+            [50, 1, null, '—'],
+          ].map(([threshold, count, years, median]) => <tr key={threshold}>
+            <th scope="row" className={`${tdL} font-medium`}>−{threshold}%</th>
+            <td className={td}>{years === null ? t('기간 중 1회', '1 in period') : t(`${count}회 · ${years}년당 1회`, `${count} · 1 per ${years} years`)}</td>
+            <td className={td}>{median}</td>
+          </tr>)}
+        </Table></div>
+        <p className="mt-2 text-xs leading-5 text-slate-400">{t(
+          '1986.01.02~2026.11.20 나스닥100 일별 종가. 전고점 회복 전에는 각 하락폭의 첫 도달만 집계했습니다. 간격 중앙값은 연속 도달일 사이의 간격으로, 1회 발생 시에는 표시하지 않습니다.',
+          'Nasdaq-100 daily closes, Jan 2, 1986–Nov 20, 2026. Each threshold is counted on its first hit before recovery to the previous peak. The median uses gaps between successive hits and is unavailable for a single hit.',
+        )}</p>
+      </section>
     </div>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>

@@ -41,7 +41,8 @@ export const CompanyTabs: React.FC<CompanyTabsProps> = ({
   return (
     <div role="group" aria-label={t('기업 선택', 'Select company')} className="min-w-0 overflow-x-auto scrollbar-none">
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
-        {/* Company specific tabs */}
+        <button type="button" aria-pressed={selectedCompany === 'all'} onClick={() => onSelectCompany('all')}
+          className={chipClass(selectedCompany === 'all')}>{t('전체', 'All')}</button>
         {enabledCompanies.map(comp => {
           const isSelected = selectedCompany === comp.id;
           const count = getEventCount(comp.id);

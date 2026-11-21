@@ -94,8 +94,9 @@ function LineChart({lines, yFormat, height = 240, ariaLabel, showHint = true}: {
   </div>;
 }
 
-function Table({head, children, mobileHide = []}: {head: string[]; children: React.ReactNode; mobileHide?: number[]}) {
-  return <div role="region" aria-label={tr('전략 비교 표 · 좌우로 이동', 'Strategy comparison table · scroll horizontally')} tabIndex={0} className="strategy-table -mx-1 overflow-x-auto px-1 focus-visible:outline-2 focus-visible:outline-cyan-400"><table className="w-full border-collapse text-[13px] sm:text-sm">
+function Table({head, children, mobileHide = [], history = false}: {head: string[]; children: React.ReactNode; mobileHide?: number[]; history?: boolean}) {
+  return <div role="region" aria-label={tr('전략 비교 표 · 좌우로 이동', 'Strategy comparison table · scroll horizontally')} tabIndex={0} className="strategy-table -mx-1 overflow-x-auto px-1 focus-visible:outline-2 focus-visible:outline-cyan-400"><table className={`w-full border-collapse text-[13px] sm:text-sm ${history ? 'min-w-[520px] table-fixed' : ''}`}>
+    {history && <colgroup><col className="w-[24%]"/><col className="w-[19%]"/><col className="w-[19%]"/><col className="w-[19%]"/><col className="w-[19%]"/></colgroup>}
     <thead><tr>{head.map((h, i) => <th key={h} className={`border-b border-slate-800 px-1.5 sm:px-2 py-2 text-xs font-medium text-slate-400 ${i ? 'text-right' : 'text-left'} ${mobileHide.includes(i) ? 'hidden sm:table-cell' : ''}`}>{h}</th>)}</tr></thead>
     <tbody>{children}</tbody></table></div>;
 }
@@ -187,7 +188,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
     <p className="mt-1 text-xs text-slate-400">{history.start}~{history.end} · {t('평균', 'Mean')} {history.mean.toFixed(2)} · {t('마지막 관측값', 'Last observation')} {history.close.toFixed(2)} ({t('평균 대비', 'vs. mean')} {formattedDelta})</p>
-    <div className="mt-2 text-xs sm:text-sm"><Table head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
+    <div className="mt-2 text-xs sm:text-sm"><Table history head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
       {history.rows.map(([threshold, count, date, median]) => <tr key={threshold}>
         <th scope="row" className={`${tdL} font-medium`}>{lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold}</th>
         <td className={td}>{count.toLocaleString()}</td>
@@ -305,7 +306,8 @@ function LiveSection({live}: {live: Live}) {
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        <div className="mt-2 text-xs sm:text-sm"><Table head={[
+        <p className="mt-1 text-xs text-slate-400">1986-01-02~2026-11-20</p>
+        <div className="mt-2 text-xs sm:text-sm"><Table history head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
           t('발생 횟수', 'Entries'),
           t('발생 빈도', 'Frequency'),

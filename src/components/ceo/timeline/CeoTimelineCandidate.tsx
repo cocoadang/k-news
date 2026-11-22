@@ -111,7 +111,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 
-  const items: Item[] = q?.items || [];
+  const items: Item[] = (q?.items || []).slice().sort((a: Item, b: Item) => (b.date.value || '').localeCompare(a.date.value || ''));
   const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
   const pickQuestion = (id: string) => setQuestionId(id);
 

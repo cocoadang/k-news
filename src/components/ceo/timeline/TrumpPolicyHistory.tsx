@@ -96,7 +96,7 @@ export function TrumpPolicyHistory() {
     summary={t(...topic.takeaway)}
     metadata={t('SNS 날짜는 한국시간, 백악관 자료는 문서에 표시된 날짜입니다.', 'Social posts use Korea time. White House sources use the dates shown on the documents.')}
   >
-    {topic.milestones.map(entry => <HistoryEntry
+    {[...topic.milestones].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
       key={entry.date}
       date={entry.date}
       dateLabel={entry.date.replace(/-/g, '.')}

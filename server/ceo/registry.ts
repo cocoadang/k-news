@@ -20,6 +20,7 @@
 import { CeoPerson, CeoRole, CeoTopic } from '../../src/ceo/types';
 
 export const CEO_PERSONS: CeoPerson[] = [
+  { personId: 'donald-trump', displayName: '도널드 트럼프', nameVariants: ['Donald Trump', 'Donald J. Trump'], isExample: false },
   { personId: 'jensen-huang', displayName: '젠슨 황', nameVariants: ['Jensen Huang'], isExample: false },
   { personId: 'satya-nadella', displayName: '사티아 나델라', nameVariants: ['Satya Nadella'], isExample: false },
   { personId: 'sundar-pichai', displayName: '순다르 피차이', nameVariants: ['Sundar Pichai'], isExample: false },
@@ -42,6 +43,7 @@ export const FEED_EXTRACTOR_PERSON_IDS = ['jensen-huang', 'satya-nadella', 'sund
 export const FEED_COMPANY_IDS = ['nvda', 'msft', 'googl'];
 
 export const CEO_ROLES: CeoRole[] = [
+  { personId: 'donald-trump', companyId: 'white-house', companyName: 'White House', title: '미국 대통령', roleType: 'other', start: '2025-01-20', end: null },
   { personId: 'jensen-huang', companyId: 'nvda', companyName: 'NVIDIA', title: '공동창업자·사장·CEO', roleType: 'ceo', start: '1993', end: null },
   { personId: 'satya-nadella', companyId: 'msft', companyName: 'Microsoft', title: 'CEO', roleType: 'ceo', start: '2014-02', end: null },
   { personId: 'sundar-pichai', companyId: 'googl', companyName: 'Google', title: 'Google CEO', roleType: 'ceo', start: '2015-08', end: null },

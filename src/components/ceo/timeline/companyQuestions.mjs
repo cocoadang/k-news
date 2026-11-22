@@ -44,6 +44,7 @@ export const COMPANY_QUESTIONS = {
     { id: 'safety', label: '안전·규제를 어떻게 말했나?', hint: '안전·규제·정렬', en: ['What did they say about safety and regulation?', 'Safety, regulation, alignment'], re: /\b(safety|safe|regulat\w*|alignment|risks?|government)\b/gi },
   ],
   anthropic: [
+    { id: 'scaling', label: 'AI 스케일링 법칙을 어떻게 설명했나?', hint: '스케일링 법칙', en: ['How did they explain AI scaling laws?', 'Scaling laws'], re: /\bscaling laws?\b/gi },
     { id: 'timeline', label: '강력한 AI는 언제 온다고 봤나?', hint: '강력한 AI·시점', en: ['When did they expect powerful AI?', 'Powerful AI, timing'], re: /\b(powerful AI|AGI|country of geniuses|20\d\d|timelines?)\b/gi },
     { id: 'safety', label: '안전·해석 가능성 연구를 어떻게 말했나?', hint: '안전·해석·정렬', en: ['What did they say about safety and interpretability research?', 'Safety, interpretability, alignment'], re: /\b(safety|interpretability|alignment|risks?|misuse|responsible scaling)\b/gi },
     { id: 'policy', label: '수출 통제·중국·정책 입장은?', hint: '수출통제·중국·규제', en: ['Stance on export controls, China and policy?', 'Export controls, China, regulation'], re: /\b(export controls?|China|Chinese|DeepSeek|regulat\w*|policy|legislation|government)\b/gi },
@@ -139,7 +140,33 @@ export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Googl
  * Each statement may answer more than one question.
  * Returns only questions with at least one statement, oldest-first items, plus excluded counts.
  */
-export function companyQuestions(statements, personId, companyIds) {
+function prioritizeWeeklyQuestions(questions, now) {
+  const day = 86_400_000;
+  const koreaToday = new Date(now.getTime() + 9 * 3_600_000).toISOString().slice(0, 10);
+  const monday = new Date(koreaToday + 'T00:00:00Z');
+  monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
+  const week = monday.toISOString().slice(0, 10);
+  const start = new Date(monday.getTime() - 28 * day).toISOString().slice(0, 10);
+  const ranked = questions.map(question => {
+    const recent = question.items.filter(item => item.date.value >= start && item.date.value < week);
+    const sources = new Set(recent.map(({statement}) => statement.evidence?.[0]?.url || statement.statementId));
+    return { question, sources: sources.size, latest: recent.at(-1)?.date.value || '' };
+  }).filter(entry => entry.sources > 0)
+    .sort((a, b) => b.sources - a.sources || b.latest.localeCompare(a.latest))
+    .slice(0, 3);
+  const featured = new Set(ranked.map(entry => entry.question.id));
+  return [
+    ...ranked.map(({question, sources}) => ({
+      ...question,
+      label: `최근 ${question.hint}에 대해 뭐라고 했나?`,
+      labelEn: `What did they say recently about ${question.hintEn || question.hint}?`,
+      weekly: { week, sources },
+    })),
+    ...questions.filter(question => !featured.has(question.id)),
+  ];
+}
+
+export function companyQuestions(statements, personId, companyIds, now = new Date()) {
   const ids = Array.isArray(companyIds) ? companyIds : [companyIds];
   const multi = ids.length > 1;
   const scoped = (statements || []).filter(s => s.personId === personId && ids.includes(s.companyId));
@@ -168,5 +195,5 @@ export function companyQuestions(statements, personId, companyIds) {
     });
   }).filter(q => q.items.length);
   const other = claims.filter(s => !assigned.has(s.statementId));
-  return { questions, other, excludedCount: scoped.length - claims.length, total: scoped.length };
+  return { questions: prioritizeWeeklyQuestions(questions, now), other, excludedCount: scoped.length - claims.length, total: scoped.length };
 }

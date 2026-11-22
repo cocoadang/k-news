@@ -36,11 +36,22 @@ export interface CuratedTranscript {
   eventDate: string;
   eventDateExcerpt: string;
   recordingExcerpt: string;
+  dateBasis?: string;
   topicId: string;
   quotes: string[];
 }
 
 export const CURATED_TRANSCRIPTS: CuratedTranscript[] = [
+  {
+    sourceId: 'white-house-trump-inaugural-2025',
+    url: 'https://www.whitehouse.gov/remarks/2025/01/the-inaugural-address/',
+    title: '도널드 트럼프 취임 연설', sourceOrg: 'The White House',
+    transcriptTitle: 'The Inaugural Address',
+    companyId: 'white-house', speakerLabel: 'THE PRESIDENT', speakerName: 'Donald Trump',
+    eventDate: '2025-01-20', eventDateExcerpt: 'January 20, 2025', recordingExcerpt: '12:10 P.M. EST',
+    dateBasis: '백악관 취임 연설 기록의 행사 날짜', topicId: '규제 / 반독점',
+    quotes: ['I will immediately begin the overhaul of our trade system to protect American workers and families.'],
+  },
   {
     sourceId: 'msft-fy25-q2-call',
     url: 'https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2',
@@ -148,7 +159,7 @@ export function extractCuratedQuotes(t: CuratedTranscript, text: string): { item
     items.push({
       speaker: { name: t.speakerName, companyId: t.companyId },
       topicId: t.topicId,
-      spokenAt: { value: t.eventDate, precision: 'day', basisType: 'explicit_in_text', basis: `녹음된 실적 발표 통화의 행사 날짜 ("${t.eventDateExcerpt}")`, basisExcerpt: t.eventDateExcerpt },
+      spokenAt: { value: t.eventDate, precision: 'day', basisType: 'explicit_in_text', basis: `${t.dateBasis || '녹음된 실적 발표 통화의 행사 날짜'} ("${t.eventDateExcerpt}")`, basisExcerpt: t.eventDateExcerpt },
       kind: 'direct_quote',
       quoteText: q.replace(/[.,]\s*$/, ''),
       quoteLanguage: 'en',

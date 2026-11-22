@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { TrumpTruthArchive } from './TrumpTruthArchive';
 import { companyQuestions, displayText, effectiveDate } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
@@ -129,6 +130,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </div>
     </header>
 
+    {scope?.personId === 'donald-trump' && <TrumpTruthArchive />}
     {latestUnclassified && <div className="tl-card mb-4">
       <h2 className="mb-2 text-sm font-semibold">{t('최근 수집 자료 · 질문 미분류', 'Latest unclassified material')}</h2>
       <p className="tl-muted mb-2">{fmt(latestUnclassified.date.value)} · {lang === 'en' ? DATE_BASIS_EN[latestUnclassified.date.basis] || latestUnclassified.date.label : latestUnclassified.date.label}</p>

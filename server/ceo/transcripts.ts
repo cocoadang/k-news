@@ -43,16 +43,6 @@ export interface CuratedTranscript {
 
 export const CURATED_TRANSCRIPTS: CuratedTranscript[] = [
   {
-    sourceId: 'white-house-trump-inaugural-2025',
-    url: 'https://www.whitehouse.gov/remarks/2025/01/the-inaugural-address/',
-    title: '도널드 트럼프 취임 연설', sourceOrg: 'The White House',
-    transcriptTitle: 'The Inaugural Address',
-    companyId: 'white-house', speakerLabel: 'THE PRESIDENT', speakerName: 'Donald Trump',
-    eventDate: '2025-01-20', eventDateExcerpt: 'January 20, 2025', recordingExcerpt: '12:10 P.M. EST',
-    dateBasis: '백악관 취임 연설 기록의 행사 날짜', topicId: '규제 / 반독점',
-    quotes: ['I will immediately begin the overhaul of our trade system to protect American workers and families.'],
-  },
-  {
     sourceId: 'msft-fy25-q2-call',
     url: 'https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2',
     title: 'Microsoft FY25 Q2 실적 발표 통화 기록', sourceOrg: 'Microsoft Investor Relations',
@@ -71,6 +61,20 @@ export const CURATED_TRANSCRIPTS: CuratedTranscript[] = [
     eventDate: '2026-01-28', eventDateExcerpt: 'Wednesday January 28, 2026', recordingExcerpt: 'webcast live and recorded',
     topicId: '클라우드 / 데이터센터',
     quotes: ['The key metric we are optimizing for is tokens per watt per dollar'],
+  },
+];
+
+export const PRODUCTION_TRANSCRIPTS: CuratedTranscript[] = [
+  ...CURATED_TRANSCRIPTS,
+  {
+    sourceId: 'white-house-trump-inaugural-2025',
+    url: 'https://www.whitehouse.gov/remarks/2025/01/the-inaugural-address/',
+    title: '도널드 트럼프 취임 연설', sourceOrg: 'The White House',
+    transcriptTitle: 'The Inaugural Address',
+    companyId: 'white-house', speakerLabel: 'THE PRESIDENT', speakerName: 'Donald Trump',
+    eventDate: '2025-01-20', eventDateExcerpt: 'January 20, 2025', recordingExcerpt: '12:10 P.M. EST',
+    dateBasis: '백악관 취임 연설 기록의 행사 날짜', topicId: '규제 / 반독점',
+    quotes: ['I will immediately begin the overhaul of our trade system to protect American workers and families.'],
   },
 ];
 

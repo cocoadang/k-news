@@ -1,3 +1,4 @@
+import { PRODUCTION_TRANSCRIPTS } from './transcripts';
 /**
  * CEO 발언 Express 라우터 (운영 server.ts와 HTTP 테스트가 같은 라우터를 씀).
  * - GET  /api/ceo/dataset        저장된 CEO 상태 읽기·복원만 (원문 요청·추출·모델·알림·쓰기 없음)
@@ -44,7 +45,8 @@ export function createCeoRuntime(getEvents: () => EventLike[], getFirestore: () 
   let koClient: ReturnType<typeof createKoGeminiClient> | undefined;
   return new CeoRuntime({
     getEvents,
-    fetchText: createFetchText({ allowHosts: [...ceoAllowedHosts(companyIds, undefined, CURATED_PAGES), ...discoveryAllowedHosts()] }),
+    transcripts: PRODUCTION_TRANSCRIPTS,
+    fetchText: createFetchText({ allowHosts: [...ceoAllowedHosts(companyIds, PRODUCTION_TRANSCRIPTS, CURATED_PAGES), ...discoveryAllowedHosts()] }),
     discovery: true,
     parseFeed: parseFeedWithRssParser,
     pages: CURATED_PAGES,

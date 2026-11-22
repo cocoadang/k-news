@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { companyQuestions, displayText, effectiveDate } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
@@ -86,7 +86,17 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
-  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyIds) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope]);
+  const [questionDate, setQuestionDate] = useState(() => new Date().toISOString().slice(0, 13));
+  useEffect(() => {
+    const refresh = () => setQuestionDate(new Date().toISOString().slice(0, 13));
+    const timer = window.setInterval(refresh, 60_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 
@@ -123,6 +133,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
         <h2>{t('질문', 'Questions')}</h2>
         {result.questions.map((x: any) => <button key={x.id} className={'tl-q' + (x.id === q?.id ? ' on' : '')} onClick={() => pickQuestion(x.id)} aria-pressed={x.id === q?.id}>
           <strong>{qLabel(x)}</strong>
+          {x.weekly && <small>{t('이번 주 주요 질문', 'Featured this week')} · {x.weekly.sources}{t('개 출처', ' sources')}</small>
           <small>{x.items.length}{t('건', lang === 'en' && x.items.length === 1 ? ' item' : ' items')}{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
           {!x.comparable && <em>{t('변화 비교 자료 부족', 'Not enough to compare change')}</em>}
         </button>)}

@@ -133,7 +133,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
         <h2>{t('질문', 'Questions')}</h2>
         {result.questions.map((x: any) => <button key={x.id} className={'tl-q' + (x.id === q?.id ? ' on' : '')} onClick={() => pickQuestion(x.id)} aria-pressed={x.id === q?.id}>
           <strong>{qLabel(x)}</strong>
-          {x.weekly && <small>{t('이번 주 주요 질문', 'Featured this week')} · {x.weekly.sources}{t('개 출처', ' sources')}</small>
+          {x.weekly && <small>{t('이번 주 주요 질문', 'Featured this week')} · {x.weekly.sources}{t('개 출처', ' sources')}</small>}
           <small>{x.items.length}{t('건', lang === 'en' && x.items.length === 1 ? ' item' : ' items')}{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
           {!x.comparable && <em>{t('변화 비교 자료 부족', 'Not enough to compare change')}</em>}
         </button>)}

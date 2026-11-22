@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { TrumpTruthArchive } from './TrumpTruthArchive';
+import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { companyQuestions, displayText, effectiveDate } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
@@ -95,6 +95,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
+  const showTrumpHistory = scope?.personId === 'donald-trump';
   const [questionDate, setQuestionDate] = useState(() => new Date().toISOString().slice(0, 13));
   useEffect(() => {
     const refresh = () => setQuestionDate(new Date().toISOString().slice(0, 13));
@@ -105,7 +106,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       document.removeEventListener('visibilitychange', refresh);
     };
   }, []);
-  const result = useMemo(() => scope ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate]);
+  const result = useMemo(() => scope && !showTrumpHistory ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate, showTrumpHistory]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 
@@ -124,20 +125,19 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   return <section className="ceo-tl">
     <header className="tl-head">
       <div className="tl-scopes" role="tablist" aria-label={t('인물 · 회사', 'Person · company')}>
-        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count}>
-          {s.name} · {s.company}<span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>
+        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count && s.personId !== 'donald-trump'}>
+          {s.name} · {s.company}{s.personId !== 'donald-trump' && <span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>}
         </button>)}
       </div>
     </header>
 
-    {scope?.personId === 'donald-trump' && <TrumpTruthArchive />}
-    {latestUnclassified && <div className="tl-card mb-4">
+    {!showTrumpHistory && latestUnclassified && <div className="tl-card mb-4">
       <h2 className="mb-2 text-sm font-semibold">{t('최근 수집 자료 · 질문 미분류', 'Latest unclassified material')}</h2>
       <p className="tl-muted mb-2">{fmt(latestUnclassified.date.value)} · {lang === 'en' ? DATE_BASIS_EN[latestUnclassified.date.basis] || latestUnclassified.date.label : latestUnclassified.date.label}</p>
       <Body s={latestUnclassified.statement} />
       <div className="tl-foot"><Source s={latestUnclassified.statement} /></div>
     </div>}
-    {!result.questions.length ? <p className="tl-empty">{t('이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.', 'No classified statements for this person and company yet.')}</p> :
+    {showTrumpHistory ? <TrumpPolicyHistory /> : !result.questions.length ? <p className="tl-empty">{t('이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.', 'No classified statements for this person and company yet.')}</p> :
     <div className="tl-layout">
       <nav className="tl-questions" aria-label={t('비교할 질문', 'Questions to compare')}>
         <h2>{t('질문', 'Questions')}</h2>

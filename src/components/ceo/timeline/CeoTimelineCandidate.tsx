@@ -21,10 +21,11 @@ function Source({ s }: { s: any }) {
 
 function Body({ s, open = false }: { s: any; open?: boolean }) {
   const t = displayText(s);
+  const socialPlatform = s.socialPlatform || 'X';
   if (getLang() === 'en' && s.kind !== 'reported_excerpt') {
     // 영어 화면: 번역 대신 영어 원문을 그대로 보여 줍니다(추가 비용 없음)
     const kind = s.kind === 'video_quote' ? `From video captions${s.videoTitle ? ` · ${s.videoTitle}` : ''}`
-      : s.kind === 'social_post' ? 'Own post on X'
+      : s.kind === 'social_post' ? `Own post on ${socialPlatform}${s.curatedSummaryKo ? ' · excerpt' : ''}`
       : s.kind === 'reported_headline' ? `Press headline · not a direct quote${s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount} outlets` : ''}`
       : 'Original quote';
     const warn = s.kind === 'reported_headline';
@@ -38,11 +39,18 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
       <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
     </>;
   }
+  if (s.curatedSummaryKo) {
+    return <>
+      <p className="tl-text">{s.curatedSummaryKo}</p>
+      <span className="tl-tag">{s.kind === 'social_post' ? `${socialPlatform} 본인 게시물` : '백악관 공식 발언'} · 요약</span>
+      <details className="tl-original" open={open}><summary>원문 발췌 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+    </>;
+  }
   if (s.kind === 'social_post') {
     const ko = t.kind === 'ai_translation';
     return <>
       <p className="tl-text">{ko ? t.text : <span lang="en">{t.text}</span>}</p>
-      <span className="tl-tag">본인 X 게시물{ko ? ' · AI 번역' : ' · 원문'}</span>
+      <span className="tl-tag">본인 {socialPlatform} 게시물{ko ? ' · AI 번역' : ' · 원문'}</span>
       {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
     </>;
   }

@@ -1,4 +1,5 @@
 import { PRODUCTION_TRANSCRIPTS } from './transcripts';
+import { curatedTrumpStatements } from './trumpStatements';
 /**
  * CEO 발언 Express 라우터 (운영 server.ts와 HTTP 테스트가 같은 라우터를 씀).
  * - GET  /api/ceo/dataset        저장된 CEO 상태 읽기·복원만 (원문 요청·추출·모델·알림·쓰기 없음)
@@ -124,7 +125,9 @@ export function createCeoRouter(deps: {
       deps.getVideoStatements ? Promise.resolve(deps.getVideoStatements()).catch(() => []) : [],
     ]);
     const ids = new Set(snap.dataset.statements.map((x: any) => x.statementId));
-    const extra = [...reported, ...posts, ...vids].filter((x: any) => !ids.has(x.statementId) && (ids.add(x.statementId), true));
+    const curated = snap.dataset.persons?.some((person: { personId: string }) => person.personId === 'donald-trump')
+      ? curatedTrumpStatements() : [];
+    const extra = [...reported, ...posts, ...vids, ...curated].filter((x: any) => !ids.has(x.statementId) && (ids.add(x.statementId), true));
     return { ...snap, dataset: { ...snap.dataset, statements: [...snap.dataset.statements, ...extra] } };
   };
   // Read only on demand; no background Firestore work after request CPU is released.

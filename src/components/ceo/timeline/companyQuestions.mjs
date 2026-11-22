@@ -6,6 +6,11 @@
 
 /** @type {Record<string, Question[]>} */
 export const COMPANY_QUESTIONS = {
+  'white-house': [
+    { id: 'trade', label: '관세·무역 정책에 대해 뭐라고 했나?', hint: '관세·무역', en: ['What did Trump say about tariffs and trade?', 'tariffs and trade'], re: /\b(tariffs?|trade|duties|imports?|exports?)\b/gi },
+    { id: 'economy', label: '금리·물가·성장에 대한 발언은?', hint: '금리·물가·성장', en: ['What did Trump say about rates, prices and growth?', 'rates, prices and growth'], re: /\b(interest rates?|Federal Reserve|inflation|prices?|GDP|economic growth)\b/gi },
+    { id: 'industry', label: 'AI·에너지·제조업에 대한 입장은?', hint: 'AI·에너지·제조업', en: ['What did Trump say about AI, energy and manufacturing?', 'AI, energy and manufacturing'], re: /\b(AI|artificial intelligence|energy|manufacturing|chips?|semiconductors?)\b/gi },
+  ],
   nvda: [
     { id: 'demand', label: 'AI 수요는 얼마나 강하다고 말했나?', hint: '수요 강도·공급 부족 표현', en: ['How strong did they say AI demand is?', 'Demand strength, supply shortage'], re: /\b(demand|sold out|off the charts|growing exponentially)\b/gi },
     { id: 'platform', label: '주력 제품 세대는 어떻게 바뀌었나?', hint: 'Hopper → Blackwell → Rubin', en: ['How did the flagship product generation change?', 'Hopper → Blackwell → Rubin'], re: /\b(Hopper|Blackwell|Rubin|Grace|NVLink)\b/gi },

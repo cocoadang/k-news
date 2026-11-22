@@ -106,6 +106,9 @@ export interface DiscoveryProvider { id: string; companyId: string; personId: st
   interview?: boolean;
   seedUrls?: string[] }
 export const DISCOVERY_PROVIDERS: DiscoveryProvider[] = [
+  { id: 'white-house-trump-remarks', companyId: 'white-house', personId: 'donald-trump', name: '백악관 트럼프 발언록',
+    index: 'https://www.whitehouse.gov/remarks/', mode: 'archive', host: 'www.whitehouse.gov',
+    articlePath: /^\/remarks\/20\d\d\/\d\d\/[^/]+\/?$/, interview: true, years: 2 },
   // Corporate statements: only explicitly attributed quotes, never all company prose.
   { id:'openai-news', companyId:'openai', personId:'sam-altman', name:'OpenAI 공식 발표', index:'https://openai.com/sitemap.xml', mode:'sitemap', host:'openai.com', articlePath:/^\/index\// },
   { id:'anthropic-news', companyId:'anthropic', personId:'dario-amodei', name:'Anthropic 공식 발표', index:'https://www.anthropic.com/sitemap.xml', mode:'sitemap', host:'www.anthropic.com', articlePath:/^\/news\// },
@@ -357,8 +360,9 @@ export async function extractDiscoveredQuotes(a: SourceArticle): Promise<RawStat
   const person = CEO_PERSONS.find(p => p.personId === a.discoveryPersonId);
   if (!person || !a.discoveryCompanyId) return [];
   // Transcripts: exact speaker labels, publication date remains distinct from spoken date.
-  const interviewHost = ['pressroom.versantmedia.com','www.dwarkesh.com','lexfridman.com'].includes(new URL(a.url).hostname);
-  let rows: RawStatement[] = interviewHost ? ownInterviewQuotes(a.body, person.nameVariants).map(q => ({
+  const whiteHouse = a.discoveryPersonId === 'donald-trump' && new URL(a.url).hostname === 'www.whitehouse.gov';
+  const interviewHost = whiteHouse || ['pressroom.versantmedia.com','www.dwarkesh.com','lexfridman.com'].includes(new URL(a.url).hostname);
+  let rows: RawStatement[] = interviewHost ? ownInterviewQuotes(a.body, whiteHouse ? [...person.nameVariants, 'THE PRESIDENT', 'PRESIDENT TRUMP'] : person.nameVariants).map(q => ({
     speaker:{name:person.nameVariants[0]},topicId:discoveryTopic(q.quote),
     spokenAt:{value:null,precision:'unknown' as const,basisType:'none' as const,basis:'인터뷰 공개일만 확인; 실제 녹화·발언일은 미상'},
     kind:'direct_quote' as const,sourceType:'interview_transcript' as const,quoteText:q.quote,quoteLanguage:'en',summaryKo:'',excerpts:[q.excerpt],

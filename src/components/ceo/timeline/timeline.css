@@ -107,3 +107,16 @@
  .tl-other{margin-top:16px;}
  .tl-metrics{margin-top:8px;}
 }
+
+.tl-history h2{margin-bottom:12px}
+.tl-history-topics{margin-bottom:14px}
+.tl-history-topics .tl-chip{text-align:left}
+.tl-history-topics .tl-topic-badge{white-space:nowrap}
+.tl-history-heading{display:grid;gap:4px;margin-bottom:16px}
+.tl-history-heading h3,.tl-history-heading p,.tl-history .tl-milestone{margin:0}
+.tl-history .tl-milestone{font-size:15px;font-weight:600;margin-bottom:4px}
+.tl-history .tl-notice{margin-bottom:12px}
+.tl-history .tl-list>li:last-child{padding-bottom:0}
+@media(max-width:639px){
+ .ceo-tl .tl-history-topics .tl-chip{max-width:min(100%,320px);flex-wrap:wrap}
+}

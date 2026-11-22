@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLang } from '../../../i18n';
+import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 
 type Localized = readonly [ko: string, en: string];
 type Milestone = {
@@ -84,25 +85,25 @@ const sourceNames: Record<Milestone['kind'], Localized> = {
 
 export function TrumpPolicyHistory() {
   const { t } = useLang();
-  const [active, setActive] = useState(0);
-  const topic = topics[active];
-  return <section aria-labelledby="trump-history-title" className="tl-card">
-    <h2 id="trump-history-title" className="mb-3 text-lg font-semibold">{t('트럼프 발언·정책 변화 이력', 'Trump’s statements and policy timeline')}</h2>
-    <div aria-label={t('비교 주제', 'Topics')} role="group" className="tl-scopes mb-3">
-      {topics.map((entry, index) => <button type="button" key={entry.title[1]} aria-pressed={active === index}
-        className={'tl-chip' + (active === index ? ' on' : '')} onClick={() => setActive(index)}>{t(...entry.title)}</button>)}
-    </div>
-    <p className="mb-3 text-sm font-medium">{t(...topic.takeaway)}</p>
-    <p className="tl-muted mb-3">{t('주요 시점만 선별했습니다. SNS 날짜는 한국시간, 백악관 자료는 문서에 표시된 날짜입니다.', 'Selected milestones. Social posts use Korea time. White House sources use their published dates.')}</p>
-    <ol className="tl-list">
-      {topic.milestones.map(entry => <li key={entry.date}>
-        <div className="tl-date"><strong><time dateTime={entry.date}>{entry.date.replace(/-/g, '.')}</time></strong></div>
-        <div className="tl-card">
-          <h3 className="mb-1 text-sm font-semibold">{t(...entry.change)}</h3>
-          <p className="tl-text">{t(...entry.summary)}</p>
-          <a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{t(...sourceNames[entry.kind])} ↗</a>
-        </div>
-      </li>)}
-    </ol>
-  </section>;
+  const [active, setActive] = useState(topics[0].title[1]);
+  const topic = topics.find(entry => entry.title[1] === active) || topics[0];
+  return <HistoryPanel
+    title={t('트럼프 발언·정책 변화 이력', 'Trump’s statements and policy timeline')}
+    topics={topics.map(entry => ({ id: entry.title[1], label: t(...entry.title) }))}
+    activeId={active}
+    onSelect={setActive}
+    topicTitle={t(...topic.title)}
+    summary={t(...topic.takeaway)}
+    metadata={t('SNS 날짜는 한국시간, 백악관 자료는 문서에 표시된 날짜입니다.', 'Social posts use Korea time. White House sources use the dates shown on the documents.')}
+  >
+    {topic.milestones.map(entry => <HistoryEntry
+      key={entry.date}
+      date={entry.date}
+      dateLabel={entry.date.replace(/-/g, '.')}
+      source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{t(...sourceNames[entry.kind])} ↗</a>}
+    >
+      <h4 className="tl-milestone">{t(...entry.change)}</h4>
+      <p className="tl-text">{t(...entry.summary)}</p>
+    </HistoryEntry>)}
+  </HistoryPanel>;
 }

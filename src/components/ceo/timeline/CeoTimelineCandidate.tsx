@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
-import { companyQuestions, displayText, effectiveDate } from './companyQuestions.mjs';
+import { HistoryPanel, HistoryEntry } from './HistoryPanel';
+import { companyQuestions, displayText } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
 
@@ -111,14 +112,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 
   const items: Item[] = q?.items || [];
-  // 목록은 최신순(날짜 미확인은 맨 아래). 분류·비교 로직은 그대로 오래된 순 데이터를 씁니다.
-  const newestFirst = [...items].sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''));
-
-  const latestUnclassified = result.other
-    .map((statement: any) => ({ statement, date: effectiveDate(statement) }))
-    .filter(item => item.date.value)
-    .sort((a, b) => (b.date.value || '').localeCompare(a.date.value || ''))[0];
-
   const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
   const pickQuestion = (id: string) => setQuestionId(id);
 
@@ -131,51 +124,35 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </div>
     </header>
 
-    {!showTrumpHistory && latestUnclassified && <div className="tl-card mb-4">
-      <h2 className="mb-2 text-sm font-semibold">{t('최근 수집 자료 · 질문 미분류', 'Latest unclassified material')}</h2>
-      <p className="tl-muted mb-2">{fmt(latestUnclassified.date.value)} · {lang === 'en' ? DATE_BASIS_EN[latestUnclassified.date.basis] || latestUnclassified.date.label : latestUnclassified.date.label}</p>
-      <Body s={latestUnclassified.statement} />
-      <div className="tl-foot"><Source s={latestUnclassified.statement} /></div>
-    </div>}
-    {showTrumpHistory ? <TrumpPolicyHistory /> : !result.questions.length ? <p className="tl-empty">{t('이 인물·회사로 분류할 수 있는 발언이 아직 없습니다. 다른 회사의 발언으로 채우지 않습니다.', 'No classified statements for this person and company yet.')}</p> :
-    <div className="tl-layout">
-      <nav className="tl-questions" aria-label={t('비교할 질문', 'Questions to compare')}>
-        <h2>{t('질문', 'Questions')}</h2>
-        {result.questions.map((x: any) => <button key={x.id} className={'tl-q' + (x.id === q?.id ? ' on' : '')} onClick={() => pickQuestion(x.id)} aria-pressed={x.id === q?.id}>
-          <strong>{qLabel(x)}</strong>
-          {x.weekly && <small>{t('이번 주 주요 질문', 'Featured this week')} · {x.weekly.sources}{t('개 출처', ' sources')}</small>}
-          <small>{x.items.length}{t('건', lang === 'en' && x.items.length === 1 ? ' item' : ' items')}{x.range ? ' · ' + month(x.range[0]) + (x.range[1] !== x.range[0] ? ' → ' + month(x.range[1]) : '') : ''}</small>
-          {!x.comparable && <em>{t('변화 비교 자료 부족', 'Not enough to compare change')}</em>}
-        </button>)}
-      </nav>
-
-      <main className="tl-main">
-        <div className="tl-qhead"><h2>{qLabel(q)}</h2><p className="tl-muted">{lang === 'en' ? `${q.hintEn || q.hint} · matched on original wording · ${items.length} items · newest first` : `${q.hint} · 원문 단어로 분류 · ${items.length}건 · 최신순`}</p></div>
-
-        {!q.comparable && <p className="tl-notice">{t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}</p>}
-
-        <ol className="tl-list">
-          {newestFirst.map(x => {
-            const s = x.statement;
-            return <li key={s.statementId}>
-              <div className="tl-date"><strong>{fmt(x.date.value)}</strong><small>{lang === 'en' ? DATE_BASIS_EN[x.date.basis] || x.date.label : x.date.label}</small></div>
-              <div className="tl-card">
-                <Body s={s} />
-                <Metrics values={x.metrics} />
-                <div className="tl-foot">
-                  <Source s={s} />
-                </div>
-              </div>
-            </li>;
-          })}
-        </ol>
-
-
-        {(result.other.length > 0 || result.excludedCount > 0) && <details className="tl-other">
-          <summary>{lang === 'en' ? `${result.other.length} unclassified statements${result.excludedCount ? ` · ${result.excludedCount} greetings / editor notes excluded` : ''}` : `질문에 분류되지 않은 발언 ${result.other.length}건${result.excludedCount ? ` · 인사말·편집자 주 ${result.excludedCount}건 제외` : ''}`}</summary>
-          <ul>{result.other.map((s: any) => <li key={s.statementId}><span className="tl-muted">{fmt(s.referenceDate?.value || s.spokenAt?.value || null)}</span> {lang === 'en' ? s.quoteText : displayText(s).text}</li>)}</ul>
-        </details>}
-      </main>
-    </div>}
+    {showTrumpHistory ? <TrumpPolicyHistory /> : !q ? (
+      <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
+    ) : <HistoryPanel
+      title={t('발언 변화 이력', 'Statement history')}
+      topics={result.questions.map((entry: any) => ({
+        id: entry.id,
+        label: qLabel(entry),
+        badge: entry.weekly ? t('이번 주 주요 질문', 'Featured this week') : undefined,
+      }))}
+      activeId={q.id}
+      onSelect={pickQuestion}
+      topicTitle={qLabel(q)}
+      metadata={[
+        t(`${items.length}건`, `${items.length} ${items.length === 1 ? 'item' : 'items'}`),
+        q.range ? month(q.range[0]) + (q.range[1] === q.range[0] ? '' : ' ~ ' + month(q.range[1])) : null,
+        q.weekly ? t(`최근 4주 출처 ${q.weekly.sources}개`, `${q.weekly.sources} sources in the last four weeks`) : null,
+      ].filter(Boolean).join(' · ')}
+      note={q.comparable ? undefined : t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}
+    >
+      {items.map(({ statement, date, metrics }) => <HistoryEntry
+        key={statement.statementId}
+        date={date.value}
+        dateLabel={fmt(date.value)}
+        dateBasis={lang === 'en' ? DATE_BASIS_EN[date.basis] || date.label : date.label}
+        source={<Source s={statement} />}
+      >
+        <Body s={statement} />
+        <Metrics values={metrics} />
+      </HistoryEntry>)}
+    </HistoryPanel>}
   </section>;
 }

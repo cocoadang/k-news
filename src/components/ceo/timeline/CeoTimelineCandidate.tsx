@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 import { companyQuestions, displayText } from './companyQuestions.mjs';
@@ -75,6 +76,11 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
   </>;
 }
 
+const curatedHistories = new Map([
+  ['donald-trump', TrumpPolicyHistory],
+  [druckenmillerPersonId, DruckenmillerHistory],
+]);
+
 export function CeoTimeline({ dataset }: { dataset: any }) {
   const { t, lang } = useLang();
   const qLabel = (x: any) => (lang === 'en' && x.labelEn ? x.labelEn : x.label);
@@ -91,12 +97,19 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       s.company = [...new Set(s.companies)].join('·');
       s.count = (dataset.statements || []).filter((x: any) => x.personId === s.personId && s.companyIds.includes(x.companyId)).length;
     }
+    seen.set(druckenmillerPersonId, {
+      key: druckenmillerPersonId,
+      personId: druckenmillerPersonId,
+      name: lang === 'en' ? 'Stanley Druckenmiller' : '스탠리 드러켄밀러',
+      company: 'Duquesne Family Office',
+      count: 0,
+    });
     return [...seen.values()].sort((a, b) => b.count - a.count);
   }, [dataset, lang]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
-  const showTrumpHistory = scope?.personId === 'donald-trump';
+  const CuratedHistory = curatedHistories.get(scope?.personId);
   const [questionDate, setQuestionDate] = useState(() => new Date().toISOString().slice(0, 13));
   useEffect(() => {
     const refresh = () => setQuestionDate(new Date().toISOString().slice(0, 13));
@@ -107,7 +120,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       document.removeEventListener('visibilitychange', refresh);
     };
   }, []);
-  const result = useMemo(() => scope && !showTrumpHistory ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate, showTrumpHistory]);
+  const result = useMemo(() => scope && !CuratedHistory ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate, CuratedHistory]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
 
@@ -118,13 +131,13 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   return <section className="ceo-tl">
     <header className="tl-head">
       <div className="tl-scopes" role="tablist" aria-label={t('인물 · 회사', 'Person · company')}>
-        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count && s.personId !== 'donald-trump'}>
-          {s.name} · {s.company}{s.personId !== 'donald-trump' && <span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>}
+        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count && !curatedHistories.has(s.personId)}>
+          {s.name} · {s.company}{!curatedHistories.has(s.personId) && <span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>}
         </button>)}
       </div>
     </header>
 
-    {showTrumpHistory ? <TrumpPolicyHistory /> : !q ? (
+    {CuratedHistory ? <CuratedHistory /> : !q ? (
       <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}

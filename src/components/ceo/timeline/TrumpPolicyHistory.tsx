@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import truthSocialManifest from './truthSocialManifest.json';
 import { useLang } from '../../../i18n';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 
@@ -39,7 +40,7 @@ const topics: Topic[] = [
     ],
   },
   {
-    title: ['연준·금리', 'Fed and interest rates'],
+    title: ['금리·연준', 'Rates and the Fed'],
     takeaway: [
       '금리 인하 요구는 이어졌습니다. 초기 게시물에서는 주택시장 개선을 강조했고, 이후 물가와 이자 부담을 근거로 들다가 구체적인 금리 수준을 제시했습니다.',
       'The call for rate cuts persisted. Trump first emphasized housing, then cited inflation and interest costs, and eventually named a specific rate.',
@@ -57,15 +58,36 @@ const topics: Topic[] = [
     ],
   },
   {
-    title: ['반도체·미국 투자', 'Chips and US investment'],
+    title: ['전쟁·미중 패권', 'War and US–China rivalry'],
     takeaway: [
-      '초기에는 미국 내 생산 투자를 강조했습니다. 이후 일부 첨단칩 수입에 관세를 적용하면서 미국 내 공급망 관련 용도에는 예외를 두었습니다.',
-      'The early emphasis was on US manufacturing investment. A later proclamation imposed tariffs on some advanced chips with exceptions for uses that support the domestic supply chain.',
+      '2025년에는 중국과 희토류·수출통제 등 공급망 현안을 협상했고, 2026년에는 미·중·러 정상 협의에서 핵 위험과 국제 안보를 논의했습니다.',
+      'In 2025, talks with China addressed rare earths and export controls. In 2026, US, Chinese and Russian leaders discussed nuclear risk and international security.',
+    ],
+    milestones: [
+      { date: '2025-11-01', kind: 'release', change: ['미중 합의에 희토류 수출통제 유예 포함', 'US–China deal included a pause in rare earth export controls'],
+        summary: ['백악관은 중국이 새 희토류 수출통제의 글로벌 시행을 유예하기로 했다고 발표했습니다.', 'The White House said China agreed to suspend global implementation of new rare earth export controls.'],
+        url: 'https://www.whitehouse.gov/fact-sheets/2025/11/fact-sheet-president-donald-j.-trump-strikes-deal-on-economic-and-trade-relations-with-china/' },
+      { date: '2026-11-19', kind: 'release', change: ['미·중·러 핵 위험 감축 대화 합의', 'US, China and Russia agreed to nuclear risk talks'],
+        summary: ['선전 정상회담 공동선언에서 세 나라는 핵 위험 감축과 핵확산 방지를 위한 대화를 추진하기로 했습니다.', 'The Shenzhen summit declaration committed the three countries to talks on reducing nuclear risk and preventing proliferation.'],
+        url: 'https://www.whitehouse.gov/briefings-statements/2026/11/u-s-russia-china-heads-of-state-declaration-toward-peace/' },
+      { date: '2026-11-20', kind: 'speech', change: ['우크라이나 전쟁 외교 해법 언급', 'Discussed diplomacy on the war in Ukraine'],
+        summary: ['트럼프는 백악관 브리핑에서 푸틴이 러시아·우크라이나 전쟁의 외교적 해결을 원한다고 자신에게 밝혔다고 전했습니다.', 'Trump told a White House briefing that Putin had expressed a desire to end Russia’s war in Ukraine through diplomacy.'],
+        url: 'https://www.whitehouse.gov/releases/2026/11/at-press-briefing-president-trump-touts-historic-wins-for-americans-signals-deal-making-on-healthcare/' },
+    ],
+  },
+  {
+    title: ['미국 투자', 'US investment'],
+    takeaway: [
+      'TSMC와 애플의 미국 내 생산 투자 계획이 발표됐고, 일부 첨단칩 관세에는 미국 내 공급망을 지원하는 용도의 예외가 명시됐습니다.',
+      'TSMC and Apple announced US manufacturing plans. A later proclamation imposed tariffs on some advanced chips with exceptions for uses that support the domestic supply chain.',
     ],
     milestones: [
       { date: '2025-03-03', kind: 'release', change: ['TSMC 미국 투자 1,000억 달러 추가 발표', 'Announced $100 billion in additional TSMC investment'],
         summary: ['백악관은 TSMC의 미국 반도체 제조 투자 확대를 발표했습니다.', 'The White House announced an expansion of TSMC’s investment in US chipmaking.'],
         url: 'https://www.whitehouse.gov/releases/2025/03/another-historic-investment-secured-under-president-trump/' },
+      { date: '2025-08-06', kind: 'release', change: ['애플, 4년간 미국 투자 계획 6,000억 달러로 확대', 'Apple raised its four-year US commitment to $600 billion'],
+        summary: ['트럼프와 팀 쿡은 애플이 기존 계획에 1,000억 달러를 추가하고 미국 제조 프로그램을 시작한다고 발표했습니다.', 'Trump and Tim Cook announced that Apple would add $100 billion to its prior commitment and launch an American manufacturing program.'],
+        url: 'https://www.whitehouse.gov/releases/2025/08/apple-600-billion-commitment-to-boost-u-s-manufacturing/' },
       { date: '2026-01-14', kind: 'order', change: ['일부 첨단칩 25% 관세와 예외 명시', 'Specified 25% tariffs and exceptions for certain chips'],
         summary: ['대통령 포고문은 일부 첨단 컴퓨팅 칩에 25% 관세를 정하고 미국 내 데이터센터·연구개발 등에는 예외를 두었습니다.', 'A presidential proclamation set a 25% rate on some advanced computing chips, with exceptions including US data-center and R&D use.'],
         url: 'https://www.whitehouse.gov/presidential-actions/2026/01/adjusting-imports-of-semiconductors-semiconductor-manufacturing-equipment-and-their-derivative-products-into-the-united-states/' },
@@ -87,6 +109,8 @@ export function TrumpPolicyHistory() {
   const { t } = useLang();
   const [active, setActive] = useState(topics[0].title[1]);
   const topic = topics.find(entry => entry.title[1] === active) || topics[0];
+  const postCount = truthSocialManifest.reduce((total, year) => total + year.count, 0).toLocaleString();
+  const milestoneCount = topics.reduce((total, entry) => total + entry.milestones.length, 0);
   return <HistoryPanel
     title={t('트럼프 발언·정책 변화 이력', 'Trump’s statements and policy timeline')}
     topics={topics.map(entry => ({ id: entry.title[1], label: t(...entry.title) }))}
@@ -94,7 +118,10 @@ export function TrumpPolicyHistory() {
     onSelect={setActive}
     topicTitle={t(...topic.title)}
     summary={t(...topic.takeaway)}
-    metadata={t('SNS 날짜는 한국시간, 백악관 자료는 문서에 표시된 날짜입니다.', 'Social posts use Korea time. White House sources use the dates shown on the documents.')}
+    metadata={t(
+      `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,
+      `Truth Social archive: ${postCount} posts as of 2026-11-22 · ${milestoneCount} selected statements and policy milestones shown`,
+    )}
   >
     {[...topic.milestones].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
       key={entry.date}

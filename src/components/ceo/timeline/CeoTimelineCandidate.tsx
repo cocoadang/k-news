@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
-import { companyQuestions, displayText } from './companyQuestions.mjs';
+import { groupedCeoTopics, displayText } from './companyQuestions.mjs';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
 
@@ -110,19 +110,10 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
   const CuratedHistory = curatedHistories.get(scope?.personId);
-  const [questionDate, setQuestionDate] = useState(() => new Date().toISOString().slice(0, 13));
-  useEffect(() => {
-    const refresh = () => setQuestionDate(new Date().toISOString().slice(0, 13));
-    const timer = window.setInterval(refresh, 60_000);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, []);
-  const result = useMemo(() => scope && !CuratedHistory ? companyQuestions(dataset.statements, scope.personId, scope.companyIds, new Date(questionDate + ':00:00Z')) : { questions: [], other: [], excludedCount: 0, total: 0 }, [dataset, scope, questionDate, CuratedHistory]);
+  const topics = useMemo(() => scope && !CuratedHistory
+    ? groupedCeoTopics(dataset.statements, scope.personId, scope.companyIds) : [], [dataset, scope, CuratedHistory]);
   const [questionId, setQuestionId] = useState<string>('');
-  const q = result.questions.find((x: any) => x.id === questionId) || result.questions[0];
+  const q = topics.find((x: any) => x.id === questionId) || topics[0];
 
   const items: Item[] = (q?.items || []).slice().sort((a: Item, b: Item) => (b.date.value || '').localeCompare(a.date.value || ''));
   const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
@@ -141,10 +132,9 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}
-      topics={result.questions.map((entry: any) => ({
+      topics={topics.map((entry: any) => ({
         id: entry.id,
         label: qLabel(entry),
-        badge: entry.weekly ? t('이번 주 주요 질문', 'Featured this week') : undefined,
       }))}
       activeId={q.id}
       onSelect={pickQuestion}
@@ -152,7 +142,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       metadata={[
         t(`${items.length}건`, `${items.length} ${items.length === 1 ? 'item' : 'items'}`),
         q.range ? month(q.range[0]) + (q.range[1] === q.range[0] ? '' : ' ~ ' + month(q.range[1])) : null,
-        q.weekly ? t(`최근 4주 출처 ${q.weekly.sources}개`, `${q.weekly.sources} sources in the last four weeks`) : null,
       ].filter(Boolean).join(' · ')}
       note={q.comparable ? undefined : t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}
     >

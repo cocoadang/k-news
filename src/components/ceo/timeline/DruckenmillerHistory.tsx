@@ -17,7 +17,7 @@ const sources = {
 const topics: { id: string; label: Localized; summary: Localized; entries: Entry[] }[] = [
   {
     id: 'portfolio',
-    label: ['시장 전망·포지션', 'Market outlook and positioning'],
+    label: ['시장 전망', 'Market outlook'],
     summary: ['2026년 초 주식과 구리에 매수 포지션을 두었지만, 11월에는 시장 방향의 불확실성을 이유로 자본 보전을 우선한다고 밝혔습니다.', 'Early in 2026 he was long equities and copper. By November, uncertainty about market direction led him to prioritize preserving capital.'],
     entries: [
       { date: '2026-11-18', source: 'tomorrowx',
@@ -33,7 +33,7 @@ const topics: { id: string; label: Localized; summary: Localized; entries: Entry
   },
   {
     id: 'ai',
-    label: ['AI·엔비디아', 'AI and Nvidia'],
+    label: ['투자 전략', 'Investment strategy'],
     summary: ['AI의 장기 잠재력을 보고도 엔비디아를 매도했습니다. 이후 포트폴리오에서 AI 비중을 줄였고, 새 상승장이 온다면 AI 응용 분야가 주도할 수 있다고 봤습니다.', 'He sold Nvidia while retaining a long-term AI thesis, later reduced AI’s role in the portfolio, and said AI applications could lead another rally.'],
     entries: [
       { date: '2026-11-18', source: 'tomorrowx',
@@ -49,7 +49,7 @@ const topics: { id: string; label: Localized; summary: Localized; entries: Entry
   },
   {
     id: 'rates',
-    label: ['연준·채권', 'The Fed and bonds'],
+    label: ['금리·인플레이션', 'Rates and inflation'],
     summary: ['2024년에는 금리 인하가 인플레이션을 다시 자극할 가능성을 보고 채권을 매도했고, 2026년 초에는 채권 매도를 위험자산의 헤지로 설명했습니다.', 'In 2024 he shorted bonds on inflation risk after a rate cut. In early 2026 he described the short as a hedge for risk assets.'],
     entries: [
       { date: '2026-02-27', source: 'morgan',
@@ -68,7 +68,7 @@ export function DruckenmillerHistory() {
   const topic = topics.find(entry => entry.id === active) || topics[0];
   return <HistoryPanel
     title={t('스탠리 드러켄밀러 발언 이력', 'Stanley Druckenmiller statement history')}
-    topics={topics.map(entry => ({ id: entry.id, label: t(...entry.label) }))}
+    topics={[topics[0], topics[2], topics[1]].map(entry => ({ id: entry.id, label: t(...entry.label) }))}
     activeId={active}
     onSelect={setActive}
     topicTitle={t(...topic.label)}

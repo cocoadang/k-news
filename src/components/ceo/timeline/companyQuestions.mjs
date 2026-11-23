@@ -202,3 +202,49 @@ export function companyQuestions(statements, personId, companyIds, now = new Dat
   const other = claims.filter(s => !assigned.has(s.statementId));
   return { questions: prioritizeWeeklyQuestions(questions, now), other, excludedCount: scoped.length - claims.length, total: scoped.length };
 }
+
+const AI_TOPICS = [
+  ['ai-outlook', 'AI 전망', 'AI outlook'],
+  ['company', '기업 이슈', 'Company developments'],
+  ['risks', '안전·규제', 'Safety and regulation'],
+];
+const FINANCE_TOPICS = [
+  ['market', '시장 전망', 'Market outlook'],
+  ['rates', '금리·인플레이션', 'Rates and inflation'],
+  ['portfolio', '투자 전략', 'Investment strategy'],
+];
+const MUSK_TOPICS = [
+  ['ai-outlook', 'AI·로보택시·로봇', 'AI, robotaxis and robotics'],
+  ['company', '테슬라 사업', 'Tesla business'],
+  ['space', '스페이스X 사업', 'SpaceX business'],
+];
+const TOPIC_MAP = {
+  nvda: { 'ai-outlook': ['demand', 'phase'], company: ['platform', 'profit'] },
+  googl: { 'ai-outlook': ['vision', 'ai-investment'], company: ['cloud', 'search', 'gemini', 'results'] },
+  msft: { 'ai-outlook': ['demand', 'capex'], company: ['agents', 'org'], risks: ['security'] },
+  openai: { 'ai-outlook': ['agi', 'jobs'], company: ['compute', 'products', 'business'], risks: ['safety'] },
+  anthropic: { 'ai-outlook': ['scaling', 'timeline', 'economy', 'benefits'], company: ['business'], risks: ['safety', 'policy'] },
+  tsla: { 'ai-outlook': ['autonomy', 'optimus'], company: ['energy', 'demand', 'merger', 'value'] },
+  spacex: { space: ['space-ai', 'missions'] },
+  bridgewater: { market: ['order', 'politics', 'ai'], rates: ['debt', 'money'], portfolio: ['markets'] },
+  pershing: { market: ['performance'], rates: ['rates'], portfolio: ['positions', 'strategy', 'listing'] },
+};
+
+/** Presentation groups keep the original classification and evidence intact. */
+export function groupedCeoTopics(statements, personId, companyIds, now = new Date()) {
+  const { questions } = companyQuestions(statements, personId, companyIds, now);
+  const groups = companyIds.some(id => id === 'bridgewater' || id === 'pershing')
+    ? FINANCE_TOPICS : companyIds.some(id => id === 'tsla' || id === 'spacex') ? MUSK_TOPICS : AI_TOPICS;
+  return groups.flatMap(([id, label, labelEn]) => {
+    const matched = questions.filter(q => {
+      const originalId = q.id.split(':').at(-1);
+      return TOPIC_MAP[q.companyId]?.[id]?.includes(originalId)
+        || (!TOPIC_MAP[q.companyId] && id === 'company');
+    });
+    const itemsById = new Map(matched.flatMap(q => q.items.map(item => [item.statement.statementId, item])));
+    const items = [...itemsById.values()].sort((a, b) => (a.date.value || '9999').localeCompare(b.date.value || '9999'));
+    if (!items.length) return [];
+    const dates = [...new Set(items.map(item => item.date.value).filter(Boolean))];
+    return [{ id, label, labelEn, items, range: dates.length ? [dates[0], dates.at(-1)] : null, comparable: dates.length >= 2 }];
+  });
+}

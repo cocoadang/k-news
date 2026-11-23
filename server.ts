@@ -3,6 +3,7 @@ import { resolveOpenAIModel } from './server/openaiClient';
 import 'dotenv/config';
 import { fetchSystemHealth } from './server/systemHealth';
 import { fetchTripod, fetchTripodPortfolio } from './server/tripod';
+import { fetchMarketIndicators } from './server/marketIndicators';
 import { fetchQqqRsi } from './server/qqqRsi';
 import express from 'express';
 import path from 'path';
@@ -717,7 +718,18 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     }
   });
 
-  const qqqRsiCache = packedCache(fetchQqqRsi, 10 * 60_000);
+  const marketIndicatorsCache = packedCache(fetchMarketIndicators, 60_000);
+  app.get('/api/market/indicators', async (req, res) => {
+    try {
+      const {packed} = await marketIndicatorsCache.get();
+      res.setHeader('Cache-Control', publicCdnHeader(30, 0));
+      sendPacked(req, res, packed);
+    } catch {
+      res.status(503).set('Cache-Control', 'no-store').json({error: 'Market indicators unavailable'});
+    }
+  });
+
+  const qqqRsiCache = packedCache(() => fetchQqqRsi(), 10 * 60_000);
   app.get('/api/market/qqq-rsi', async (req, res) => {
     try {
       const { packed } = await qqqRsiCache.get();

@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {PageHeader, chipClass} from './ui';
 import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
 import {useLang, tr, getLang} from '../i18n';
+import type {MarketIndicators} from '../../server/marketIndicators';
 
 // 나스닥 전략 비교 — 자료 출처는 KS Wealth OS(asset.dsoom.com)
 //  · 백테스트: https://asset.dsoom.com/strategy-backtest.json (CORS: news.dsoom.com 허용)
@@ -105,10 +106,10 @@ const tdL = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-left whitespa
 const mh = 'hidden sm:table-cell';
 const card = 'strategy-card min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
 
-function Kpi({title, value, sub, tone}: {title: string; value: string; sub?: string; tone?: 'ok' | 'warn' | 'bad'}) {
+function Kpi({title, value, sub, time, tone}: {title: string; value: string; sub?: string; time?: string; tone?: 'ok' | 'warn' | 'bad'}) {
   const c = tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-300' : tone === 'ok' ? 'text-emerald-300' : 'text-white';
-  return <div className="strategy-kpi min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
-    <p className="text-xs text-slate-400">{title}</p><p className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-0.5 text-xs leading-5 text-slate-400">{sub}</p>}
+  return <div className="strategy-kpi h-full min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
+    <p className="text-xs text-slate-400">{title}</p><p className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-0.5 text-xs leading-5 text-slate-400">{sub}</p>}{time && <p className="mt-1 text-xs leading-4 text-slate-400">{time}</p>}
   </div>;
 }
 
@@ -132,6 +133,7 @@ export function StrategyMenu() {
       />
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}
     {status === 'error' && <p role="alert">{t('자료를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.', 'Could not load data. Please refresh in a moment.')}</p>}
+    <MarketIndicatorCards live={live}/>
     {live && <LiveSection live={live}/>}
     {bt && variant && <BacktestSection key={lang} bt={bt} variant={variant} setVariant={setVariant}/>}
   </section>;
@@ -198,7 +200,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
       </tr>)}
     </Table></div>
     <p className="mt-2 text-xs leading-5 text-slate-400">{t('구간에 처음 진입한 날을 집계합니다. 연속 체류는 1회이며, 간격은 달력일 기준입니다.', 'Each entry into a band counts once. Consecutive sessions in the same band count as one entry. Gaps use calendar days.')}</p>
-    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다. 위 카드의 실시간 표시값과 관측 시점이 다를 수 있습니다.', 'Uses archived CNN daily observations. Their observation times can differ from the live card above.')}</p>}
+    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다. 위 카드의 최신 표시값과 관측 시점이 다를 수 있습니다.', 'Uses archived CNN daily observations. Their observation times can differ from the latest reading above.')}</p>}
   </section>;
 }
 
@@ -211,41 +213,134 @@ function IndicatorHistoryButton({label, open, onToggle}: {label: string; open: b
   </button>;
 }
 
-function QqqRsiCard() {
-  const {t} = useLang();
-  const [reading, setReading] = useState<{value: number; asOf: string} | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/market/qqq-rsi', {signal: controller.signal})
-      .then(async response => {
-        if (!response.ok) return;
-        const {value, asOf} = await response.json();
-        if (!controller.signal.aborted && typeof value === 'number' && Number.isFinite(value) &&
-            value >= 0 && value <= 100 && typeof asOf === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
-          setReading({value, asOf});
-        }
-      })
-      .catch(() => {})
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, []);
-  return <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')}
-    value={reading ? reading.value.toFixed(1) : '—'}
-    sub={reading ? t(`미국장 종가 · ${reading.asOf}`, `US close · ${reading.asOf}`)
-      : loading ? t('불러오는 중', 'Loading') : t('데이터를 불러올 수 없음', 'Data unavailable')}/>;
-}
+const quoteDate = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+const quoteTime = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+});
 
-function LiveSection({live}: {live: Live}) {
+function MarketIndicatorCards({live}: {live: Live | null}) {
   const {t, lang} = useLang();
-  const m = live.market || {}, dd = num(m.dd), vix = num(m.vix?.value), fg = num(m.fearGreed?.score);
-  const order = (live.order || ORDER).filter(k => live.virtual[k]);
+  const [quotes, setQuotes] = useState<MarketIndicators | null>(null);
   const [drawdownsOpen, setDrawdownsOpen] = useState(false);
   const [activeIndicator, setActiveIndicator] = useState<IndicatorHistoryKey | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    let pending = false;
+    const refresh = async () => {
+      if (pending || document.visibilityState !== 'visible') return;
+      pending = true;
+      try {
+        const response = await fetch('/api/market/indicators', {signal: controller.signal});
+        if (!response.ok) throw new Error('Market indicators unavailable');
+        const latest: MarketIndicators = await response.json();
+        if (!controller.signal.aborted) setQuotes(latest);
+      } catch {
+        if (!controller.signal.aborted) setQuotes({ndx: null, vix: null, fearGreed: null, rsi: null});
+      } finally {
+        pending = false;
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  const m = live?.market;
+  const ndx = quotes?.ndx;
+  const usableNdx = ndx && (!live || quoteDate.format(new Date(ndx.asOf)) >= live.asOf) ? ndx : null;
+  const peak = usableNdx ? Math.max(num(m?.peak) ?? 0, usableNdx.recentClosingPeak, usableNdx.value) : num(m?.peak);
+  const dd = usableNdx && peak ? (1 - usableNdx.value / peak) * 100 : num(m?.dd);
+  const vixQuote = quotes?.vix && (!live || quoteDate.format(new Date(quotes.vix.asOf)) >= live.asOf) ? quotes.vix : null;
+  const vix = vixQuote?.value ?? num(m?.vix?.value);
+  const fg = quotes?.fearGreed?.value ?? num(m?.fearGreed?.score);
+  const rsi = quotes?.rsi;
+  const formatted = (date: string | number) => `${quoteTime.format(new Date(date))} KST`;
+  const saved = (asOf?: string) => asOf ? `${t('저장값', 'Saved')} · ${asOf}` : undefined;
+  const availability = quotes ? t('데이터를 불러올 수 없음', 'Data unavailable') : t('불러오는 중', 'Loading');
+  const rating = (quotes?.fearGreed?.label || m?.fearGreed?.label)?.toLowerCase();
   const toggleIndicator = (indicator: IndicatorHistoryKey) => {
     setDrawdownsOpen(false);
     setActiveIndicator(current => current === indicator ? null : indicator);
   };
+  return <>
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="relative min-w-0">
+        <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : dd === 0 ? '0.00%' : `−${dd.toFixed(2)}%`}
+          sub={peak ? `${t('전고점', 'Peak')} ${Math.round(peak).toLocaleString('en-US')}` : availability}
+          time={usableNdx ? t(`지연 시세 · ${formatted(usableNdx.asOf)}`, `Delayed quote · ${formatted(usableNdx.asOf)}`) : saved(live?.asOf)}
+          tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
+        <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
+          aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
+          className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
+          onClick={() => { setActiveIndicator(null); setDrawdownsOpen(open => !open); }}>
+          <span aria-hidden="true" className="absolute right-2 top-2 text-xs">{drawdownsOpen ? '▴' : '▾'}</span>
+        </button>
+      </div>
+      <div className="relative min-w-0">
+        <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)}
+          sub={vixQuote ? t('Yahoo Finance 시세', 'Yahoo Finance quote') : m?.vix?.label ? (lang === 'en' ? VIX_EN[m.vix.label] || m.vix.label : m.vix.label) : availability}
+          time={vixQuote ? formatted(vixQuote.asOf) : saved(live?.asOf)}
+          tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
+        <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
+      </div>
+      <div className="relative min-w-0">
+        <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)}
+          sub={rating ? (lang === 'en' ? rating.replace(/\b\w/g, char => char.toUpperCase()) : indicatorRatingKo[rating] || rating) : availability}
+          time={quotes?.fearGreed ? `CNN · ${formatted(quotes.fearGreed.asOf)}` : live && fg !== null ? t(`저장 시각 · ${formatted(live.updatedAt)}`, `Saved at · ${formatted(live.updatedAt)}`) : undefined}
+          tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
+        <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
+      </div>
+      <div className="relative min-w-0">
+        <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')} value={rsi ? rsi.value.toFixed(1) : '—'}
+          sub={rsi ? rsi.intraday ? t('장중 잠정치 · 일봉 기준', 'Intraday estimate · daily RSI') : t('미국장 종가', 'US close') : availability}
+          time={rsi ? rsi.intraday ? formatted(rsi.asOf) : rsi.asOf : undefined}/>
+        <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
+      </div>
+      {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
+      <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
+        <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
+        <p className="mt-1 text-xs text-slate-400">1986-01-02~2026-11-20</p>
+        <div className="mt-2 text-xs sm:text-sm"><Table history head={[
+          t('전고점 대비 하락폭', 'Drawdown from peak'),
+          t('발생 횟수', 'Entries'),
+          t('발생 빈도', 'Frequency'),
+          t('최근 도달일', 'Last entry'),
+          t('간격 중앙값', 'Median gap'),
+        ]}>
+          {([
+            [10, 35, '2026-11-02', t('약 7개월', '≈7 months')],
+            [20, 8, '2025-04-04', t('약 2.8년', '≈2.8 years')],
+            [30, 4, '2022-06-13', t('약 9.5년', '≈9.5 years')],
+            [40, 1, '2000-11-20', '—'],
+            [50, 1, '2000-12-20', '—'],
+          ] as const).map(([threshold, count, date, median]) => <tr key={threshold}>
+            <th scope="row" className={`${tdL} font-medium`}>−{threshold}%</th>
+            <td className={td}>{count}</td>
+            <td className={td}>{annualEntryRate(count, '1986-01-02', '2026-11-20')}{t('회/년', '/year')}</td>
+            <td className={td}>{date}</td>
+            <td className={td}>{median}</td>
+          </tr>)}
+        </Table></div>
+        <p className="mt-2 text-xs leading-5 text-slate-400">{t(
+          '1986.01.02~2026.11.20 나스닥100 일별 종가. 전고점 회복 전에는 각 하락폭의 첫 도달만 집계했습니다. 간격 중앙값은 연속 도달일 사이의 간격으로, 1회 발생 시에는 표시하지 않습니다.',
+          'Nasdaq-100 daily closes, Jan 2, 1986–Nov 20, 2026. Each threshold is counted on its first hit before recovery to the previous peak. The median uses gaps between successive hits and is unavailable for a single hit.',
+        )}</p>
+      </section>
+    </div>
+    <p className="text-xs text-slate-400">{t('화면을 열어두면 1분마다 확인합니다. 실제 갱신 시점은 시세 제공처에 따라 다릅니다.', 'Checks every minute while visible. Quote updates depend on the data provider.')}</p>
+  </>;
+}
+
+function LiveSection({live}: {live: Live}) {
+  const {t, lang} = useLang();
+  const order = (live.order || ORDER).filter(k => live.virtual[k]);
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
   useEffect(() => {
@@ -281,62 +376,9 @@ function LiveSection({live}: {live: Live}) {
     </td>
   </tr>;
   return <>
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-      <div className="relative min-w-0">
-        <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : `−${dd.toFixed(2)}%`} sub={`${t('전고점', 'Peak')} ${num(m.peak) ? Math.round(m.peak as number).toLocaleString('en-US') : '—'}`} tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
-        <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
-          aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
-          className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
-          onClick={() => { setActiveIndicator(null); setDrawdownsOpen(open => !open); }}>
-          <span aria-hidden="true" className="absolute right-2 top-2 text-xs">{drawdownsOpen ? '▴' : '▾'}</span>
-        </button>
-      </div>
-      <div className="relative min-w-0">
-        <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)} sub={[lang === 'en' && m.vix?.label ? VIX_EN[m.vix.label] || m.vix.label : m.vix?.label, num(m.vix?.percentile) !== null ? (lang === 'en' ? `${Math.round(m.vix!.percentile!)}th pct. historically` : `역사 ${Math.round(m.vix!.percentile!)}%`) : ''].filter(Boolean).join(' · ')} tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
-        <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
-      </div>
-      <div className="relative min-w-0">
-        <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)} sub={m.fearGreed?.label} tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
-        <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
-      </div>
-      <div className="relative min-w-0">
-        <QqqRsiCard/>
-        <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
-      </div>
-      {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
-      <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
-        <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        <p className="mt-1 text-xs text-slate-400">1986-01-02~2026-11-20</p>
-        <div className="mt-2 text-xs sm:text-sm"><Table history head={[
-          t('전고점 대비 하락폭', 'Drawdown from peak'),
-          t('발생 횟수', 'Entries'),
-          t('발생 빈도', 'Frequency'),
-          t('최근 도달일', 'Last entry'),
-          t('간격 중앙값', 'Median gap'),
-        ]}>
-          {([
-            [10, 35, '2026-11-02', t('약 7개월', '≈7 months')],
-            [20, 8, '2025-04-04', t('약 2.8년', '≈2.8 years')],
-            [30, 4, '2022-06-13', t('약 9.5년', '≈9.5 years')],
-            [40, 1, '2000-11-20', '—'],
-            [50, 1, '2000-12-20', '—'],
-          ] as const).map(([threshold, count, date, median]) => <tr key={threshold}>
-            <th scope="row" className={`${tdL} font-medium`}>−{threshold}%</th>
-            <td className={td}>{count}</td>
-            <td className={td}>{annualEntryRate(count, '1986-01-02', '2026-11-20')}{t('회/년', '/year')}</td>
-            <td className={td}>{date}</td>
-            <td className={td}>{median}</td>
-          </tr>)}
-        </Table></div>
-        <p className="mt-2 text-xs leading-5 text-slate-400">{t(
-          '1986.01.02~2026.11.20 나스닥100 일별 종가. 전고점 회복 전에는 각 하락폭의 첫 도달만 집계했습니다. 간격 중앙값은 연속 도달일 사이의 간격으로, 1회 발생 시에는 표시하지 않습니다.',
-          'Nasdaq-100 daily closes, Jan 2, 1986–Nov 20, 2026. Each threshold is counted on its first hit before recovery to the previous peak. The median uses gaps between successive hits and is unavailable for a single hit.',
-        )}</p>
-      </section>
-    </div>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>
-      <p className="mt-1 text-sm text-slate-400">{lang === 'en' ? <>Virtual accounts adding the same amount on the first trading day of each month since {dot(live.start)} · as of {dot(live.asOf)}{m.stale ? ' · indicators delayed' : ''}</> : <>{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}{m.stale ? ' · 지표 갱신 지연' : ''}</>}</p>
+      <p className="mt-1 text-sm text-slate-400">{lang === 'en' ? <>Virtual accounts adding the same amount on the first trading day of each month since {dot(live.start)} · as of {dot(live.asOf)}</> : <>{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}</>}</p>
       <div className="mt-3 space-y-2 sm:hidden" aria-label={t('모바일 전략별 실전 추적', 'Mobile strategy tracking')}>
         {[...order, 'tripod'].map(k => {
           const v = k === 'tripod' ? null : live.virtual[k];

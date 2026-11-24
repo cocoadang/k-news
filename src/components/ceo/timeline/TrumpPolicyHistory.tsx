@@ -6,7 +6,7 @@ import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 type Localized = readonly [ko: string, en: string];
 type Milestone = {
   date: string;
-  kind: 'speech' | 'post' | 'order' | 'release';
+  kind: 'speech' | 'post' | 'order' | 'release' | 'interview';
   change: Localized;
   summary: Localized;
   url: string;
@@ -78,10 +78,19 @@ const topics: Topic[] = [
   {
     title: ['미국 투자', 'US investment'],
     takeaway: [
-      'TSMC와 애플의 미국 내 생산 투자 계획이 발표됐고, 일부 첨단칩 관세에는 미국 내 공급망을 지원하는 용도의 예외가 명시됐습니다.',
-      'TSMC and Apple announced US manufacturing plans. A later proclamation imposed tariffs on some advanced chips with exceptions for uses that support the domestic supply chain.',
+      'TSMC·애플의 미국 생산 투자 발표에 이어, 트럼프는 미국 반도체 산업을 이유로 젠슨 황의 엔비디아 CEO 복귀를 지지했습니다.',
+      'After US manufacturing announcements by TSMC and Apple, Trump backed Jensen Huang’s return as Nvidia CEO, citing the importance of the US semiconductor industry.',
     ],
     milestones: [
+      { date: '2026-11-23', kind: 'interview', change: ['CNBC에서 엔비디아 이사회를 설득했다고 설명', 'Told CNBC he persuaded Nvidia’s board'],
+        summary: ['트럼프는 엔비디아 이사회와 접촉해 복귀를 설득했고, 복귀가 결정된 뒤 젠슨 황과 통화했다고 밝혔습니다.', 'Trump said he spoke with Nvidia’s board and persuaded it to reinstate Huang, then called Huang after the decision.'],
+        url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-transcript-president-donald-trump-speaks-cnbcs-eamon-javers-and-squawk' },
+      { date: '2026-11-23', kind: 'post', change: ['젠슨 황 복귀 환영·수출통제 조사 지속 요구', 'Welcomed Huang’s return and urged Nvidia to continue its export-control review'],
+        summary: ['트럼프는 이사회의 복귀 결정을 환영하며 국가안보 위험을 뒷받침할 근거가 없다는 미 정부 입장을 전했습니다. 엔비디아에는 미국 수출통제 준수 여부에 대한 내부 조사를 계속하라고 요청했습니다.', 'Trump welcomed the decision and said the US government had no reason to believe the return posed a national security risk. He urged Nvidia to continue its internal review of compliance with US export controls.'],
+        url: truth('117666141823845971') },
+      { date: '2026-11-22', kind: 'post', change: ['이사회에 젠슨 황 재선임 촉구', 'Urged Nvidia’s board to rehire Huang'],
+        summary: ['트럼프는 젠슨 황의 복귀가 엔비디아와 미국 모두에 최선이라고 밝혔습니다.', 'Trump said bringing Huang back would be best for Nvidia and the United States.'],
+        url: truth('117663497310955803') },
       { date: '2025-03-03', kind: 'release', change: ['TSMC 미국 투자 1,000억 달러 추가 발표', 'Announced $100 billion in additional TSMC investment'],
         summary: ['백악관은 TSMC의 미국 반도체 제조 투자 확대를 발표했습니다.', 'The White House announced an expansion of TSMC’s investment in US chipmaking.'],
         url: 'https://www.whitehouse.gov/releases/2025/03/another-historic-investment-secured-under-president-trump/' },
@@ -100,6 +109,7 @@ const topics: Topic[] = [
 
 const sourceNames: Record<Milestone['kind'], Localized> = {
   speech: ['백악관 연설', 'White House speech'],
+  interview: ['CNBC 인터뷰 전문', 'CNBC interview transcript'],
   post: ['Truth Social 게시물', 'Truth Social post'],
   order: ['백악관 정책 문서', 'White House policy document'],
   release: ['백악관 발표', 'White House release'],
@@ -124,7 +134,7 @@ export function TrumpPolicyHistory() {
     )}
   >
     {[...topic.milestones].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
-      key={entry.date}
+      key={entry.url}
       date={entry.date}
       dateLabel={entry.date.replace(/-/g, '.')}
       source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{t(...sourceNames[entry.kind])} ↗</a>}

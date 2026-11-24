@@ -1,5 +1,7 @@
 /** Selected public remarks with publication dates and links to primary sources. */
 const truthPosts = [
+  ["117666141823845971","2026-11-23T09:07:00-05:00","NVIDIA should continue its thorough internal investigation","트럼프는 젠슨 황의 CEO 복귀를 환영하며 엔비디아에 미국 수출통제 준수 여부에 대한 내부 조사를 계속하라고 요청했다.","https://www.trumpstruth.org/statuses/43714","규제 / 반독점"],
+  ["117663497310955803","2026-11-22T21:54:00-05:00","I hope the Board of Nvidia rehires Jensen Huang.","트럼프는 젠슨 황의 복귀가 엔비디아와 미국에 최선이라며 이사회에 재선임을 촉구했다.","https://www.trumpstruth.org/statuses/43709","규제 / 반독점"],
   ["117644175826027343","2026-11-19T12:01:00-05:00","Also, will be discussing the Trade Deals with Thailand, the Philippines, and others.","태국, 필리핀 등과의 무역 합의를 논의할 예정이라고 밝혔다.","https://www.trumpstruth.org/statuses/43630","규제 / 반독점"],
   ["117636323928351024","2026-11-18T02:44:00-05:00","I am pleased to announce that we made a new and completely different Trade Deal with the Philippines","필리핀과 기존과 다른 새로운 무역 합의를 맺었다고 밝혔다.","https://www.presidency.ucsb.edu/documents/truth-social-posts-november-17-2026","규제 / 반독점"],
   ["117629011695762969","2026-11-16T19:44:00-05:00","I am working to END the Left's War on Energy Affordability and Energy Security","에너지 비용 부담 완화와 에너지 안보 강화를 추진 중이라고 밝혔다.","https://www.presidency.ucsb.edu/documents/truth-social-posts-november-16-2026","에너지 / 배터리"],
@@ -29,6 +31,22 @@ export function curatedTrumpStatements() {
     isExample: false,
   }));
   return [...posts, {
+    statementId: 'cnbc_2026_11_23_nvidia_reinstatement',
+    personId: 'donald-trump',
+    companyId: 'white-house',
+    topicId: '규제 / 반독점',
+    kind: 'direct_quote',
+    quoteText: "Well, I spoke to 'em. Let me just put it that way, and I convinced 'em.",
+    quoteLanguage: 'en',
+    curatedSummaryKo: '트럼프는 CNBC 인터뷰에서 엔비디아 이사회를 설득해 젠슨 황의 복귀를 이끌었고, 결정 뒤 황과 통화했다고 밝혔다.',
+    referenceDate: { value: '2026-11-23', basis: 'spoken', precision: 'day' },
+    evidence: [{
+      articleId: 'cnbc_2026_11_23_nvidia_interview',
+      url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-transcript-president-donald-trump-speaks-cnbcs-eamon-javers-and-squawk',
+      sourceName: 'CNBC · Squawk on the Street',
+    }],
+    isExample: false,
+  }, {
     statementId: 'white_house_2026_11_20_thailand_trade',
     personId: 'donald-trump',
     companyId: 'white-house',

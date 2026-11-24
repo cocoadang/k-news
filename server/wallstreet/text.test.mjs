@@ -248,3 +248,24 @@ test('pending legacy attachment becomes a text outbox and an uncertain suffix is
   assert.equal(x.store.state.videos[v.id].telegramParts[1].status,'unknown');
   assert.ok(x.store.state.videos[v.id].telegramParts.every(part=>!part.document));
 });
+
+test('a confirmed caption quota limit stops further balance reads for that provider during the run',async()=>{
+ const x=setup({summaryApproved:false,vidiqApproved:true});
+ let balanceReads=0,captionReads=0;
+ x.deps.captions={
+  balance:async()=>{balanceReads++;return {type:'limited',renewableCredits:0,maxRenewableCredits:150,renewableResetsAt:'2026-11-28T00:00Z'};},
+  get:async()=>{captionReads++;throw Error('unexpected_caption_request');},
+ };
+ await x.store.exclusive(async(s,save)=>{
+  for(const id of ['Idn_d5ArZvA','annR-E8m5WQ','IggP39LRnT8']){
+   s.videos[id]={video:video(id),programmes:['wallstreet'],recipient:'123',stage:'text_waiting',firstSeen:now};
+  }
+  await save();
+ });
+ await x.run().run();
+ assert.equal(balanceReads,1);
+ assert.equal(captionReads,0);
+ for(const row of Object.values(x.store.state.videos))assert.equal(row.hold,'vidiq_free_cycle_or_day_limit');
+ await x.run().run();
+ assert.equal(balanceReads,2);
+});

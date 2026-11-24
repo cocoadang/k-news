@@ -718,11 +718,11 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
     }
   });
 
-  const marketIndicatorsCache = packedCache(fetchMarketIndicators, 60_000);
+  const marketIndicatorsCache = packedCache(fetchMarketIndicators, 180_000);
   app.get('/api/market/indicators', async (req, res) => {
     try {
       const {packed} = await marketIndicatorsCache.get();
-      res.setHeader('Cache-Control', publicCdnHeader(30, 0));
+      res.setHeader('Cache-Control', publicCdnHeader(60, 0));
       sendPacked(req, res, packed);
     } catch {
       res.status(503).set('Cache-Control', 'no-store').json({error: 'Market indicators unavailable'});

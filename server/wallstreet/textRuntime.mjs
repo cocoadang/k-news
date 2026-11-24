@@ -120,6 +120,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         for(const r of Object.values(s.videos))if(TRANSCRIPT_DONE_STAGES.includes(r.stage)&&now-(r.firstSeen||0)>=TRANSCRIPT_KEEP_MS&&(r.transcript||r.summaryCandidate?.validationJournal)){
           delete r.transcript;delete r.summaryCheckpoint;if(r.summaryCandidate?.validationJournal)delete r.summaryCandidate.validationJournal;r.transcriptPrunedAt=now;
         }
+        let supadataLimitReached=false, vidiqLimitReached=false;
         for(const r of Object.values(s.videos)){
           if(c.excludedVideoIds?.includes(r.video.id))continue;
           if(r.recipient!==c.recipient)continue;
@@ -128,7 +129,13 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           if(r.stage==='text_waiting'&&now-r.firstSeen>=172800000){r.stage='text_caption_expired';r.hold='caption_not_obtained_within_48h';continue;}
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&['bullbear','crypto'].includes(r.programmes[0])&&c.supadataApproved===true&&supadata){
             let before;
-            try{before=await supadata.balance();if(!reserveSupadata(s,before,now,c)){r.hold='supadata_free_cycle_or_day_limit';continue;}}
+            try{
+              if(!supadataLimitReached){
+                before=await supadata.balance();
+                supadataLimitReached=!reserveSupadata(s,before,now,c);
+              }
+              if(supadataLimitReached){r.hold='supadata_free_cycle_or_day_limit';continue;}
+            }
             catch{r.hold='supadata_free_account_or_cycle_unverified';continue;}
             r.stage='supadata_inflight';await save();
             let definiteNoCaption=false;
@@ -146,7 +153,13 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
           }
           if(r.stage==='text_waiting'&&r.programmes?.length===1&&r.programmes[0]==='wallstreet'&&c.vidiqApproved===true&&captions){
             let before;
-            try{before=await captions.balance();if(!reserveVidiq(s,before,now)){r.hold='vidiq_free_cycle_or_day_limit';continue;}}
+            try{
+              if(!vidiqLimitReached){
+                before=await captions.balance();
+                vidiqLimitReached=!reserveVidiq(s,before,now);
+              }
+              if(vidiqLimitReached){r.hold='vidiq_free_cycle_or_day_limit';continue;}
+            }
             catch{r.hold='vidiq_free_account_balance_unverified';continue;}
             r.stage='vidiq_inflight';await save();
             try{const result=await captions.get(r.video.id);if(result.status!=='ok')throw Error('vidiq_'+(/^[a-z_]{1,30}$/.test(result.status)?result.status:'unavailable'));acceptNativeCaption(result.segments,r.video);

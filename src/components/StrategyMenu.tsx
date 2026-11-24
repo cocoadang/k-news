@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {PageHeader, chipClass} from './ui';
 import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
 import {useLang, tr, getLang} from '../i18n';
+import {startVisiblePolling} from '../screenPolling';
 import type {MarketIndicators} from '../../server/marketIndicators';
 
 // 나스닥 전략 비교 — 자료 출처는 KS Wealth OS(asset.dsoom.com)
@@ -242,13 +243,10 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
         pending = false;
       }
     };
-    void refresh();
-    const timer = window.setInterval(refresh, 60_000);
-    document.addEventListener('visibilitychange', refresh);
+    const stop = startVisiblePolling(refresh, document, 180_000);
     return () => {
+      stop();
       controller.abort();
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
     };
   }, []);
 
@@ -334,7 +332,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
         )}</p>
       </section>
     </div>
-    <p className="text-xs text-slate-400">{t('화면을 열어두면 1분마다 확인합니다. 실제 갱신 시점은 시세 제공처에 따라 다릅니다.', 'Checks every minute while visible. Quote updates depend on the data provider.')}</p>
+    <p className="text-xs text-slate-400">{t('화면을 열어두면 3분마다 확인합니다. 실제 갱신 시점은 시세 제공처에 따라 다릅니다.', 'Checks every 3 minutes while visible. Quote updates depend on the data provider.')}</p>
   </>;
 }
 

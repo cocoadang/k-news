@@ -23,7 +23,7 @@ async function fetchNasdaq(): Promise<NonNullable<MarketIndicators['ndx']>> {
   return { ...quote, recentClosingPeak: peak };
 }
 
-async function fetchFearGreed(): Promise<NonNullable<MarketIndicators['fearGreed']>> {
+async function requestFearGreed(): Promise<NonNullable<MarketIndicators['fearGreed']>> {
   const response = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', {
     headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000),
   });
@@ -38,11 +38,23 @@ async function fetchFearGreed(): Promise<NonNullable<MarketIndicators['fearGreed
   return { value: score, asOf: new Date(time).toISOString(), label: index.rating };
 }
 
+// CNN updates on its own cadence. Back off when the source rejects requests.
+let cnn: { reading: MarketIndicators['fearGreed']; expiresAt: number } | undefined;
+let cnnPending: Promise<MarketIndicators['fearGreed']> | undefined;
+
+function fetchFearGreed(): Promise<MarketIndicators['fearGreed']> {
+  if (cnn && Date.now() < cnn.expiresAt) return Promise.resolve(cnn.reading);
+  return cnnPending ??= requestFearGreed().catch(() => null).then(reading => {
+    cnn = { reading, expiresAt: Date.now() + (reading ? 15 : 60) * 60_000 };
+    return reading;
+  }).finally(() => { cnnPending = undefined; });
+}
+
 export async function fetchMarketIndicators(): Promise<MarketIndicators> {
   const [ndx, vix, fearGreed, rsi] = await Promise.all([
     fetchNasdaq().catch(() => null),
     fetchYahooChart('^VIX', '5d').then(readRegularQuote).catch(() => null),
-    fetchFearGreed().catch(() => null),
+    fetchFearGreed(),
     fetchQqqRsi(true).catch(() => null),
   ]);
   return { ndx, vix, fearGreed, rsi };

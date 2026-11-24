@@ -30,3 +30,15 @@ test('a screen mounted in a hidden tab waits until it becomes visible', t => {
   assert.equal(calls, 1);
   stop();
 });
+
+test('market polling uses its own three-minute interval', t => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const visibility = Object.assign(new EventTarget(), { hidden: false });
+  let calls = 0;
+  const stop = startVisiblePolling(() => { calls++; }, visibility, 180_000);
+  t.mock.timers.tick(179_999);
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1);
+  assert.equal(calls, 2);
+  stop();
+});

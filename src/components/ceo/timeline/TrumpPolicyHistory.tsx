@@ -83,7 +83,7 @@ const topics: Topic[] = [
     ],
     milestones: [
       { date: '2026-11-23', kind: 'interview', change: ['CNBC에서 엔비디아 이사회를 설득했다고 설명', 'Told CNBC he persuaded Nvidia’s board'],
-        summary: ['트럼프는 엔비디아 이사회와 접촉해 복귀를 설득했고, 복귀가 결정된 뒤 젠슨 황과 통화했다고 밝혔습니다.', 'Trump said he spoke with Nvidia’s board and persuaded it to reinstate Huang, then called Huang after the decision.'],
+        summary: ['트럼프는 엔비디아 이사회와 접촉해 복귀를 설득했고, 복귀가 결정된 뒤 젠슨 황과 통화했다고 밝혔습니다. 복귀 후 엔비디아가 좋은 실적을 낼 것으로 기대했습니다.', 'Trump said he spoke with Nvidia’s board and persuaded it to reinstate Huang, then called Huang after the decision. He expected Nvidia to perform well after Huang’s return.'],
         url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-transcript-president-donald-trump-speaks-cnbcs-eamon-javers-and-squawk' },
       { date: '2026-11-23', kind: 'post', change: ['젠슨 황 복귀 환영·수출통제 조사 지속 요구', 'Welcomed Huang’s return and urged Nvidia to continue its export-control review'],
         summary: ['트럼프는 이사회의 복귀 결정을 환영하며 국가안보 위험을 뒷받침할 근거가 없다는 미 정부 입장을 전했습니다. 엔비디아에는 미국 수출통제 준수 여부에 대한 내부 조사를 계속하라고 요청했습니다.', 'Trump welcomed the decision and said the US government had no reason to believe the return posed a national security risk. He urged Nvidia to continue its internal review of compliance with US export controls.'],

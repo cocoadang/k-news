@@ -156,25 +156,19 @@ const stanceLabels: Localized[] = [
   ['긍정', 'Bullish'], ['강한 긍정', 'Strongly bullish'],
 ];
 
-export function MarketStance({personId, personName, people, onSelect}: {
-  personId: string;
-  personName: string;
-  people: { personId: string; name: string }[];
-  onSelect: (id: string) => void;
-}) {
+export function MarketStance({ personId, personName }: { personId: string; personName: string }) {
   const { t } = useLang();
   const stance = stanceEvidence[personId];
-  const label = (id: string, level: Stance['level']) => id === 'stanley-druckenmiller'
+  const label = !stance ? null : personId === 'stanley-druckenmiller'
     ? t('중립·관망', 'Neutral / wait and see')
-    : t(...stanceLabels[level + 2]);
+    : t(...stanceLabels[stance.level + 2]);
   return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card mb-4">
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <h2>{t('시장 스탠스', 'Market stance')} · {personName}</h2>
-      {stance && <strong>{label(personId, stance.level)} · {t(...stance.scope)}</strong>}
+      {stance && <strong>{label} · {t(...stance.scope)}</strong>}
     </div>
-    {stance ? <>
-      <div className="mx-2 mt-3" role="meter" aria-label={t('긍정·부정 정도', 'Market stance scale')}
-        aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label(personId, stance.level)}>
+    {stance ? <div className="mx-2 mt-3" role="meter" aria-label={t('공개 자료 기반 5단계 스탠스', 'Five-level stance based on public sources')}
+        aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label}>
         <div className="relative h-2 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
           <span className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-950 shadow"
             style={{left: `${(stance.level + 2) * 25}%`}}/>
@@ -183,24 +177,22 @@ export function MarketStance({personId, personName, people, onSelect}: {
           <span>{t('부정', 'Bearish')}</span><span className="text-center">{t('중립', 'Neutral')}</span><span className="text-right">{t('긍정', 'Bullish')}</span>
         </div>
       </div>
-      <div className="mt-2 text-sm">
-        <p>{t(...stance.evidence.text)}</p>
-        <time className="tl-muted" dateTime={stance.evidence.date}>{stance.evidence.date}</time>
-        {' · '}<a href={stance.evidence.url} target="_blank" rel="noreferrer">{stance.evidence.source} ↗</a>
-      </div>
-    </> : <p className="tl-muted">{t('공개 자료에서 시장·사업 전망의 판단 근거를 확인하지 못했습니다.', 'No public evidence of a market or business outlook.')}</p>}
-    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-      <span className="tl-muted">{t('공개 근거를 바탕으로 한 수동 5단계 평가', 'Editorial five-level reading of public evidence')}</span>
-      <details className="mt-1 w-full">
-        <summary className="w-fit cursor-pointer py-2">{t('다른 인물 스탠스 보기', 'Compare other people')}</summary>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-          {people.filter(person => person.personId !== personId && stanceEvidence[person.personId]).map(person =>
-            <button type="button" key={person.personId} className="min-h-9 underline underline-offset-4 hover:text-cyan-300"
-              onClick={() => onSelect(person.personId)}>{person.name} · {label(person.personId, stanceEvidence[person.personId].level)}</button>)}
-        </div>
-      </details>
-    </div>
+    : <p className="tl-muted">{t('평가 근거 부족', 'Insufficient evidence')}</p>}
   </section>;
+}
+
+export function StanceEvidence({ personId }: { personId: string }) {
+  const { t } = useLang();
+  const evidence = stanceEvidence[personId]?.evidence;
+  if (!evidence) return null;
+  return <details className="mb-3 text-sm">
+    <summary className="w-fit cursor-pointer py-1 text-slate-300">
+      {t('스탠스 판단 근거', 'Evidence for this stance')}
+    </summary>
+    <p>{t(...evidence.text)}</p>
+    <time className="tl-muted" dateTime={evidence.date}>{evidence.date}</time>
+    {' · '}<a href={evidence.url} target="_blank" rel="noreferrer">{evidence.source} ↗</a>
+  </details>;
 }
 
 export function InvestorHistory({ profile }: { profile: typeof investorProfiles[keyof typeof investorProfiles] }) {

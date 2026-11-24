@@ -3,7 +3,7 @@ import { useLang } from '../../../i18n';
 
 type HistoryTopic = { id: string; label: string; badge?: string };
 
-export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, summary, metadata, note, children }: {
+export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, summary, metadata, note, evidence, children }: {
   title: string;
   topics: HistoryTopic[];
   activeId: string;
@@ -12,6 +12,7 @@ export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, su
   summary?: string;
   metadata?: string;
   note?: string;
+  evidence?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
@@ -31,6 +32,7 @@ export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, su
       {metadata && <p className="tl-muted">{metadata}</p>}
     </div>
     {note && <p className="tl-notice">{note}</p>}
+    {evidence}
     <ol className="tl-list">{children}</ol>
   </section>;
 }

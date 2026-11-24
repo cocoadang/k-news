@@ -1,4 +1,4 @@
-import { InvestorHistory, MarketStance, investorProfiles } from './InvestorHistory';
+import { InvestorHistory, MarketStance, StanceEvidence, investorProfiles } from './InvestorHistory';
 import React, { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
@@ -144,11 +144,12 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </div>
     </header>
 
-    {scope && <MarketStance personId={scope.personId} personName={scope.name} people={scopes} onSelect={pickScope}/>}
+    {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
     {investor ? <InvestorHistory key={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
       <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}
+      evidence={<StanceEvidence key={scopeKey} personId={scope.personId}/>}
       topics={topics.map((entry: any) => ({
         id: entry.id,
         label: qLabel(entry),

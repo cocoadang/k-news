@@ -1,3 +1,4 @@
+import { InvestorHistory, MarketStance, investorProfiles } from './InvestorHistory';
 import React, { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
@@ -114,14 +115,19 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       company: 'Duquesne Family Office',
       count: 0,
     });
+    for (const [personId, profile] of Object.entries(investorProfiles)) {
+      seen.set(personId, { key: personId, personId, name: lang === 'en' ? profile.name[1] : profile.name[0],
+        company: profile.company, count: profile.topics.reduce((sum, topic) => sum + topic.entries.length, 0) });
+    }
     return [...seen.values()].sort((a, b) => b.count - a.count);
   }, [dataset, lang]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
   const scope = scopes.find(s => s.key === scopeKey);
   const CuratedHistory = curatedHistories.get(scope?.personId);
-  const topics = useMemo(() => scope && !CuratedHistory
-    ? groupedCeoTopics(dataset.statements, scope.personId, scope.companyIds) : [], [dataset, scope, CuratedHistory]);
+  const investor = investorProfiles[scope?.personId as keyof typeof investorProfiles];
+  const topics = useMemo(() => scope && !CuratedHistory && !investor
+    ? groupedCeoTopics(dataset.statements, scope.personId, scope.companyIds) : [], [dataset, scope, CuratedHistory, investor]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = topics.find((x: any) => x.id === questionId) || topics[0];
 
@@ -138,7 +144,8 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       </div>
     </header>
 
-    {CuratedHistory ? <CuratedHistory /> : !q ? (
+    {scope && <MarketStance personId={scope.personId} personName={scope.name} people={scopes} onSelect={pickScope}/>}
+    {investor ? <InvestorHistory key={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
       <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}

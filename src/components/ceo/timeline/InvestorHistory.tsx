@@ -11,7 +11,7 @@ type Entry = {
   url: string;
 };
 type Topic = { id: string; label: Localized; entries: Entry[] };
-type Stance = { level: -2 | -1 | 0 | 1 | 2; scope: Localized; evidence: Entry };
+type Stance = { level: -2 | -1 | 0 | 1 | 2; scope: Localized; evidence: Omit<Entry, 'headline'> };
 
 const fisherOutlook: Entry = {
   date: '2026-11-04',
@@ -77,11 +77,74 @@ export const investorProfiles = {
 } satisfies Record<string, { name: Localized; company: string; topics: Topic[] }>;
 
 const stanceEvidence: Record<string, Stance> = {
+  'sam-altman': {
+    level: 0, scope: ['AI 개발·인간 통제', 'AI development and human oversight'],
+    evidence: { date: '2026-11-18',
+      text: ['AI가 산업과 제도의 의사결정권을 넘겨받을 가능성을 경계하며, 미래에 대한 통제는 사람이 쥐어야 한다고 밝혔습니다.',
+        'He cautioned against handing decision-making authority over to AI and argued that people should stay in control of the future.'],
+      source: 'TechCrunch · DealBook Summit', url: 'https://techcrunch.com/2026/11/18/sam-altman-warns-against-a-future-where-ai-not-humans-calls-the-shots/' },
+  },
+  'elon-musk': {
+    level: 1, scope: ['테슬라 자율주행 사업', 'Tesla autonomous driving'],
+    evidence: { date: '2026-11-18',
+      text: ['2인승 사이버캡이 로보택시 운행의 대부분을 맡을 것으로 보고, 6~7인이 탈 수 있는 자율주행 모델 Y 개발 계획도 밝혔습니다.',
+        'He expected the two-seat Cybercab to cover most robotaxi miles and described plans for a six- or seven-seat autonomous Model Y.'],
+      source: 'Business Insider · DealBook Summit', url: 'https://www.businessinsider.com/elon-musk-tesla-robotaxi-autonomous-model-y-more-seats-cybercab-2026-11' },
+  },
+  'bill-ackman': {
+    level: 1, scope: ['대형 클라우드 기업의 AI 투자', 'AI investment by hyperscalers'],
+    evidence: { date: '2026-11-02',
+      text: ['라이언 이스라엘과 함께 쓴 주주서한에서 대형 클라우드 기업의 AI 설비투자를 성장 투자로 평가하고, 향후 현금흐름이 시장 예상보다 높을 수 있다고 봤습니다.',
+        'In a joint shareholder letter with Ryan Israel, he framed hyperscalers’ AI spending as growth investment and saw potential for cash flow above market expectations.'],
+      source: 'Pershing Square · Shareholder letter', url: 'https://www.pershingsquareinc.com/wp-content/uploads/2026/11/Q3-26-PS-Inc-Letter-to-Shareholders.pdf' },
+  },
+  'sundar-pichai': {
+    level: 1, scope: ['구글 AI·클라우드', 'Google AI and Cloud'],
+    evidence: { date: '2026-10-28',
+      text: ['AI 투자로 검색 이용이 늘었고, AI 인프라와 솔루션에 대한 강한 수요가 구글 클라우드 성장을 이끌었다고 밝혔습니다.',
+        'He said AI investment increased Search usage and strong demand for AI infrastructure and solutions drove Google Cloud growth.'],
+      source: 'Alphabet · Q3 2026 earnings call', url: 'https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q3-2026/' },
+  },
+  'satya-nadella': {
+    level: 1, scope: ['기업용 AI 도입', 'Enterprise AI adoption'],
+    evidence: { date: '2026-11-17',
+      text: ['Ignite에서 빠르게 발전하는 AI를 기업의 실질적 성과로 연결할 기회를 강조하고, 조직의 데이터 통제와 신뢰를 도입 조건으로 제시했습니다.',
+        'At Ignite, he emphasized using fast-improving AI to deliver business outcomes, with organizational control of data and trust as conditions for adoption.'],
+      source: 'Microsoft · Ignite keynote', url: 'https://blogs.microsoft.com/blog/2026/11/17/ignite-2026-building-the-frontier-ecosystem/' },
+  },
+  'ray-dalio': {
+    level: -1, scope: ['AI 주식 밸류에이션', 'AI equity valuations'],
+    evidence: { date: '2026-11-23',
+      text: ['AI가 큰 가치를 만들더라도 투자 수익은 매입 가격에 달려 있다고 강조했습니다. 자금이 필요해 자산을 팔기 시작하면 거품이 꺼질 수 있다고 설명했습니다.',
+        'He stressed that AI can create great value while investment returns still depend on the purchase price. He explained how a need for cash can trigger selling and burst a bubble.'],
+      source: 'Sourcery · Ray Dalio', url: 'https://www.ondacast.com/podcast/sourcery/episode/ray-dalio-on-the-5-forces-reshaping-the-global-economy-783d9b79' },
+  },
+  'jensen-huang': {
+    level: 1, scope: ['엔비디아 사업 장기 전망', 'Nvidia’s long-term business outlook'],
+    evidence: { date: '2026-11-23',
+      text: ['복귀 성명에서 새로운 산업 혁명이 시작되고 있다고 평가하며, 그 과정에서 엔비디아를 이끌겠다고 밝혔습니다.',
+        'In his return statement, he described a new industrial revolution beginning and said he was committed to leading Nvidia through it.'],
+      source: 'NVIDIA Newsroom', url: 'https://nvidianews.nvidia.com/news/nvidia-board-reinstates-jensen-huang-as-president-ceo-and-board-director' },
+  },
+  'dario-amodei': {
+    level: 1, scope: ['앤트로픽 장기 사업 전망', 'Anthropic’s long-term business outlook'],
+    evidence: { date: '2026-11-19',
+      text: ['AI 개발 속도와 안전의 균형이 과제라고 설명하면서, 안전성과 고객 신뢰가 장기적으로 앤트로픽의 성과에 도움이 될 것으로 봤습니다.',
+        'He acknowledged the tension between AI development speed and safety and expected safety and customer trust to support Anthropic’s long-term performance.'],
+      source: 'CNBC · IPO interview', url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-exclusive-transcript-anthropic-co-founders-dario-and-daniela-amodei-speak' },
+  },
+  'donald-trump': {
+    level: 1, scope: ['엔비디아 사업 전망', 'Nvidia’s business outlook'],
+    evidence: { date: '2026-11-23',
+      text: ['CNBC에서 젠슨 황 복귀 후 엔비디아가 좋은 실적을 낼 것으로 기대한다고 밝혔습니다.',
+        'He told CNBC he expected Nvidia to perform well after Jensen Huang’s return.'],
+      source: 'CNBC · Squawk on the Street', url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-transcript-president-donald-trump-speaks-cnbcs-eamon-javers-and-squawk' },
+  },
   'ken-fisher': { level: 1, scope: ['미국 주식', 'US equities'], evidence: fisherOutlook },
   'michael-burry': { level: -1, scope: ['나스닥100', 'Nasdaq-100'], evidence: burryOutlook },
   'stanley-druckenmiller': {
     level: 0, scope: ['미국 주식', 'US equities'],
-    evidence: { date: '2026-11-18', headline: ['자본 보전 우선', 'Prioritized capital preservation'],
+    evidence: { date: '2026-11-18',
       text: ['향후 12개월의 시장 방향을 판단하기 어렵다며 자본 보전을 우선한다고 밝혔습니다.',
         'He said the market’s direction over the next 12 months was unusually unclear and prioritized capital preservation.'],
       source: 'TomorrowX Summit', url: 'https://www.youtube.com/watch?v=6r3D-CMJkuI' },
@@ -89,7 +152,7 @@ const stanceEvidence: Record<string, Stance> = {
 };
 
 const stanceLabels: Localized[] = [
-  ['강한 부정', 'Strongly bearish'], ['부정', 'Bearish'], ['중립·관망', 'Neutral / wait and see'],
+  ['강한 부정', 'Strongly bearish'], ['부정', 'Bearish'], ['중립·신중', 'Neutral / cautious'],
   ['긍정', 'Bullish'], ['강한 긍정', 'Strongly bullish'],
 ];
 
@@ -101,14 +164,17 @@ export function MarketStance({personId, personName, people, onSelect}: {
 }) {
   const { t } = useLang();
   const stance = stanceEvidence[personId];
+  const label = (id: string, level: Stance['level']) => id === 'stanley-druckenmiller'
+    ? t('중립·관망', 'Neutral / wait and see')
+    : t(...stanceLabels[level + 2]);
   return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card mb-4">
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <h2>{t('시장 스탠스', 'Market stance')} · {personName}</h2>
-      {stance && <strong>{t(...stanceLabels[stance.level + 2])} · {t(...stance.scope)}</strong>}
+      {stance && <strong>{label(personId, stance.level)} · {t(...stance.scope)}</strong>}
     </div>
     {stance ? <>
       <div className="mx-2 mt-3" role="meter" aria-label={t('긍정·부정 정도', 'Market stance scale')}
-        aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={t(...stanceLabels[stance.level + 2])}>
+        aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label(personId, stance.level)}>
         <div className="relative h-2 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
           <span className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-950 shadow"
             style={{left: `${(stance.level + 2) * 25}%`}}/>
@@ -122,12 +188,17 @@ export function MarketStance({personId, personName, people, onSelect}: {
         <time className="tl-muted" dateTime={stance.evidence.date}>{stance.evidence.date}</time>
         {' · '}<a href={stance.evidence.url} target="_blank" rel="noreferrer">{stance.evidence.source} ↗</a>
       </div>
-    </> : <p className="tl-muted">{t('최근 공개 자료에서 주식시장 방향에 대한 판단 근거를 확인하지 못했습니다.', 'No recent public evidence of a directional equity market view.')}</p>}
+    </> : <p className="tl-muted">{t('공개 자료에서 시장·사업 전망의 판단 근거를 확인하지 못했습니다.', 'No public evidence of a market or business outlook.')}</p>}
     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
       <span className="tl-muted">{t('공개 근거를 바탕으로 한 수동 5단계 평가', 'Editorial five-level reading of public evidence')}</span>
-      {people.filter(person => person.personId !== personId && stanceEvidence[person.personId]).map(person =>
-        <button type="button" key={person.personId} className="min-h-9 underline underline-offset-4 hover:text-cyan-300"
-          onClick={() => onSelect(person.personId)}>{person.name} · {t(...stanceLabels[stanceEvidence[person.personId].level + 2])}</button>)}
+      <details className="mt-1 w-full">
+        <summary className="w-fit cursor-pointer py-2">{t('다른 인물 스탠스 보기', 'Compare other people')}</summary>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+          {people.filter(person => person.personId !== personId && stanceEvidence[person.personId]).map(person =>
+            <button type="button" key={person.personId} className="min-h-9 underline underline-offset-4 hover:text-cyan-300"
+              onClick={() => onSelect(person.personId)}>{person.name} · {label(person.personId, stanceEvidence[person.personId].level)}</button>)}
+        </div>
+      </details>
     </div>
   </section>;
 }

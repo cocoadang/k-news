@@ -31,7 +31,95 @@ const burryOutlook: Entry = {
   url: 'https://finance.yahoo.com/markets/stocks/articles/michael-burry-bought-nvidia-calls-032355083.html',
 };
 
+const griffinOutlook: Entry = {
+  date: '2026-10-26',
+  headline: ['AI 종목 선별과 GPU 공급 과잉 위험', 'More selective AI investing and the risk of GPU oversupply'],
+  text: ['AI 공급망 전반을 사들이던 투자자들이 이제 수익을 누가 가져가는지 따지기 시작했고, GPU 공급 과잉은 가격 급락으로 이어질 수 있다고 봤습니다.',
+    'He said investors were becoming more selective about who profits across the AI supply chain and warned that excess GPU capacity could drive prices sharply lower.'],
+  source: 'Citadel Securities · Future of Global Markets',
+  url: 'https://www.citadelsecurities.com/news-and-insights/future-of-global-markets-2026-conference/conversation-with-ken-griffin/',
+};
+
+const marksOutlook: Entry = {
+  date: '2026-11-11',
+  headline: ['AI 투자 기회와 수익의 불확실성', 'AI investment opportunity and uncertain returns'],
+  text: ['AI의 잠재력이 커 투자 기회를 외면하기 어렵지만 수익을 얻을 기업과 자금조달 여건을 예측하기 어려워 투자 위험을 신중히 감수해야 한다고 봤습니다.',
+    'He saw too much potential to ignore AI, while arguing that uncertainty about winners and financing makes it important to take risk carefully.'],
+  source: 'Oaktree · A Layman Thinks About AI',
+  url: 'https://www.oaktreecapital.com/insights/memo/a-layman-thinks-about-ai',
+};
+
+const dimonOutlook: Entry = {
+  date: '2026-10-13',
+  headline: ['기업 투자와 소비가 미국 경기를 지탱', 'Business investment and consumer spending sustained the US economy'],
+  text: ['기업 투자와 소비가 경기를 지탱한다고 평가하면서 재정적자, 끈질긴 물가, 높은 자산 가격과 금리 상승을 위험 요인으로 꼽았습니다.',
+    'He said business investment and consumer spending sustained the economy while identifying fiscal deficits, persistent inflation, high asset prices and rising rates as risks.'],
+  source: 'JPMorganChase · Q3 2026 earnings release',
+  url: 'https://www.jpmorganchase.com/content/dam/jpmc/jpmorgan-chase-and-co/investor-relations/documents/quarterly-earnings/2026/3rd-quarter/6c1f8114-1be4-4174-8292-f75bbb59bc21.pdf',
+};
+
 export const investorProfiles = {
+  'ken-griffin': {
+    name: ['켄 그리핀', 'Ken Griffin'],
+    company: 'Citadel',
+    topics: [
+      { id: 'market', label: ['시장·AI 투자', 'Markets and AI investing'], entries: [griffinOutlook] },
+      { id: 'rates', label: ['금리·재정', 'Rates and fiscal policy'], entries: [
+        { date: '2026-01-23', headline: ['일본 국채 변동성을 미국 재정의 경고로 해석', 'Saw Japanese bond volatility as a fiscal warning for the US'],
+          text: ['다보스에서 일본 국채 변동성이 미국의 재정 정비 필요성을 보여 준다고 말하고, 연준 독립성도 강조했습니다.',
+            'At Davos, he said Japanese bond volatility was a warning for the US to improve its fiscal position and stressed Fed independence.'],
+          source: 'Citadel · World Economic Forum', url: 'https://www.citadel.com/news/citadel-founder-and-ceo-ken-griffin-speaks-at-2026-world-economic-forum-post/' },
+      ] },
+      { id: 'trade', label: ['관세·무역', 'Tariffs and trade'], entries: [
+        { date: '2025-02-11', headline: ['관세가 미국 성장에 부담', 'Saw tariffs as a risk to US growth'],
+          text: ['관세로 인한 무역정책 불확실성이 미국 경제 성장에 부담을 줄 수 있다고 경고했습니다.',
+            'He warned that uncertainty around tariff policy could weigh on US economic growth.'],
+          source: 'Reuters', url: 'https://www.reuters.com/markets/us/citadels-griffin-sees-tariffs-posing-risk-us-growth-2025-02-11/' },
+      ] },
+    ],
+  },
+  'howard-marks': {
+    name: ['하워드 막스', 'Howard Marks'],
+    company: 'Oaktree',
+    topics: [
+      { id: 'market', label: ['AI 투자·시장 과열', 'AI investing and market excess'], entries: [
+        marksOutlook,
+        { date: '2025-12-09', headline: ['AI 투자 열풍의 거품 여부는 판단 유보', 'Reserved judgment on whether AI enthusiasm was a bubble'],
+          text: ['AI에 대한 투자 열기는 분명하지만 잠재력이 크고 불확실성도 높아 당시 가격이 비합리적인 수준이라고 단정하기 어렵다고 봤습니다.',
+            'He saw unmistakable enthusiasm for AI, but thought the scale of the opportunity and the unknowns made it hard to judge whether prices were irrational.'],
+          source: 'Oaktree · Is It a Bubble?', url: 'https://www.oaktreecapital.com/insights/memo/is-it-a-bubble' },
+      ] },
+      { id: 'credit', label: ['신용시장·사모대출', 'Credit markets and private lending'], entries: [
+        { date: '2026-04-09', headline: ['우호적인 환경이 대출 심사 약화를 가렸다고 평가', 'Said favorable conditions masked weaker loan underwriting'],
+          text: ['금융위기 이후 우호적인 환경 덕분에 직접대출이 성과를 냈지만, 그 기간 대출 심사 기준이 약해진 징후가 있었다고 지적했습니다.',
+            'He said benign conditions after the financial crisis helped direct lenders perform despite signs of weaker underwriting.'],
+          source: 'Oaktree · What’s Going on in Private Credit?', url: 'https://www.oaktreecapital.com/insights/memo/whats-going-on-in-private-credit/' },
+      ] },
+    ],
+  },
+  'jamie-dimon': {
+    name: ['제이미 다이먼', 'Jamie Dimon'],
+    company: 'JPMorgan Chase',
+    topics: [
+      { id: 'market', label: ['미국 경기·소비', 'US economy and consumers'], entries: [
+        dimonOutlook,
+        { date: '2026-04-06', headline: ['소비는 일부 둔화했지만 경기 회복력 유지', 'Saw the economy as resilient despite some cooling in spending'],
+          text: ['주주서한에서 소비가 일부 둔화했지만 가계의 소득과 지출이 이어지고 기업도 건전하다고 평가했습니다.',
+            'In his shareholder letter, he said households were still earning and spending despite some cooling and that businesses remained healthy.'],
+          source: 'JPMorganChase · 2025 annual shareholder letter', url: 'https://www.jpmorganchase.com/ir/annual-report/2025/ar-ceo-letters' },
+      ] },
+      { id: 'rates', label: ['금리·인플레이션', 'Rates and inflation'], entries: [
+        { date: '2026-10-13', headline: ['물가와 금리의 동반 부담을 경계', 'Flagged persistent inflation and higher interest rates'],
+          text: ['3분기 실적 발표에서 끈질긴 물가와 금리 상승을 지목하며 여러 경기 시나리오에 대비한다고 밝혔습니다.',
+            'In the third-quarter release he flagged persistent inflation and rising interest rates, saying the bank was preparing for a range of outcomes.'],
+          source: dimonOutlook.source, url: dimonOutlook.url },
+        { date: '2026-04-06', headline: ['AI 설비투자의 단기 물가 압력', 'Saw near-term inflation pressure from AI capital spending'],
+          text: ['AI가 장기적으로 생산성을 높이겠지만, 대형 클라우드 기업의 대규모 AI 투자는 단기적으로 물가를 높일 수 있다고 판단했습니다.',
+            'He said AI should raise productivity over time while heavy investment by large cloud companies could add to inflation in the short term.'],
+          source: 'JPMorganChase · 2025 annual shareholder letter', url: 'https://www.jpmorganchase.com/ir/annual-report/2025/ar-ceo-letters' },
+      ] },
+    ],
+  },
   'ken-fisher': {
     name: ['켄 피셔', 'Ken Fisher'],
     company: 'Fisher Investments',
@@ -77,6 +165,9 @@ export const investorProfiles = {
 } satisfies Record<string, { name: Localized; company: string; topics: Topic[] }>;
 
 const stanceEvidence: Record<string, Stance> = {
+  'ken-griffin': { level: 0, scope: ['AI 투자·GPU 공급', 'AI investing and GPU supply'], evidence: griffinOutlook },
+  'howard-marks': { level: 0, scope: ['AI 투자', 'AI investing'], evidence: marksOutlook },
+  'jamie-dimon': { level: 0, scope: ['미국 경기', 'US economy'], evidence: dimonOutlook },
   'sam-altman': {
     level: 0, scope: ['AI 개발·인간 통제', 'AI development and human oversight'],
     evidence: { date: '2026-11-18',

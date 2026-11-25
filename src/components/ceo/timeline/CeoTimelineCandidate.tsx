@@ -92,6 +92,8 @@ const curatedHistories = new Map([
   [druckenmillerPersonId, DruckenmillerHistory],
 ]);
 
+const financePeople = new Set(['bill-ackman', 'ray-dalio', druckenmillerPersonId, ...Object.keys(investorProfiles)]);
+
 export function CeoTimeline({ dataset }: { dataset: any }) {
   const { t, lang } = useLang();
   const qLabel = (x: any) => (lang === 'en' && x.labelEn ? x.labelEn : x.label);
@@ -123,6 +125,11 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   }, [dataset, lang]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
+  const scopeGroups = [
+    { id: 'business', label: t('기술·기업', 'Technology and business'), scopes: scopes.filter(s => s.personId !== 'donald-trump' && !financePeople.has(s.personId)) },
+    { id: 'finance', label: t('투자·금융', 'Investing and finance'), scopes: scopes.filter(s => financePeople.has(s.personId)) },
+    { id: 'policy', label: t('정책', 'Policy'), scopes: scopes.filter(s => s.personId === 'donald-trump') },
+  ];
   const scope = scopes.find(s => s.key === scopeKey);
   const CuratedHistory = curatedHistories.get(scope?.personId);
   const investor = investorProfiles[scope?.personId as keyof typeof investorProfiles];
@@ -136,13 +143,20 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const pickQuestion = (id: string) => setQuestionId(id);
 
   return <section className="ceo-tl">
-    <header className="tl-head">
-      <div className="tl-scopes" role="tablist" aria-label={t('인물 · 회사', 'Person · company')}>
-        {scopes.map(s => <button key={s.key} role="tab" aria-selected={s.key === scopeKey} className={'tl-chip' + (s.key === scopeKey ? ' on' : '')} onClick={() => pickScope(s.key)} disabled={!s.count && !curatedHistories.has(s.personId)}>
-          {s.name} · {s.company}{!curatedHistories.has(s.personId) && <span>{s.count ? s.count + t('건', '') : t('자료 없음', 'No data')}</span>}
-        </button>)}
-      </div>
-    </header>
+    {scopes.length > 0 && <div className="tl-head">
+      <label className="tl-person-picker">
+        <span>{t('인물 선택', 'Select a person')}</span>
+        <select value={scopeKey} onChange={event => pickScope(event.target.value)}>
+          {scopeGroups.filter(group => group.scopes.length > 0).map(group => (
+            <optgroup key={group.id} label={group.label}>
+              {group.scopes.map(s => <option key={s.key} value={s.key} disabled={!s.count && !curatedHistories.has(s.personId)}>
+                {s.name} · {s.company}
+              </option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+    </div>}
 
     {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
     {investor ? <InvestorHistory key={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (

@@ -10,6 +10,10 @@
 .ceo-tl a:hover{text-decoration:underline}
 
 .tl-head{margin-bottom:20px}
+.tl-person-picker{display:flex;align-items:center;gap:10px;width:min(100%,32rem);color:var(--tl-muted);font-size:13px;font-weight:600}
+.tl-person-picker>span{flex:none}
+.tl-person-picker select{flex:1;min-width:0;min-height:44px;padding:8px 12px;border:1px solid var(--tl-line);border-radius:10px;background:var(--tl-card);color:#e2e8f0;color-scheme:dark;font-size:16px;cursor:pointer;text-overflow:ellipsis}
+.tl-person-picker select:focus-visible{outline:2px solid var(--tl-accent);outline-offset:2px}
 .tl-scopes{display:flex;flex-wrap:wrap;gap:8px}
 .tl-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--tl-line);background:#0f172a;border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600;color:#cbd5e1}
 .tl-chip span{color:var(--tl-muted);font-size:12px}

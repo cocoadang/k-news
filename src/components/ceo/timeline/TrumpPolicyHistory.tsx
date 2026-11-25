@@ -2,6 +2,7 @@ import { useState } from 'react';
 import truthSocialManifest from './truthSocialManifest.json';
 import { useLang } from '../../../i18n';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
+import { InvestorArchive } from './InvestorHistory';
 
 type Localized = readonly [ko: string, en: string];
 type Milestone = {
@@ -127,6 +128,7 @@ export function TrumpPolicyHistory() {
     activeId={active}
     onSelect={setActive}
     topicTitle={t(...topic.title)}
+    evidence={<InvestorArchive personId="donald-trump"/>}
     summary={t(...topic.takeaway)}
     metadata={t(
       `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,

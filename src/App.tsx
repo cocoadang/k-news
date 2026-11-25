@@ -16,7 +16,7 @@ import { StrategyMenu } from './components/StrategyMenu';
 import { SystemHealthMenu } from './components/SystemHealthMenu';
 import { useLang } from './i18n';
 import { NewsEvent, SystemStatus, MonitorSettings, CompanyProfile, AuthStatus } from './types';
-import { Sparkles, Newspaper, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Newspaper, AlertCircle, CheckCircle2, PlaySquare, MessagesSquare, TrendingUp, Landmark } from 'lucide-react';
 
 export default function App() {
   const { t } = useLang();
@@ -461,17 +461,24 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
 
-        <nav className="mb-4 grid grid-cols-6 gap-1 sm:grid-cols-5 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
-          {([['youtube', t('유튜브 요약', 'YouTube')], ['news', t('뉴스 피드', 'News')], ['ceo', t('CEO 발언', 'CEO Quotes')], ['strategy', t('나스닥 전략', 'Nasdaq Strategy')], ['system', t('미국 시스템', 'US System')]] as const).map(([key, label]) => (
+        <nav className="mb-4 grid grid-cols-5 gap-0.5 sm:gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+          {([
+            ['youtube', t('유튜브 요약', 'YouTube'), PlaySquare],
+            ['news', t('뉴스 피드', 'News'), Newspaper],
+            ['ceo', t('CEO 발언', 'CEO Quotes'), MessagesSquare],
+            ['strategy', t('나스닥 전략', 'Nasdaq Strategy'), TrendingUp],
+            ['system', t('미국 시스템', 'US System'), Landmark],
+          ] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               type="button"
               aria-current={mainView === key ? 'page' : undefined}
               onClick={() => setMainView(key)}
-              className={`${key === 'strategy' || key === 'system' ? 'col-span-3' : 'col-span-2'} sm:col-span-1 min-w-0 min-h-11 rounded-lg px-1 sm:px-4 text-xs sm:text-sm leading-tight break-keep font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+              className={`flex min-w-0 min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1 text-[11px] sm:flex-row sm:gap-2 sm:px-4 sm:text-sm leading-tight break-keep font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                 mainView === key ? 'bg-cyan-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
             >
-              {label}
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <span>{label}</span>
             </button>
           ))}
         </nav>

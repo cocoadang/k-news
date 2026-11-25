@@ -12,7 +12,141 @@ type ArchiveEntry = InvestorEntry & { topic: string };
 
 // Dates refer to the letter, publication or interview, according to the linked source.
 export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
+  'sam-altman': [
+    {
+      topic: 'archive', date: '2023-02-24',
+      headline: ['AGI에 대비한 단계적 공개 방침 제시', 'Proposed gradual deployment on the path to AGI'],
+      text: ['성능이 다른 AI를 단계적으로 공개하면 사회와 정책 당국이 효용과 위험을 직접 확인하며 적응할 시간을 얻는다고 설명했습니다.',
+        'He argued that gradual deployment gives society and policymakers time to experience the benefits and risks of increasingly capable AI and adapt.'],
+      source: 'OpenAI · Planning for AGI and beyond',
+      url: 'https://openai.com/index/planning-for-agi-and-beyond/',
+    },
+    {
+      topic: 'archive', date: '2021-03-16',
+      headline: ['AI가 만든 부를 넓게 배분하는 방안 제안', 'Proposed broad distribution of AI-generated wealth'],
+      text: ['AI가 더 많은 일을 맡으며 노동에서 자본으로 경제력이 이동할 수 있다고 보고, 기업과 토지에 대한 과세로 그 부의 일부를 배분하자고 제안했습니다.',
+        'He anticipated AI shifting economic power from labor to capital and proposed taxing companies and land to distribute some of the gains.'],
+      source: 'Sam Altman · Moore’s Law for Everything',
+      url: 'https://moores.samaltman.com/',
+    },
+  ],
+  'elon-musk': [
+    {
+      topic: 'archive', date: '2016-07-20',
+      headline: ['태양광·저장장치 통합과 자율주행 공유 구상', 'Outlined integrated solar, storage and autonomous car sharing'],
+      text: ['두 번째 마스터플랜에서 태양광 발전과 전력 저장을 결합하고, 자율주행이 허용되면 소유주가 차량을 공유할 수 있게 하겠다고 밝혔습니다.',
+        'His second master plan proposed combining solar power and energy storage and allowing owners to share their cars once autonomous driving was permitted.'],
+      source: 'Tesla · Master Plan, Part Deux',
+      url: 'https://www.tesla.com/master-plan-part-deux',
+    },
+    {
+      topic: 'archive', date: '2006-08-02',
+      headline: ['로드스터에서 더 저렴한 전기차로 이어지는 계획 공개', 'Outlined a path from the Roadster to cheaper electric cars'],
+      text: ['고성능 로드스터를 먼저 판매하고 그 수익을 다음 모델 개발에 재투자해 전기차 가격을 단계적으로 낮추겠다고 밝혔습니다.',
+        'He described selling a high-performance Roadster first and reinvesting proceeds in progressively more affordable electric cars.'],
+      source: 'Tesla · The Secret Tesla Motors Master Plan',
+      url: 'https://www.tesla.com/secret-master-plan',
+    },
+  ],
+  'sundar-pichai': [
+    {
+      topic: 'archive', date: '2018-05-08',
+      headline: ['전화 예약을 대신하는 구글 듀플렉스 시연', 'Demonstrated Google Duplex handling phone reservations'],
+      text: ['구글 I/O에서 AI 비서가 업체에 전화해 예약 같은 일을 대신할 수 있다고 설명하고, 듀플렉스 기술을 시연했습니다.',
+        'At Google I/O, he demonstrated Duplex and described how an AI assistant could call businesses to handle tasks such as booking appointments.'],
+      source: 'Google · I/O 2018',
+      url: 'https://blog.google/innovation-and-ai/products/io18-overview/',
+    },
+    {
+      topic: 'archive', date: '2016-04-28',
+      headline: ['모바일 중심에서 AI 중심으로의 전환 전망', 'Predicted a shift from mobile-first to AI-first'],
+      text: ['창업자 서한에서 기기의 형태보다 일상을 돕는 지능형 비서가 중요해지며 모바일 중심에서 AI 중심으로 이동할 것이라고 봤습니다.',
+        'In the founders’ letter, he predicted that intelligent assistants would become more important than device form factors as computing moved from mobile-first to AI-first.'],
+      source: 'Google · Founders’ Letter',
+      url: 'https://blog.google/alphabet/this-years-founders-letter/',
+    },
+  ],
+  'satya-nadella': [
+    {
+      topic: 'archive', date: '2020-04-29',
+      headline: ['원격 근무와 클라우드로 디지털 전환 가속', 'Saw digital change accelerate with remote work and cloud adoption'],
+      text: ['실적 발표에서 원격 협업·교육과 클라우드 도입이 빨라지며 2년치 디지털 전환이 두 달 사이에 나타났다고 평가했습니다.',
+        'In an earnings release, he described remote collaboration, learning and cloud adoption driving about two years of digital transformation in two months.'],
+      source: 'Microsoft · FY2020 Q3 earnings release',
+      url: 'https://www.microsoft.com/en-us/Investor/earnings/FY-2020-Q3/press-release-webcast',
+    },
+    {
+      topic: 'archive', date: '2014-07-10',
+      headline: ['모바일·클라우드 시대의 생산성을 핵심 전략으로 제시', 'Made productivity central to the mobile and cloud strategy'],
+      text: ['직원에게 보낸 글에서 모바일과 클라우드를 중심으로 개인과 조직의 생산성을 새롭게 정의하겠다는 방향을 제시했습니다.',
+        'In an employee memo, he made reinventing productivity for people and organizations a priority in a mobile-first, cloud-first world.'],
+      source: 'Microsoft · Employee memo',
+      url: 'https://blogs.microsoft.com/blog/2014/07/10/satya-nadella-to-employees-bold-ambition-and-our-core/',
+    },
+  ],
+  'jensen-huang': [
+    {
+      topic: 'archive', date: '2018-08-20',
+      headline: ['튜링 GPU로 실시간 레이 트레이싱 시대를 전망', 'Presented Turing as the start of real-time ray tracing in games'],
+      text: ['게임스컴을 앞두고 튜링 기반 GeForce RTX가 레이 트레이싱을 실시간 게임 그래픽에 적용해 현실감을 높일 것이라고 설명했습니다.',
+        'Ahead of Gamescom, he said Turing-based GeForce RTX would bring ray tracing to real-time games and make their graphics more realistic.'],
+      source: 'NVIDIA · GeForce RTX announcement',
+      url: 'https://nvidianews.nvidia.com/news/10-years-in-the-making-nvidia-brings-real-time-ray-tracing-to-gamers-with-geforce-rtx',
+    },
+    {
+      topic: 'archive', date: '2016-04-05',
+      headline: ['딥러닝 전용 슈퍼컴퓨터와 산업 전반의 AI 확산 전망', 'Unveiled a deep-learning supercomputer and forecast broad AI adoption'],
+      text: ['DGX-1 발표에서 AI가 산업 전반을 바꾸고 새로운 시장을 열 것으로 봤으며, 연구자가 컴퓨팅 환경 구축에 시간을 덜 쓰도록 하겠다고 밝혔습니다.',
+        'At the DGX-1 launch, he expected AI to reshape industries and open markets, and said the system would reduce the time researchers spent building compute setups.'],
+      source: 'NVIDIA · DGX-1 announcement',
+      url: 'https://nvidianews.nvidia.com/news/nvidia-launches-world-s-first-deep-learning-supercomputer-6622436',
+    },
+  ],
+  'dario-amodei': [
+    {
+      topic: 'archive', date: '2024-10',
+      headline: ['강력한 AI가 생물학과 의료 발전을 앞당길 가능성 제시', 'Described how powerful AI could accelerate biology and medicine'],
+      text: ['에세이에서 강력한 AI의 개발이 잘 진행된다는 가정 아래 생물학과 의료 연구가 크게 빨라지고 건강 개선에 기여할 수 있다고 전망했습니다.',
+        'In an essay about a scenario where powerful AI development goes well, he outlined how it might accelerate biology and medical research and improve health.'],
+      source: 'Dario Amodei · Machines of Loving Grace',
+      url: 'https://darioamodei.com/essay/machines-of-loving-grace',
+    },
+    {
+      topic: 'archive', date: '2023-07-25',
+      headline: ['고성능 AI의 안전성 시험과 감사 제안', 'Proposed safety testing and audits for advanced AI'],
+      text: ['미 상원 청문회에서 새로 개발되는 고성능 AI를 대상으로 정기적인 안전성 시험과 감사 체계를 마련하자고 제안했습니다.',
+        'In Senate testimony, he proposed a testing and auditing regime for newly developed, more powerful AI systems.'],
+      source: 'US Senate Judiciary Committee · Written testimony',
+      url: 'https://www.judiciary.senate.gov/imo/media/doc/2023-07-26_-_testimony_-_amodei.pdf',
+    },
+  ],
+  'donald-trump': [
+    {
+      topic: 'archive', date: '2020-01-15',
+      headline: ['미중 1단계 무역합의 서명', 'Signed the first phase of the US–China trade deal'],
+      text: ['미중 1단계 무역합의에 서명하며 중국과의 무역 관계를 더 상호적인 방향으로 바꾸는 조치라고 설명했습니다.',
+        'At the signing, he described phase one of the US–China agreement as a step toward more reciprocal trade.'],
+      source: 'White House archives · Signing remarks',
+      url: 'https://trumpwhitehouse.archives.gov/briefings-statements/remarks-president-trump-signing-u-s-china-phase-one-trade-agreement-2/',
+    },
+    {
+      topic: 'archive', date: '2018-03-08',
+      headline: ['철강 25%·알루미늄 10% 관세 발표', 'Announced 25% steel and 10% aluminum tariffs'],
+      text: ['국가안보와 미국 산업 보호를 이유로 수입 철강에 25%, 수입 알루미늄에 10%의 관세를 부과하겠다고 밝혔습니다.',
+        'He announced tariffs of 25% on imported steel and 10% on aluminum, citing national security and protection of US industry.'],
+      source: 'Roll Call · Signing remarks transcript',
+      url: 'https://rollcall.com/factbase/trump/transcript/donald-trump-remarks-steel-aluminum-tariffs-march-8-2018/',
+    },
+  ],
   'ken-griffin': [
+    {
+      topic: 'rates', date: '2022-09-28',
+      headline: ['연준이 물가 기대를 낮추기 위해 긴축을 이어가야 한다고 평가', 'Called on the Fed to keep fighting inflation expectations'],
+      text: ['CNBC 행사에서 높은 물가가 굳어지지 않도록 연준이 물가 대응을 이어가야 한다고 밝혔습니다.',
+        'At a CNBC event, he argued that the Fed should keep fighting inflation to prevent high expectations from becoming entrenched.'],
+      source: 'CNBC Television · Delivering Alpha',
+      url: 'https://www.youtube.com/watch?v=w4Mwt-JehOw',
+    },
     {
       topic: 'rates', date: '2023-03-07',
       headline: ['연준에 일관된 물가 대응 메시지를 주문', 'Called for consistent Fed messaging on inflation'],
@@ -40,6 +174,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'howard-marks': [
     {
+      topic: 'market', date: '2020-04-14',
+      headline: ['코로나19 국면의 정밀한 예측에 경계', 'Warned against precise forecasts during the pandemic'],
+      text: ['팬데믹 진행과 경제 정상화 경로처럼 알기 어려운 변수에 대해 단정적인 전망에 의존하는 위험을 설명했습니다.',
+        'He warned against relying on confident predictions about unknowable variables such as the pandemic’s path and the timing of economic normalization.'],
+      source: 'Oaktree · Knowledge of the Future',
+      url: 'https://www.oaktreecapital.com/insights/memo/knowledge-of-the-future',
+    },
+    {
       topic: 'credit', date: '2022-12-13',
       headline: ['금리 환경이 바뀌며 신용 투자 매력이 높아졌다고 평가', 'Saw a new rate regime improving credit opportunities'],
       text: ['장기간 이어진 저금리 환경이 바뀌고 대출기관이 더 높은 수익률을 요구할 수 있게 되면서 신용 투자 매력이 높아졌다고 판단했습니다.',
@@ -58,6 +200,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'jamie-dimon': [
     {
+      topic: 'market', date: '2020-04-06',
+      headline: ['코로나19로 심각한 경기침체에 대비', 'Prepared for a severe pandemic recession'],
+      text: ['주주서한에서 코로나19로 심각한 침체가 예상된다며, 은행이 더 극단적인 시나리오에서도 대출을 지속할 수 있는지를 점검했다고 밝혔습니다.',
+        'He said a severe recession was expected and described testing whether the bank could continue lending under more extreme scenarios.'],
+      source: 'JPMorganChase · 2019 annual shareholder letter',
+      url: 'https://www.jpmorganchase.com/content/dam/jpmc/jpmorgan-chase-and-co/investor-relations/documents/ceo-letter-to-shareholders-2019.pdf',
+    },
+    {
       topic: 'rates', date: '2023-04-04',
       headline: ['급격한 금리 상승과 긴축을 위험 요인으로 점검', 'Assessed rapid rate hikes and tightening as risks'],
       text: ['2022년 고물가와 빠른 금리 인상에 이어 양적긴축 및 지정학 위험이 경기와 금융시장에 미칠 영향을 주주서한에서 점검했습니다.',
@@ -75,6 +225,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
     },
   ],
   'ken-fisher': [
+    {
+      topic: 'market', date: '2025-03-19',
+      headline: ['조정기 헤드라인이 투자 심리에 미치는 영향 설명', 'Explained how correction headlines affect sentiment'],
+      text: ['주가 조정의 특징과 함께, 하락기에 공포가 커지면서 투자 판단이 흔들릴 수 있다고 설명했습니다.',
+        'He described market corrections and how rising fear during a decline can affect investment decisions.'],
+      source: 'Fisher Investments · Video transcript',
+      url: 'https://www.fisherinvestments.com/en-us/insights/videos/watch-out-for-this-when-the-market-drops',
+    },
     {
       topic: 'market', date: '2025-09-15',
       headline: ['상승장의 출발점을 2022년 하반기로 평가', 'Dated the start of the bull market to the second half of 2022'],
@@ -110,6 +268,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'michael-burry': [
     {
+      topic: 'strategy', date: '2015-12-29',
+      headline: ['물을 직접 옮기기보다 식량 생산을 통한 투자 설명', 'Described investing in water through food production'],
+      text: ['물 자체를 운송하는 비용이 높아 물이 풍부한 지역에서 생산한 식량을 물이 부족한 시장에 판매하는 방식에 주목했다고 전해졌습니다.',
+        'He reportedly focused on producing food in water-rich areas for sale to water-scarce markets because transporting water itself is costly.'],
+      source: 'Business Insider via Yahoo Finance · Interview report',
+      url: 'https://finance.yahoo.com/news/genius-big-short-explains-biggest-145902930.html',
+    },
+    {
       topic: 'strategy', date: '2019-08-16',
       headline: ['게임스톱 이사회에 자사주 매입 촉구', 'Urged GameStop’s board to complete its buyback'],
       text: ['주가가 4달러 미만일 때 남은 2억 3,760만 달러의 자사주 매입 한도를 집행하면 발행 주식 수를 크게 줄일 수 있다고 주장했습니다.',
@@ -127,6 +293,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
     },
   ],
   'stanley-druckenmiller': [
+    {
+      topic: 'portfolio', date: '2022-09-28',
+      headline: ['연준 긴축이 예상보다 큰 침체로 이어질 수 있다고 전망', 'Warned Fed tightening could cause a deeper-than-expected recession'],
+      text: ['CNBC 행사에서 연준 긴축의 여파로 다음 해 미국 경기가 예상보다 크게 위축될 수 있다고 봤습니다.',
+        'At a CNBC conference, he warned that the effects of Fed tightening could cause a deeper-than-expected US recession the following year.'],
+      source: 'Reuters · Delivering Alpha',
+      url: 'https://finance.yahoo.com/news/druckenmiller-sees-us-falling-recession-161309436.html',
+    },
     {
       topic: 'portfolio', date: '2023-06-07',
       headline: ['미국 경기의 경착륙 가능성 경고', 'Warned of a hard landing for the US economy'],
@@ -162,6 +336,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'bill-ackman': [
     {
+      topic: 'archive', date: '2017-03-13',
+      headline: ['퍼싱스퀘어의 밸리언트 지분 전량 매각 공개', 'Disclosed Pershing Square’s exit from Valeant'],
+      text: ['퍼싱스퀘어는 밸리언트 투자 전량을 매각했다고 발표하고, 애크먼이 이사회에서 남은 임기를 마친 뒤 물러난다고 밝혔습니다.',
+        'Pershing Square announced it had sold its entire Valeant investment and that Ackman would leave the board when his term ended.'],
+      source: 'Pershing Square · Valeant sale statement',
+      url: 'https://pershingsquareholdings.com/https-pershingsquareholdings-com-pershing-square-capital-management-l-p-announces-sale-of-its-investment-in-valeant-pharmaceuticals-international-inc/',
+    },
+    {
       topic: 'archive', date: '2023-03-29',
       headline: ['2022년 금리 헤지 성과와 배경 설명', 'Explained the performance of the 2022 rate hedge'],
       text: ['퍼싱스퀘어 연차보고서는 금리 상승에 대비한 헤지가 2022년 S&P 500 대비 초과 성과의 주요 요인이었다고 설명했습니다.',
@@ -179,6 +361,14 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
     },
   ],
   'ray-dalio': [
+    {
+      topic: 'archive', date: '2021-03-15',
+      headline: ['낮은 실질금리로 국채 투자 매력이 줄었다고 평가', 'Saw low real yields diminishing bond appeal'],
+      text: ['채권의 명목 수익률과 물가를 감안한 실질 수익률이 낮아 채권 보유 매력이 떨어진다고 주장했습니다.',
+        'He argued that low nominal and inflation-adjusted yields made bonds less attractive to hold.'],
+      source: 'Ray Dalio · Why in the World Would You Own Bonds When…',
+      url: 'https://www.linkedin.com/pulse/why-world-would-you-own-bonds-when-ray-dalio',
+    },
     {
       topic: 'archive', date: '2022-09-13',
       headline: ['금리 상승이 자산 가격과 성장을 압박한다고 분석', 'Analyzed how rising rates pressure asset prices and growth'],

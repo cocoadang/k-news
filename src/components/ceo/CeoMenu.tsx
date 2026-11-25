@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CeoApiResponse } from '../../ceo/types';
 import { fetchCeoDataset, requestCeoRefresh } from '../../ceo/dataSource';
-import { CeoStatementsView, CeoViewState } from './CeoStatementsView';
+import type { CeoViewState } from './CeoStatementsView';
 import { CeoTimeline } from './timeline/CeoTimelineCandidate';
 import { CeoKoAdmin } from './CeoKoAdmin';
 import { PageHeader, RefreshButton, CollectButton } from '../ui';
 import { useLang } from '../../i18n';
 
+let lastPublicDataset: { api: CeoApiResponse; fetchedAt: number } | undefined;
+
 /** CEO 메뉴 컨테이너: 읽기 전용 API 조회 → 화면 상태. 관리자에게만 원문 새로고침 버튼 */
 export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adminToolsOnly?:boolean }) {
   const { t } = useLang();
-  const [api, setApi] = useState<CeoApiResponse | null>(null);
+  const [api, setApi] = useState<CeoApiResponse | null>(() => !isAdmin && lastPublicDataset
+    && Date.now() - lastPublicDataset.fetchedAt < 120_000 ? lastPublicDataset.api : null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -21,10 +24,19 @@ export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adm
   const load = useCallback(async () => {
     const n = ++seq.current;
     setError(null);
-    try { accept(n, await fetchCeoDataset()); }
+    try {
+      const response = await fetchCeoDataset();
+      if (!isAdmin && n === seq.current && response.dataset && response.status !== 'not_loaded') {
+        lastPublicDataset = { api: response, fetchedAt: Date.now() };
+      }
+      accept(n, response);
+    }
     catch (e) { if (n === seq.current) setError(e instanceof Error ? e.message : String(e)); }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
+  }, [isAdmin]);
+  useEffect(() => {
+    void load();
+    return () => { seq.current++; };
+  }, [load]);
 
   const onRefresh = async () => {
     setRefreshing(true); setNotice(null);
@@ -42,7 +54,7 @@ export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adm
     }
   };
 
-  const state: CeoViewState = error ? { status: 'error', message: error }
+  const state: CeoViewState = error && !api?.dataset ? { status: 'error', message: error }
     : !api ? { status: 'loading' }
     : api.status === 'not_loaded' ? { status: 'not_loaded', message: api.message || '공식 출처 원문을 아직 불러오지 않았습니다.' }
     : !api.dataset ? { status: 'error', message: api.message || '공식 출처를 읽지 못했습니다.', sources: api.sources }
@@ -59,7 +71,24 @@ export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adm
       <PageHeader title={t('CEO 발언', 'CEO Quotes')} description={t('주제별 최신 발언과 원문을 확인하세요.', 'What CEOs said on the same questions, newest first. Changes in stance are not judged automatically — check the original wording and numbers.')}
         status={notice || undefined}
         />
-      {state.status === 'ready' ? <><p className="mb-3 text-xs text-slate-500">{t('저장된 자료의 일부 출처 또는 발언일이 미확인일 수 있습니다. 자료 부족은 발언 부재를 의미하지 않습니다.', 'Some sources or dates may be unconfirmed. Missing data does not mean nothing was said.')}</p><SectionBoundary label={t('CEO 발언 타임라인', 'CEO timeline')}><CeoTimeline dataset={state.dataset} /></SectionBoundary></> : <CeoStatementsView state={state} onRetry={load} isAdmin={false} />}
+      {state.status === 'ready' ? (
+        <SectionBoundary label={t('CEO 발언 타임라인', 'CEO timeline')}>
+          <CeoTimeline dataset={state.dataset} />
+        </SectionBoundary>
+      ) : state.status === 'loading' ? (
+        <p role="status" className="py-2 text-sm text-slate-400">
+          {t('발언 이력을 불러오는 중…', 'Loading statement history…')}
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3 py-2 text-sm text-slate-300">
+          <p role="status">{state.status === 'not_loaded'
+            ? t('아직 표시할 발언 이력이 없습니다.', 'No statement history is available yet.')
+            : t('발언 이력을 불러오지 못했습니다.', 'Could not load statement history.')}</p>
+          <button type="button" onClick={load} className="min-h-11 rounded-lg border border-slate-700 px-3 text-cyan-200 hover:bg-slate-800">
+            {t('다시 시도', 'Retry')}
+          </button>
+        </div>
+      )}
 
     </div>
   );

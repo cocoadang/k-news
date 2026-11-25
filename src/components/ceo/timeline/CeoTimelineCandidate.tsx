@@ -4,6 +4,7 @@ import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHist
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 import { groupedCeoTopics, displayText, displaySummary } from './companyQuestions.mjs';
+import { CeoPersonPicker } from './CeoPersonPicker';
 import { investorArchive } from './investorArchive';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
@@ -125,11 +126,16 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   }, [dataset, lang]);
 
   const [scopeKey, setScopeKey] = useState(scopes.find(s => s.count)?.key || scopes[0]?.key || '');
-  const scopeGroups = [
-    { id: 'business', label: t('기술·기업', 'Technology and business'), scopes: scopes.filter(s => s.personId !== 'donald-trump' && !financePeople.has(s.personId)) },
-    { id: 'finance', label: t('투자·금융', 'Investing and finance'), scopes: scopes.filter(s => financePeople.has(s.personId)) },
-    { id: 'policy', label: t('정책', 'Policy'), scopes: scopes.filter(s => s.personId === 'donald-trump') },
-  ];
+  const people = [
+    ...scopes.filter(s => s.personId !== 'donald-trump' && !financePeople.has(s.personId)),
+    ...scopes.filter(s => financePeople.has(s.personId)),
+    ...scopes.filter(s => s.personId === 'donald-trump'),
+  ].map(s => ({
+    id: s.personId,
+    name: s.name,
+    company: s.company,
+    disabled: !s.count && !curatedHistories.has(s.personId) && !investorArchive[s.personId]?.length,
+  }));
   const scope = scopes.find(s => s.key === scopeKey);
   const CuratedHistory = curatedHistories.get(scope?.personId);
   const investor = investorProfiles[scope?.personId as keyof typeof investorProfiles];
@@ -139,24 +145,15 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const q = topics.find((x: any) => x.id === questionId) || topics[0];
 
   const items: Item[] = (q?.items || []).slice().sort((a: Item, b: Item) => (b.date.value || '').localeCompare(a.date.value || ''));
-  const pickScope = (k: string) => { setScopeKey(k); setQuestionId(''); };
+  const pickScope = (k: string) => {
+    if (k === scopeKey) return;
+    setScopeKey(k);
+    setQuestionId('');
+  };
   const pickQuestion = (id: string) => setQuestionId(id);
 
   return <section className="ceo-tl">
-    {scopes.length > 0 && <div className="tl-head">
-      <label className="tl-person-picker">
-        <span>{t('인물 선택', 'Select a person')}</span>
-        <select value={scopeKey} onChange={event => pickScope(event.target.value)}>
-          {scopeGroups.filter(group => group.scopes.length > 0).map(group => (
-            <optgroup key={group.id} label={group.label}>
-              {group.scopes.map(s => <option key={s.key} value={s.key} disabled={!s.count && !curatedHistories.has(s.personId) && !investorArchive[s.personId]?.length}>
-                {s.name} · {s.company}
-              </option>)}
-            </optgroup>
-          ))}
-        </select>
-      </label>
-    </div>}
+    {people.length > 0 && <CeoPersonPicker people={people} selected={scopeKey} onSelect={pickScope} />}
 
     {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
     {investor ? <InvestorHistory key={scopeKey} personId={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (

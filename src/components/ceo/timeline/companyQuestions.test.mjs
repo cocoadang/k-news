@@ -1,10 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { companyQuestions, effectiveDate, literalMetrics, isComparableClaim, displayText } from './companyQuestions.mjs';
+import { companyQuestions, effectiveDate, literalMetrics, isComparableClaim, displayText, displaySummary } from './companyQuestions.mjs';
 
 // Synthetic, clearly fictional fixtures. No production data.
 const st = (id, companyId, quoteText, extra = {}) => ({ statementId: id, personId: 'p', companyId, kind: 'direct_quote', quoteText, ...extra });
 const rel = v => ({ referenceDate: { value: v, basis: 'released', precision: 'day' } });
+
+test('interview summaries show the body when available and preserve reviewed translations', () => {
+  const quote = { sourceType: 'interview', koSummary: { status: 'ready', title: '짧은 제목', summary: ' 자세한 내용 ' } };
+  assert.deepEqual(displaySummary(quote), { title: '짧은 제목', summary: '자세한 내용', reviewed: false });
+  assert.equal(displaySummary({ ...quote, translationKo: { status: 'reviewed', text: '검토된 번역' } }), null);
+  assert.equal(displaySummary({ ...quote, koSummary: { ...quote.koSummary, summary: '짧은 제목' } }), null);
+});
+
+test('reviewed scaling summary applies only to the matching interview excerpt', () => {
+  const quote = {
+    personId: 'dario-amodei',
+    quoteText: "The scaling laws are a line on a piece of paper.",
+    evidence: [{ url: 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-exclusive-transcript-anthropic-co-founders-dario-and-daniela-amodei-speak' }],
+  };
+  assert.equal(displaySummary(quote)?.reviewed, true);
+  assert.equal(displaySummary({ ...quote, quoteText: 'The scaling laws predict certain capabilities.' }), null);
+  assert.equal(displaySummary({ ...quote, evidence: [] }), null);
+});
 
 test('company-specific questions, oldest first, isolated by company', () => {
   const data = [

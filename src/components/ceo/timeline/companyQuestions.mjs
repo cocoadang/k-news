@@ -136,6 +136,24 @@ export function displayText(s) {
   return { text: String(s?.quoteText || ''), kind: 'original' };
 }
 
+export function displaySummary(s) {
+  if (s?.personId === 'dario-amodei'
+    && s.evidence?.some(({ url }) => url === 'https://pressroom.versantmedia.com/cnbc/press-releases/cnbc-exclusive-transcript-anthropic-co-founders-dario-and-daniela-amodei-speak')
+    && /scaling laws?\b[^.?!]*\bline on a piece of paper\b/i.test(s.quoteText || '')) {
+    return {
+      title: 'AI가 할 수 있는 일은 예측했지만, 실제 파급력은 뒤늦게 실감',
+      summary: 'AI 모델의 규모를 키우면 어떤 업무까지 해낼지 예측할 수 있었지만, 그 능력이 현실에서 얼마나 큰 변화를 일으킬지는 실제로 벌어진 뒤에야 실감했다고 말했습니다.',
+      reviewed: true,
+    };
+  }
+  const display = displayText(s);
+  if (display.kind !== 'ai_title') return null;
+  const summary = typeof s.koSummary.summary === 'string' ? s.koSummary.summary.trim() : '';
+  return summary && summary !== display.text.trim()
+    ? { title: display.text, summary, reviewed: false }
+    : null;
+}
+
 export const COMPANY_LABELS = { nvda: 'NVIDIA', msft: 'Microsoft', googl: 'Google', tsla: 'Tesla', spacex: 'SpaceX', bridgewater: 'Bridgewater', pershing: 'Pershing Square', openai: 'OpenAI', anthropic: 'Anthropic' };
 
 /**

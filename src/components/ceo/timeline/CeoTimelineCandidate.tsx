@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
-import { groupedCeoTopics, displayText } from './companyQuestions.mjs';
+import { groupedCeoTopics, displayText, displaySummary } from './companyQuestions.mjs';
 import { investorArchive } from './investorArchive';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
@@ -68,13 +68,12 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
       {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
       {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
-  const blogSummary = s.sourceType === 'authored_post' && t.kind === 'ai_title'
-    ? s.koSummary.summary?.trim() : '';
-  if (blogSummary) {
+  const summary = displaySummary(s);
+  if (summary) {
     return <>
-      <h4 className="tl-milestone">{t.text}</h4>
-      <p className="tl-text">{blogSummary}</p>
-      <span className="tl-tag">블로그 발췌 요약</span>
+      <h4 className="tl-milestone">{summary.title}</h4>
+      <p className="tl-text">{summary.summary}</p>
+      <span className="tl-tag">{summary.reviewed ? '원문 검토 요약' : s.sourceType === 'authored_post' ? '블로그 발췌 요약' : 'AI 발언 요약'}</span>
       <details className="tl-original" open={open}><summary>원문 발췌 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
     </>;
   }

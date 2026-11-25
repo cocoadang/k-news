@@ -1,15 +1,10 @@
 import { useState } from 'react';
 import { useLang } from '../../../i18n';
 import { HistoryEntry, HistoryPanel } from './HistoryPanel';
+import { investorArchive, type InvestorEntry } from './investorArchive';
 
 type Localized = readonly [ko: string, en: string];
-type Entry = {
-  date: string;
-  headline: Localized;
-  text: Localized;
-  source: string;
-  url: string;
-};
+type Entry = InvestorEntry;
 type Topic = { id: string; label: Localized; entries: Entry[] };
 type Stance = { level: -2 | -1 | 0 | 1 | 2; scope: Localized; evidence: Omit<Entry, 'headline'> };
 
@@ -286,11 +281,41 @@ export function StanceEvidence({ personId }: { personId: string }) {
   </details>;
 }
 
-export function InvestorHistory({ profile }: { profile: typeof investorProfiles[keyof typeof investorProfiles] }) {
+export function SourcedInvestorEntry({ entry }: { entry: InvestorEntry }) {
+  const { t } = useLang();
+  return <HistoryEntry
+    date={entry.date}
+    dateLabel={entry.date.replace(/-/g, '.')}
+    source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{entry.source} ↗</a>}
+  >
+    <h4 className="tl-milestone">{t(...entry.headline)}</h4>
+    <p className="tl-text">{t(...entry.text)}</p>
+  </HistoryEntry>;
+}
+
+export function InvestorArchive({ personId }: { personId: string }) {
+  const { t } = useLang();
+  const entries = investorArchive[personId]?.filter(entry => entry.topic === 'archive') ?? [];
+  if (!entries.length) return null;
+  return <details className="mb-4 text-sm">
+    <summary className="w-fit cursor-pointer py-1 text-slate-300">
+      {t(`과거 주요 발언 ${entries.length}건`, `Historical highlights · ${entries.length}`)}
+    </summary>
+    <ol className="tl-list mt-3">
+      {[...entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => (
+        <SourcedInvestorEntry key={entry.url} entry={entry}/>
+      ))}
+    </ol>
+  </details>;
+}
+
+export function InvestorHistory({ personId, profile }: { personId: string; profile: typeof investorProfiles[keyof typeof investorProfiles] }) {
   const { t } = useLang();
   const [active, setActive] = useState('market');
   const topics: Topic[] = profile.topics;
   const topic = topics.find(entry => entry.id === active) || topics[0];
+  const olderEntries = investorArchive[personId]?.filter(entry => entry.topic === topic.id) ?? [];
+  const entries = [...topic.entries, ...olderEntries].sort((a, b) => b.date.localeCompare(a.date));
   return <HistoryPanel
     title={t(`${profile.name[0]} 발언 이력`, `${profile.name[1]} statement history`)}
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.label) }))}
@@ -299,14 +324,6 @@ export function InvestorHistory({ profile }: { profile: typeof investorProfiles[
     topicTitle={t(...topic.label)}
     metadata={t('발언일 또는 보도일 기준 · 최신순', 'Statement or publication dates · newest first')}
   >
-    {[...topic.entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
-      key={entry.url}
-      date={entry.date}
-      dateLabel={entry.date.replace(/-/g, '.')}
-      source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{entry.source} ↗</a>}
-    >
-      <h4 className="tl-milestone">{t(...entry.headline)}</h4>
-      <p className="tl-text">{t(...entry.text)}</p>
-    </HistoryEntry>)}
+    {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}
   </HistoryPanel>;
 }

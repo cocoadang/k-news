@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLang } from '../../../i18n';
-import { HistoryEntry, HistoryPanel } from './HistoryPanel';
+import { HistoryPanel } from './HistoryPanel';
+import { SourcedInvestorEntry } from './InvestorHistory';
+import { investorArchive } from './investorArchive';
 
 export const druckenmillerPersonId = 'stanley-druckenmiller';
 
@@ -66,6 +68,10 @@ export function DruckenmillerHistory() {
   const { t } = useLang();
   const [active, setActive] = useState(topics[0].id);
   const topic = topics.find(entry => entry.id === active) || topics[0];
+  const entries = [
+    ...topic.entries.map(entry => ({ ...entry, source: sources[entry.source].name, url: sources[entry.source].url })),
+    ...investorArchive[druckenmillerPersonId].filter(entry => entry.topic === topic.id),
+  ].sort((a, b) => b.date.localeCompare(a.date));
   return <HistoryPanel
     title={t('스탠리 드러켄밀러 발언 이력', 'Stanley Druckenmiller statement history')}
     topics={[topics[0], topics[2], topics[1]].map(entry => ({ id: entry.id, label: t(...entry.label) }))}
@@ -75,14 +81,6 @@ export function DruckenmillerHistory() {
     summary={t(...topic.summary)}
     metadata={t('인터뷰·행사 공개일 기준 · 최신순', 'Interview and event publication dates · newest first')}
   >
-    {[...topic.entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
-      key={entry.date}
-      date={entry.date}
-      dateLabel={entry.date.replace(/-/g, '.')}
-      source={<a className="tl-source" href={sources[entry.source].url} target="_blank" rel="noreferrer">{sources[entry.source].name} ↗</a>}
-    >
-      <h4 className="tl-milestone">{t(...entry.headline)}</h4>
-      <p className="tl-text">{t(...entry.text)}</p>
-    </HistoryEntry>)}
+    {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}
   </HistoryPanel>;
 }

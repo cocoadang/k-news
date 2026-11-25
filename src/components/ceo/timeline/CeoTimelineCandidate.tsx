@@ -1,9 +1,10 @@
-import { InvestorHistory, MarketStance, StanceEvidence, investorProfiles } from './InvestorHistory';
+import { InvestorArchive, InvestorHistory, MarketStance, StanceEvidence, investorProfiles } from './InvestorHistory';
 import React, { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
 import { groupedCeoTopics, displayText } from './companyQuestions.mjs';
+import { investorArchive } from './investorArchive';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
 
@@ -149,7 +150,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
         <select value={scopeKey} onChange={event => pickScope(event.target.value)}>
           {scopeGroups.filter(group => group.scopes.length > 0).map(group => (
             <optgroup key={group.id} label={group.label}>
-              {group.scopes.map(s => <option key={s.key} value={s.key} disabled={!s.count && !curatedHistories.has(s.personId)}>
+              {group.scopes.map(s => <option key={s.key} value={s.key} disabled={!s.count && !curatedHistories.has(s.personId) && !investorArchive[s.personId]?.length}>
                 {s.name} · {s.company}
               </option>)}
             </optgroup>
@@ -159,11 +160,16 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
     </div>}
 
     {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
-    {investor ? <InvestorHistory key={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
-      <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
+    {investor ? <InvestorHistory key={scopeKey} personId={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
+      investorArchive[scopeKey]?.length
+        ? <InvestorArchive key={scopeKey} personId={scopeKey}/>
+        : <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}
-      evidence={<StanceEvidence key={scopeKey} personId={scope.personId}/>}
+      evidence={<React.Fragment key={scopeKey}>
+        <StanceEvidence personId={scopeKey}/>
+        <InvestorArchive personId={scopeKey}/>
+      </React.Fragment>}
       topics={topics.map((entry: any) => ({
         id: entry.id,
         label: qLabel(entry),

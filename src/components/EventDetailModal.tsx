@@ -7,7 +7,6 @@ import {
   Layers, 
   Sparkles, 
   CheckSquare, 
-  Eye, 
   CheckCircle2, 
   Clock, 
   AlertTriangle 
@@ -44,6 +43,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   }, [event?.id, onClose]);
 
   if (!event) return null;
+
+  const hasAnalysis = event.analysisStatus === 'completed' || (!event.analysisStatus && event.importance > 0);
+  const hasRelatedSources = event.relatedSources.length > 0;
+  const sources = [event.primarySource, ...event.relatedSources];
 
   const handleSend = async () => {
     setIsSending(true);
@@ -227,14 +230,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         {/* Content Body */}
         <div className="news-detail-sections p-3 sm:p-6 space-y-3 sm:space-y-4 text-sm text-slate-200">
           
-          {event.screening && event.analysisStatus !== 'completed' && (
-            <div className="bg-cyan-950/40 p-4 rounded-xl border border-cyan-900">
-              <p className="font-bold text-cyan-300">{t('간단 평가', 'Quick score')} {event.screening.score}★ {t('(최종 점수 아님)', '(not final)')}</p>
-              <p>{event.screening.reason}</p>
-              <p>{event.screening.uncertain ? t('정보 부족 또는 판단 불확실: 상세 확인 대상', 'Insufficient info or uncertain: needs a closer look') : ''}</p>
-              <p>{event.analysisDeferredReason}</p>
-            </div>
-          )}
           {/* Analysis Status Details (Failed, Skipped, Pending reasons) */}
           {event.analysisStatus === 'failed' && (
             <div className="bg-rose-950/60 p-3.5 sm:p-4 rounded-xl border border-rose-800/80">
@@ -294,36 +289,38 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {/* Multi-Company Impacts */}
-          <div className="bg-slate-950/70 p-3.5 sm:p-4 rounded-xl border border-slate-800">
-            <div className="text-xs font-bold text-purple-300 mb-2.5 uppercase">
-              {t('📊 [기업별 영향] 개별 영향 및 분석', '📊 Impact by company')}
-            </div>
-            <div className="space-y-2">
-              {event.companyImpacts && event.companyImpacts.length > 0 ? (
-                event.companyImpacts.map((ci, idx) => {
-                  const isPos = ci.impact === 'positive';
-                  const isNeg = ci.impact === 'negative';
-                  const badgeText = isPos ? t('🟢 긍정적', '🟢 Positive') : isNeg ? t('🔴 부정적', '🔴 Negative') : t('🟡 중립적', '🟡 Neutral');
-                  const badgeColor = isPos ? 'text-emerald-400' : isNeg ? 'text-rose-400' : 'text-amber-400';
+          {hasAnalysis && (
+            <div className="bg-slate-950/70 p-3.5 sm:p-4 rounded-xl border border-slate-800">
+              <div className="text-xs font-bold text-purple-300 mb-2.5 uppercase">
+                {t('📊 [기업별 영향] 개별 영향 및 분석', '📊 Impact by company')}
+              </div>
+              <div className="space-y-2">
+                {event.companyImpacts && event.companyImpacts.length > 0 ? (
+                  event.companyImpacts.map((ci, idx) => {
+                    const isPos = ci.impact === 'positive';
+                    const isNeg = ci.impact === 'negative';
+                    const badgeText = isPos ? t('🟢 긍정적', '🟢 Positive') : isNeg ? t('🔴 부정적', '🔴 Negative') : t('🟡 중립적', '🟡 Neutral');
+                    const badgeColor = isPos ? 'text-emerald-400' : isNeg ? 'text-rose-400' : 'text-amber-400';
 
-                  return (
-                    <div key={idx} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-white text-xs">{ci.companyName} {ci.ticker && `(${ci.ticker})`}</span>
-                        <span className={`text-xs font-semibold ${badgeColor}`}>{badgeText}</span>
+                    return (
+                      <div key={idx} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-white text-xs">{ci.companyName} {ci.ticker && `(${ci.ticker})`}</span>
+                          <span className={`text-xs font-semibold ${badgeColor}`}>{badgeText}</span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">→ {ci.rationale}</p>
                       </div>
-                      <p className="text-xs text-slate-300 leading-relaxed">→ {ci.rationale}</p>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-slate-300">{event.investmentImpactExplanation || event.impactRationale}</p>
-              )}
+                    );
+                  })
+                ) : (
+                  <p className="text-xs text-slate-300">{event.investmentImpactExplanation || event.impactRationale}</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Why it Matters */}
-          {event.whyItMatters && (
+          {hasAnalysis && event.whyItMatters && (
             <div className="bg-slate-950/70 p-3.5 sm:p-4 rounded-xl border border-slate-800">
               <div className="text-xs font-bold text-amber-300 mb-1.5 uppercase">
                 {t('💡 [왜 중요한가] 장기 기업가치 및 비즈니스 해자', '💡 Why it matters: long-term value & moat')}
@@ -335,7 +332,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {/* Key Checkpoints to watch */}
-          {event.keyCheckpointsToWatch && event.keyCheckpointsToWatch.length > 0 && (
+          {hasAnalysis && event.keyCheckpointsToWatch && event.keyCheckpointsToWatch.length > 0 && (
             <div className="bg-slate-950/70 p-3.5 sm:p-4 rounded-xl border border-slate-800">
               <div className="text-xs font-bold text-emerald-300 mb-2 flex items-center gap-1.5 uppercase">
                 <CheckSquare className="w-4 h-4 text-emerald-400" />
@@ -352,67 +349,33 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
           )}
 
-          {/* Clustered Media Sources Section */}
-          <div className="bg-slate-950/70 p-3.5 sm:p-4 rounded-xl border border-slate-800">
-            <div className="text-xs font-bold text-purple-300 mb-2 flex items-center gap-1.5 uppercase">
-              <Layers className="w-4 h-4 text-purple-400" />
-              {t('함께 묶인 기사', 'Grouped articles')} ({1 + event.relatedSources.length})
+          {hasRelatedSources && (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
+              <Layers className="h-4 w-4 text-purple-400" />
+              {t('함께 묶인 기사', 'Grouped articles')} ({sources.length})
             </div>
-            <p className="text-[11px] text-slate-500 mb-2">
-              {t('자동으로 같은 사건으로 분류된 기사입니다. 기사 수가 사실 확인 여부나 신뢰도를 뜻하지는 않습니다.', 'Articles automatically grouped as the same event. The number of articles does not indicate verification or credibility.')}
-            </p>
-            <div className="space-y-2">
-              {/* Primary Source */}
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900 border border-cyan-800/40">
-                <div className="min-w-0 pr-2">
-                  <div className="flex items-center flex-wrap gap-1.5">
-                    <span className="font-semibold text-white text-xs">{event.primarySource.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">{t('대표 출처', 'Primary source')}</span>
-                    <span className="text-[10px] text-slate-400">{t('신뢰도', 'Credibility')} {event.primarySource.credibilityScore || 10}/10</span>
-                  </div>
-                  <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{event.primarySource.title}</div>
-                </div>
+          )}
+          <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label={t('기사 출처', 'Article sources')}>
+            {sources.map((source) => (
+              <li key={source.url}>
                 <a
-                  href={event.primarySource.url}
-                  aria-label={t(`${event.primarySource.name} 원문 보기`, `Read ${event.primarySource.name} source`)}
+                  href={source.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white transition-colors shrink-0"
+                  aria-label={t(`${source.name} 원문 보기`, `Read ${source.name} source`)}
+                  className="inline-flex min-h-[44px] items-center gap-1.5 text-sm text-cyan-300 hover:underline"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  {source.name}
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
-              </div>
-
-              {/* Detected original source citation */}
-              {event.detectedOriginalSource && (
-                <div className="p-2 rounded bg-cyan-950/40 border border-cyan-800/40 text-xs text-cyan-300">
-                  <span className="font-semibold">{t('원출처 인용 감지', 'Original source detected')}:</span> {event.detectedOriginalSource}
-                </div>
-              )}
-
-              {/* Related Sources */}
-              {event.relatedSources.map((rel, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                  <div className="min-w-0 pr-2">
-                    <div className="flex items-center flex-wrap gap-1.5">
-                      <span className="font-medium text-slate-200 text-xs">{rel.name}</span>
-                      <span className="text-[10px] text-slate-400">{t('신뢰도', 'Credibility')} {rel.credibilityScore || 8}/10</span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{rel.title}</div>
-                  </div>
-                  <a
-                    href={rel.url}
-                    aria-label={t(`${rel.name} 원문 보기`, `Read ${rel.name} source`)}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
+          {event.detectedOriginalSource && (
+            <p className="text-xs text-slate-400">
+              {t('원출처 인용 감지', 'Original source detected')}: {event.detectedOriginalSource}
+            </p>
+          )}
 
           <div className="text-xs text-slate-400 border-t border-slate-800 pt-3">
             <span>{t('최초 발견', 'First seen')}: {new Date(event.firstSeenAt).toLocaleString(locale)}</span>

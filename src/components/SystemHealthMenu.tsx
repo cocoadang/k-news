@@ -192,7 +192,6 @@ export function SystemHealthMenu() {
           </div>)}
         </div>
       </section>)}
-      <p className="text-xs leading-relaxed text-slate-400">해석 주의: 펀드 유출입에는 개인·기관 자금이 함께 포함될 수 있으며 전체 국가 간 자본 이동을 뜻하지 않습니다. 보유잔액 변동은 환율·가격 효과를 포함합니다. 공식 국제수지 흐름과 펀드 흐름은 합산하지 않습니다.</p>
     </section>
   );
 }

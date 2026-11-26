@@ -20,11 +20,11 @@ const RULES = (): Record<string, string> => ({
   mubot: tr('라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식', 'Approximation of Laoer\'s Infinite Buying V4.0 (TQQQ, 20 splits)'),
   qqq: tr('같은 날 같은 금액을 QQQ에 적립', 'Same amount into QQQ on the same days'),
 });
-const VARIANT_EN: Record<string, [string, string]> = {
-  gfc: ['GFC low', 'Starts at the Nasdaq-100 closing low on Nov 20, 2008 (1,037), −54% from the Oct 2007 peak.'],
-  trade: ['US–China trade war low', 'Starts at the Dec 24, 2018 low (5,899), −23% from the Aug 2018 peak.'],
-  covid: ['COVID low', 'Starts at the Mar 20, 2020 low (6,994), −28% from the Feb 2020 peak.'],
-  rate: ['2022 rate-hike low', 'Starts at the Dec 28, 2022 low (10,679), −36% from the Nov 2021 peak.'],
+const VARIANT_EN: Record<string, string> = {
+  gfc: 'GFC low',
+  trade: 'US–China trade war low',
+  covid: 'COVID low',
+  rate: '2022 rate-hike low',
 };
 const ASSUMPTIONS_EN = [
   'First contribution on each low date, then a fixed amount on the first trading day of every month; signal from the prior close, trades at the same-day close; 0.25% fee on each buy and sell',
@@ -40,7 +40,7 @@ type Live = {asOf: string; start: string; updatedAt: number; order?: string[];
   virtual: Record<string, {label: string; twr: number | null; mdd: number; series: [string, number][]; bucket: string | null; deployLeft: number | null;
     mubot: {mode: string; T: number; avgUsd: number; closeUsd: number} | null}>};
 type Strat = {label: string; note: string; irr?: number; irrLiq?: number; mdd?: number; final?: number; invested?: number; curve?: [string, number, number][]; na?: string};
-type Variant = {name: string; label: string; desc: string; period: [string, string]; strategies: Record<string, Strat>};
+type Variant = {name: string; label: string; period: [string, string]; strategies: Record<string, Strat>};
 type Backtest = {monthly: number; dataEnd: string; order?: string[]; variants: Record<string, Variant>; assumptions?: string[];
   startYears: Record<string, any>[]; fiveYear: Record<string, any>[]; startRange: [number, number]; fiveRange: [number, number];
   summary: Record<string, {startAvg: number; startWorstMdd: number; fiveAvg: number; fiveMin: number; fiveBeatQqq: number | null; fiveN: number}>};
@@ -275,7 +275,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       <div className="relative min-w-0">
         <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : dd === 0 ? '0.00%' : `−${dd.toFixed(2)}%`}
           sub={compare(dd === null ? null : -dd, drawdownAverage ? -drawdownAverage.mean : undefined, '%p')}
-          time={usableNdx ? t(`지연 시세 · ${formatted(usableNdx.asOf)}`, `Delayed quote · ${formatted(usableNdx.asOf)}`) : dd !== null ? saved(live?.asOf) : availability}
+          time={usableNdx ? undefined : dd !== null ? saved(live?.asOf) : availability}
           tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
         <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
           aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
@@ -336,7 +336,6 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
         )}</p>
       </section>
     </div>
-    <p className="text-xs text-slate-400">{t('화면을 열어두면 3분마다 확인합니다. 실제 갱신 시점은 시세 제공처에 따라 다릅니다.', 'Checks every 3 minutes while visible. Quote updates depend on the data provider.')}</p>
   </>;
 }
 
@@ -414,8 +413,7 @@ function LiveSection({live}: {live: Live}) {
 
 function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: string; setVariant: (v: string) => void}) {
   const {t, lang} = useLang();
-  const vName = (k: string, v: Variant) => (lang === 'en' && VARIANT_EN[k] ? VARIANT_EN[k][0] : v.name);
-  const vDesc = (k: string, v: Variant) => (lang === 'en' && VARIANT_EN[k] ? VARIANT_EN[k][1] : v.desc.trim());
+  const vName = (k: string, v: Variant) => (lang === 'en' ? VARIANT_EN[k] ?? v.name : v.name);
   const order = bt.order || ORDER, V = bt.variants[variant] || Object.values(bt.variants)[0];
   const comparison = tripodVariants[variant];
   const includeTripod = comparison && comparison.start === V.period[0] && comparison.end === V.period[1]
@@ -437,7 +435,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     <h2 className="text-base font-semibold text-white">{lang === 'en' ? `Backtest — start at a crisis low, add ${won(bt.monthly)} every month` : `백테스트 — 위기 저점에서 시작해 매달 ${Math.round(bt.monthly / 1e4)}만 원 적립`}</h2>
     <div className="mt-3 flex flex-wrap gap-2" aria-label={t('시작 시점', 'Start point')}>{Object.entries(bt.variants).map(([k, v]) =>
       <button key={k} type="button" className={chipClass(k === variant)} aria-pressed={k === variant} onClick={() => setVariant(k)}>{vName(k, v)}</button>)}</div>
-    <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span> · {vDesc(variant, V)}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span></p>
     <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]} mobileHide={[4]}>
       {primaryOrder.map(k => { const s = S[k]; if (!s) return null; return s.na
         ? <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={`${tdL} text-slate-400`} colSpan={3}>{s.na}</td></tr>

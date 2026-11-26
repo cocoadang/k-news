@@ -517,16 +517,6 @@ export default function App() {
 
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 text-xs text-slate-500 text-center">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>{t('미국주식 모니터링', 'US Stock Monitor')}</span>
-          <span className="text-[11px] text-slate-400">
-            {t('감시 대상', 'Tracking')}: SpaceX · Alphabet/Google · Tesla · Microsoft · NVIDIA & {t('주요 글로벌 경제지', 'major global business press')}
-          </span>
-        </div>
-      </footer>
-
       {/* Modals */}
       {detailEvent && (
         <EventDetailModal

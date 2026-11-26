@@ -309,7 +309,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        {drawdownAverage && <p className="mt-1 text-xs text-slate-400">{drawdownAverage.start}~{drawdownAverage.end} · {t('나스닥100 일별 종가의 전고점 대비 하락폭 평균', 'Mean drawdown from the running high of Nasdaq-100 daily closes')} −{drawdownAverage.mean.toFixed(2)}%</p>}
+        {drawdownAverage && <p className="mt-1 text-xs text-slate-400">{drawdownAverage.start}~{drawdownAverage.end} · {t('나스닥100 일별 종가의 조회 기간 내 전고점 대비 하락폭 평균', 'Mean drawdown from the running high within the displayed Nasdaq-100 daily series')} −{drawdownAverage.mean.toFixed(2)}%</p>}
         {peak !== null && <p className="mt-1 text-xs text-slate-400">{t('전고점', 'Peak')} {Math.round(peak).toLocaleString('en-US')}</p>}
         <div className="mt-2 text-xs sm:text-sm"><Table history head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),

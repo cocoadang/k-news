@@ -31,7 +31,7 @@ body,button,input,select,textarea{font-family:inherit;}
   .news-search-clear{width:44px;}
   .news-card-actions>button,.news-card-actions>div>a{min-height:44px;}
   .strategy-menu{overflow-wrap:anywhere;}
-  .strategy-menu .strategy-card,.strategy-menu .strategy-kpi{padding:12px;}
+  .strategy-menu .strategy-card{padding:12px;}
   .strategy-menu .strategy-card>h2{line-height:1.5;}
   .strategy-menu .mt-4{margin-top:12px;}
   .strategy-menu summary{min-height:44px;align-content:center;line-height:1.5;}

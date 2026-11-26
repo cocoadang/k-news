@@ -106,10 +106,12 @@ const tdL = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-left whitespa
 const mh = 'hidden sm:table-cell';
 const card = 'strategy-card min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
 
-function Kpi({title, value, sub, time, tone}: {title: string; value: string; sub?: string; time?: string; tone?: 'ok' | 'warn' | 'bad'}) {
+function Kpi({title, value, sub, tone}: {title: string; value: string; sub: string; tone?: 'ok' | 'warn' | 'bad'}) {
   const c = tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-300' : tone === 'ok' ? 'text-emerald-300' : 'text-white';
-  return <div className="strategy-kpi h-full min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
-    <p className="text-xs text-slate-400">{title}</p><p className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-0.5 text-xs leading-5 text-slate-400">{sub}</p>}{time && <p className="mt-1 text-xs leading-4 text-slate-400">{time}</p>}
+  return <div className="strategy-kpi h-full min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 sm:px-3.5 sm:py-3">
+    <p className="pr-4 text-xs leading-4 text-slate-400">{title}</p>
+    <p className={`mt-1 text-xl font-bold leading-6 tabular-nums ${c}`}>{value}</p>
+    <p className="mt-0.5 text-xs leading-4 text-slate-400">{sub}</p>
   </div>;
 }
 
@@ -214,10 +216,6 @@ function IndicatorHistoryButton({label, open, onToggle}: {label: string; open: b
 const quoteDate = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
 });
-const quoteTime = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-});
-
 function MarketIndicatorCards({live}: {live: Live | null}) {
   const {t} = useLang();
   const [quotes, setQuotes] = useState<MarketIndicators | null>(null);
@@ -256,12 +254,11 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
   const vix = vixQuote?.value ?? num(m?.vix?.value);
   const fg = quotes?.fearGreed?.value ?? num(m?.fearGreed?.score);
   const rsi = quotes?.rsi;
-  const formatted = (date: string | number) => `${quoteTime.format(new Date(date))} KST`;
-  const saved = (asOf?: string) => asOf ? `${t('저장값', 'Saved')} · ${asOf}` : undefined;
   const availability = quotes ? t('데이터를 불러올 수 없음', 'Data unavailable') : t('불러오는 중', 'Loading');
   const drawdownAverage = ndx?.drawdownAverage;
   const compare = (value: number | null, mean?: number, unit = 'p') => {
-    if (value === null || mean === undefined || !Number.isFinite(mean)) return t('평균 비교 자료 없음', 'Mean comparison unavailable');
+    if (value === null) return availability;
+    if (mean === undefined || !Number.isFinite(mean)) return t('평균 비교 자료 없음', 'Mean comparison unavailable');
     const delta = value - mean;
     return t(`평균 ${mean.toFixed(2)}${unit === '%p' ? '%' : ''} 대비 ${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit}`,
       `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit === '%p' ? ' pp' : ' pts'} vs. mean ${mean.toFixed(2)}${unit === '%p' ? '%' : ''}`);
@@ -275,7 +272,6 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       <div className="relative min-w-0">
         <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : dd === 0 ? '0.00%' : `−${dd.toFixed(2)}%`}
           sub={compare(dd === null ? null : -dd, drawdownAverage ? -drawdownAverage.mean : undefined, '%p')}
-          time={usableNdx ? undefined : dd !== null ? saved(live?.asOf) : availability}
           tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
         <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
           aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
@@ -287,21 +283,18 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       <div className="relative min-w-0">
         <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)}
           sub={compare(vix, indicatorHistory.vix.mean)}
-          time={vixQuote ? formatted(vixQuote.asOf) : vix !== null ? saved(live?.asOf) : availability}
           tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
         <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
       </div>
       <div className="relative min-w-0">
         <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)}
           sub={compare(fg, indicatorHistory.fear.mean)}
-          time={quotes?.fearGreed ? `CNN · ${formatted(quotes.fearGreed.asOf)}` : live && fg !== null ? t(`저장 시각 · ${formatted(live.updatedAt)}`, `Saved at · ${formatted(live.updatedAt)}`) : availability}
           tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
         <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
       </div>
       <div className="relative min-w-0">
         <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')} value={rsi ? rsi.value.toFixed(1) : '—'}
-          sub={compare(rsi?.value ?? null, indicatorHistory.rsi.mean)}
-          time={rsi ? rsi.intraday ? t(`장중 · ${formatted(rsi.asOf)}`, `Intraday · ${formatted(rsi.asOf)}`) : t(`${rsi.asOf} 미국장 종가`, `${rsi.asOf} US close`) : availability}/>
+          sub={compare(rsi?.value ?? null, indicatorHistory.rsi.mean)}/>
         <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
       </div>
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}

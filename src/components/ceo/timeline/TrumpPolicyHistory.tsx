@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import truthSocialManifest from './truthSocialManifest.json';
 import { useLang } from '../../../i18n';
-import { HistoryPanel, HistoryEntry } from './HistoryPanel';
-import { InvestorArchive } from './InvestorHistory';
+import { HistoryPanel } from './HistoryPanel';
+import { SourcedInvestorEntry } from './InvestorHistory';
+import { investorArchive } from './investorArchive';
 
 type Localized = readonly [ko: string, en: string];
 type Milestone = {
@@ -12,12 +13,12 @@ type Milestone = {
   summary: Localized;
   url: string;
 };
-type Topic = { title: Localized; takeaway: Localized; milestones: Milestone[] };
+type Topic = { id: string; title: Localized; takeaway: Localized; milestones: Milestone[] };
 const truth = (id: string) => 'https://truthsocial.com/@realDonaldTrump/' + id;
 
 const topics: Topic[] = [
   {
-    title: ['관세·무역', 'Tariffs and trade'],
+    id: 'trade', title: ['관세·무역', 'Tariffs and trade'],
     takeaway: [
       '무역제도 개편 방침을 기본관세 10%와 국가별 추가 관세로 구체화한 뒤, 양자 협상에서 나라별로 인상과 인하를 모두 제시했습니다.',
       'A pledge to overhaul trade became a 10% tariff baseline with higher country rates. Bilateral bargaining then produced announcements of both increases and reductions.',
@@ -41,7 +42,7 @@ const topics: Topic[] = [
     ],
   },
   {
-    title: ['금리·연준', 'Rates and the Fed'],
+    id: 'rates', title: ['금리·연준', 'Rates and the Fed'],
     takeaway: [
       '금리 인하 요구는 이어졌습니다. 초기 게시물에서는 주택시장 개선을 강조했고, 이후 물가와 이자 부담을 근거로 들다가 구체적인 금리 수준을 제시했습니다.',
       'The call for rate cuts persisted. Trump first emphasized housing, then cited inflation and interest costs, and eventually named a specific rate.',
@@ -59,7 +60,7 @@ const topics: Topic[] = [
     ],
   },
   {
-    title: ['전쟁·미중 패권', 'War and US–China rivalry'],
+    id: 'rivalry', title: ['전쟁·미중 패권', 'War and US–China rivalry'],
     takeaway: [
       '2025년에는 중국과 희토류·수출통제 등 공급망 현안을 협상했고, 2026년에는 미·중·러 정상 협의에서 핵 위험과 국제 안보를 논의했습니다.',
       'In 2025, talks with China addressed rare earths and export controls. In 2026, US, Chinese and Russian leaders discussed nuclear risk and international security.',
@@ -77,7 +78,7 @@ const topics: Topic[] = [
     ],
   },
   {
-    title: ['미국 투자', 'US investment'],
+    id: 'investment', title: ['미국 투자', 'US investment'],
     takeaway: [
       'TSMC·애플의 미국 생산 투자 발표에 이어, 트럼프는 미국 반도체 산업을 이유로 젠슨 황의 엔비디아 CEO 복귀를 지지했습니다.',
       'After US manufacturing announcements by TSMC and Apple, Trump backed Jensen Huang’s return as Nvidia CEO, citing the importance of the US semiconductor industry.',
@@ -118,31 +119,30 @@ const sourceNames: Record<Milestone['kind'], Localized> = {
 
 export function TrumpPolicyHistory() {
   const { t } = useLang();
-  const [active, setActive] = useState(topics[0].title[1]);
-  const topic = topics.find(entry => entry.title[1] === active) || topics[0];
+  const [active, setActive] = useState(topics[0].id);
+  const topic = topics.find(entry => entry.id === active) || topics[0];
   const postCount = truthSocialManifest.reduce((total, year) => total + year.count, 0).toLocaleString();
-  const milestoneCount = topics.reduce((total, entry) => total + entry.milestones.length, 0);
+  const archive = investorArchive['donald-trump'];
+  const milestoneCount = topics.reduce((total, entry) => total + entry.milestones.length, archive.length);
+  const entries = [
+    ...topic.milestones.map(entry => ({
+      date: entry.date, headline: entry.change, text: entry.summary,
+      source: t(...sourceNames[entry.kind]), url: entry.url,
+    })),
+    ...archive.filter(entry => entry.topic === topic.id),
+  ].sort((a, b) => b.date.localeCompare(a.date));
   return <HistoryPanel
     title={t('트럼프 발언·정책 변화 이력', 'Trump’s statements and policy timeline')}
-    topics={topics.map(entry => ({ id: entry.title[1], label: t(...entry.title) }))}
+    topics={topics.map(entry => ({ id: entry.id, label: t(...entry.title) }))}
     activeId={active}
     onSelect={setActive}
     topicTitle={t(...topic.title)}
-    evidence={<InvestorArchive personId="donald-trump"/>}
     summary={t(...topic.takeaway)}
     metadata={t(
       `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,
       `Truth Social archive: ${postCount} posts as of 2026-11-22 · ${milestoneCount} selected statements and policy milestones shown`,
     )}
   >
-    {[...topic.milestones].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <HistoryEntry
-      key={entry.url}
-      date={entry.date}
-      dateLabel={entry.date.replace(/-/g, '.')}
-      source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{t(...sourceNames[entry.kind])} ↗</a>}
-    >
-      <h4 className="tl-milestone">{t(...entry.change)}</h4>
-      <p className="tl-text">{t(...entry.summary)}</p>
-    </HistoryEntry>)}
+    {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}
   </HistoryPanel>;
 }

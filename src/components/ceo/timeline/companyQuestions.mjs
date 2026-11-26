@@ -248,8 +248,10 @@ const TOPIC_MAP = {
   pershing: { market: ['performance'], rates: ['rates'], portfolio: ['positions', 'strategy', 'listing'] },
 };
 
-/** Presentation groups keep the original classification and evidence intact. */
-export function groupedCeoTopics(statements, personId, companyIds, now = new Date()) {
+/** Presentation groups keep the original classification and evidence intact.
+ * @param {readonly {topic: string}[]} supplemental
+ */
+export function groupedCeoTopics(statements, personId, companyIds, now = new Date(), supplemental = []) {
   const { questions } = companyQuestions(statements, personId, companyIds, now);
   const groups = companyIds.some(id => id === 'bridgewater' || id === 'pershing')
     ? FINANCE_TOPICS : companyIds.some(id => id === 'tsla' || id === 'spacex') ? MUSK_TOPICS : AI_TOPICS;
@@ -261,8 +263,29 @@ export function groupedCeoTopics(statements, personId, companyIds, now = new Dat
     });
     const itemsById = new Map(matched.flatMap(q => q.items.map(item => [item.statement.statementId, item])));
     const items = [...itemsById.values()].sort((a, b) => (a.date.value || '9999').localeCompare(b.date.value || '9999'));
-    if (!items.length) return [];
+    if (!items.length && !supplemental.some(entry => entry.topic === id)) return [];
     const dates = [...new Set(items.map(item => item.date.value).filter(Boolean))];
     return [{ id, label, labelEn, items, range: dates.length ? [dates[0], dates.at(-1)] : null, comparable: dates.length >= 2 }];
   });
+}
+
+function comparableSource(value) {
+  try {
+    const url = new URL(value);
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|trk$)/i.test(key)) url.searchParams.delete(key);
+    }
+    return url.hostname.replace(/^www\./, '') + url.pathname.replace(/\/$/, '') + url.search;
+  } catch { return null; }
+}
+
+const normalizedStatementText = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+export function matchesSourcedEntry(statement, entry) {
+  const url = comparableSource(entry.url);
+  if (!url || !statement.evidence?.some(source => comparableSource(source.url) === url)) return false;
+  const reviewedContent = [...entry.headline, ...entry.text].map(normalizedStatementText).filter(Boolean);
+  return [statement.quoteText, statement.koSummary?.title, statement.koSummary?.summary, statement.translationKo?.text,
+    statement.aiTranslationKo, statement.curatedSummaryKo]
+    .map(normalizedStatementText).some(value => value && reviewedContent.includes(value));
 }

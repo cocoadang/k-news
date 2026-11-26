@@ -14,7 +14,7 @@ type ArchiveEntry = InvestorEntry & { topic: string };
 export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   'sam-altman': [
     {
-      topic: 'archive', date: '2023-02-24',
+      topic: 'risks', date: '2023-02-24',
       headline: ['AGI에 대비한 단계적 공개 방침 제시', 'Proposed gradual deployment on the path to AGI'],
       text: ['성능이 다른 AI를 단계적으로 공개하면 사회와 정책 당국이 효용과 위험을 직접 확인하며 적응할 시간을 얻는다고 설명했습니다.',
         'He argued that gradual deployment gives society and policymakers time to experience the benefits and risks of increasingly capable AI and adapt.'],
@@ -22,7 +22,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://openai.com/index/planning-for-agi-and-beyond/',
     },
     {
-      topic: 'archive', date: '2021-03-16',
+      topic: 'ai-outlook', date: '2021-03-16',
       headline: ['AI가 만든 부를 넓게 배분하는 방안 제안', 'Proposed broad distribution of AI-generated wealth'],
       text: ['AI가 더 많은 일을 맡으며 노동에서 자본으로 경제력이 이동할 수 있다고 보고, 기업과 토지에 대한 과세로 그 부의 일부를 배분하자고 제안했습니다.',
         'He anticipated AI shifting economic power from labor to capital and proposed taxing companies and land to distribute some of the gains.'],
@@ -32,7 +32,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'elon-musk': [
     {
-      topic: 'archive', date: '2016-07-20',
+      topic: 'ai-outlook', date: '2016-07-20',
       headline: ['태양광·저장장치 통합과 자율주행 공유 구상', 'Outlined integrated solar, storage and autonomous car sharing'],
       text: ['두 번째 마스터플랜에서 태양광 발전과 전력 저장을 결합하고, 자율주행이 허용되면 소유주가 차량을 공유할 수 있게 하겠다고 밝혔습니다.',
         'His second master plan proposed combining solar power and energy storage and allowing owners to share their cars once autonomous driving was permitted.'],
@@ -40,7 +40,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://www.tesla.com/master-plan-part-deux',
     },
     {
-      topic: 'archive', date: '2006-08-02',
+      topic: 'company', date: '2006-08-02',
       headline: ['로드스터에서 더 저렴한 전기차로 이어지는 계획 공개', 'Outlined a path from the Roadster to cheaper electric cars'],
       text: ['고성능 로드스터를 먼저 판매하고 그 수익을 다음 모델 개발에 재투자해 전기차 가격을 단계적으로 낮추겠다고 밝혔습니다.',
         'He described selling a high-performance Roadster first and reinvesting proceeds in progressively more affordable electric cars.'],
@@ -50,7 +50,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'sundar-pichai': [
     {
-      topic: 'archive', date: '2018-05-08',
+      topic: 'company', date: '2018-05-08',
       headline: ['전화 예약을 대신하는 구글 듀플렉스 시연', 'Demonstrated Google Duplex handling phone reservations'],
       text: ['구글 I/O에서 AI 비서가 업체에 전화해 예약 같은 일을 대신할 수 있다고 설명하고, 듀플렉스 기술을 시연했습니다.',
         'At Google I/O, he demonstrated Duplex and described how an AI assistant could call businesses to handle tasks such as booking appointments.'],
@@ -58,7 +58,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://blog.google/innovation-and-ai/products/io18-overview/',
     },
     {
-      topic: 'archive', date: '2016-04-28',
+      topic: 'ai-outlook', date: '2016-04-28',
       headline: ['모바일 중심에서 AI 중심으로의 전환 전망', 'Predicted a shift from mobile-first to AI-first'],
       text: ['창업자 서한에서 기기의 형태보다 일상을 돕는 지능형 비서가 중요해지며 모바일 중심에서 AI 중심으로 이동할 것이라고 봤습니다.',
         'In the founders’ letter, he predicted that intelligent assistants would become more important than device form factors as computing moved from mobile-first to AI-first.'],
@@ -68,7 +68,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'satya-nadella': [
     {
-      topic: 'archive', date: '2020-04-29',
+      topic: 'company', date: '2020-04-29',
       headline: ['원격 근무와 클라우드로 디지털 전환 가속', 'Saw digital change accelerate with remote work and cloud adoption'],
       text: ['실적 발표에서 원격 협업·교육과 클라우드 도입이 빨라지며 2년치 디지털 전환이 두 달 사이에 나타났다고 평가했습니다.',
         'In an earnings release, he described remote collaboration, learning and cloud adoption driving about two years of digital transformation in two months.'],
@@ -76,7 +76,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://www.microsoft.com/en-us/Investor/earnings/FY-2020-Q3/press-release-webcast',
     },
     {
-      topic: 'archive', date: '2014-07-10',
+      topic: 'company', date: '2014-07-10',
       headline: ['모바일·클라우드 시대의 생산성을 핵심 전략으로 제시', 'Made productivity central to the mobile and cloud strategy'],
       text: ['직원에게 보낸 글에서 모바일과 클라우드를 중심으로 개인과 조직의 생산성을 새롭게 정의하겠다는 방향을 제시했습니다.',
         'In an employee memo, he made reinventing productivity for people and organizations a priority in a mobile-first, cloud-first world.'],
@@ -86,7 +86,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'jensen-huang': [
     {
-      topic: 'archive', date: '2018-08-20',
+      topic: 'company', date: '2018-08-20',
       headline: ['튜링 GPU로 실시간 레이 트레이싱 시대를 전망', 'Presented Turing as the start of real-time ray tracing in games'],
       text: ['게임스컴을 앞두고 튜링 기반 GeForce RTX가 레이 트레이싱을 실시간 게임 그래픽에 적용해 현실감을 높일 것이라고 설명했습니다.',
         'Ahead of Gamescom, he said Turing-based GeForce RTX would bring ray tracing to real-time games and make their graphics more realistic.'],
@@ -94,7 +94,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://nvidianews.nvidia.com/news/10-years-in-the-making-nvidia-brings-real-time-ray-tracing-to-gamers-with-geforce-rtx',
     },
     {
-      topic: 'archive', date: '2016-04-05',
+      topic: 'ai-outlook', date: '2016-04-05',
       headline: ['딥러닝 전용 슈퍼컴퓨터와 산업 전반의 AI 확산 전망', 'Unveiled a deep-learning supercomputer and forecast broad AI adoption'],
       text: ['DGX-1 발표에서 AI가 산업 전반을 바꾸고 새로운 시장을 열 것으로 봤으며, 연구자가 컴퓨팅 환경 구축에 시간을 덜 쓰도록 하겠다고 밝혔습니다.',
         'At the DGX-1 launch, he expected AI to reshape industries and open markets, and said the system would reduce the time researchers spent building compute setups.'],
@@ -104,7 +104,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'dario-amodei': [
     {
-      topic: 'archive', date: '2024-10',
+      topic: 'ai-outlook', date: '2024-10',
       headline: ['강력한 AI가 생물학과 의료 발전을 앞당길 가능성 제시', 'Described how powerful AI could accelerate biology and medicine'],
       text: ['에세이에서 강력한 AI의 개발이 잘 진행된다는 가정 아래 생물학과 의료 연구가 크게 빨라지고 건강 개선에 기여할 수 있다고 전망했습니다.',
         'In an essay about a scenario where powerful AI development goes well, he outlined how it might accelerate biology and medical research and improve health.'],
@@ -112,7 +112,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://darioamodei.com/essay/machines-of-loving-grace',
     },
     {
-      topic: 'archive', date: '2023-07-25',
+      topic: 'risks', date: '2023-07-25',
       headline: ['고성능 AI의 안전성 시험과 감사 제안', 'Proposed safety testing and audits for advanced AI'],
       text: ['미 상원 청문회에서 새로 개발되는 고성능 AI를 대상으로 정기적인 안전성 시험과 감사 체계를 마련하자고 제안했습니다.',
         'In Senate testimony, he proposed a testing and auditing regime for newly developed, more powerful AI systems.'],
@@ -122,7 +122,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'donald-trump': [
     {
-      topic: 'archive', date: '2020-01-15',
+      topic: 'trade', date: '2020-01-15',
       headline: ['미중 1단계 무역합의 서명', 'Signed the first phase of the US–China trade deal'],
       text: ['미중 1단계 무역합의에 서명하며 중국과의 무역 관계를 더 상호적인 방향으로 바꾸는 조치라고 설명했습니다.',
         'At the signing, he described phase one of the US–China agreement as a step toward more reciprocal trade.'],
@@ -130,7 +130,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://trumpwhitehouse.archives.gov/briefings-statements/remarks-president-trump-signing-u-s-china-phase-one-trade-agreement-2/',
     },
     {
-      topic: 'archive', date: '2018-03-08',
+      topic: 'trade', date: '2018-03-08',
       headline: ['철강 25%·알루미늄 10% 관세 발표', 'Announced 25% steel and 10% aluminum tariffs'],
       text: ['국가안보와 미국 산업 보호를 이유로 수입 철강에 25%, 수입 알루미늄에 10%의 관세를 부과하겠다고 밝혔습니다.',
         'He announced tariffs of 25% on imported steel and 10% on aluminum, citing national security and protection of US industry.'],
@@ -336,7 +336,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'bill-ackman': [
     {
-      topic: 'archive', date: '2017-03-13',
+      topic: 'portfolio', date: '2017-03-13',
       headline: ['퍼싱스퀘어의 밸리언트 지분 전량 매각 공개', 'Disclosed Pershing Square’s exit from Valeant'],
       text: ['퍼싱스퀘어는 밸리언트 투자 전량을 매각했다고 발표하고, 애크먼이 이사회에서 남은 임기를 마친 뒤 물러난다고 밝혔습니다.',
         'Pershing Square announced it had sold its entire Valeant investment and that Ackman would leave the board when his term ended.'],
@@ -344,7 +344,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://pershingsquareholdings.com/https-pershingsquareholdings-com-pershing-square-capital-management-l-p-announces-sale-of-its-investment-in-valeant-pharmaceuticals-international-inc/',
     },
     {
-      topic: 'archive', date: '2023-03-29',
+      topic: 'rates', date: '2023-03-29',
       headline: ['2022년 금리 헤지 성과와 배경 설명', 'Explained the performance of the 2022 rate hedge'],
       text: ['퍼싱스퀘어 연차보고서는 금리 상승에 대비한 헤지가 2022년 S&P 500 대비 초과 성과의 주요 요인이었다고 설명했습니다.',
         'Pershing Square’s annual report attributed its 2022 outperformance against the S&P 500 primarily to hedges against rising rates.'],
@@ -352,7 +352,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://assets.pershingsquareholdings.com/2023/03/29160536/Pershing-Square-Holdings-Ltd.-2022-Annual-Report.pdf',
     },
     {
-      topic: 'archive', date: '2020-03-26',
+      topic: 'portfolio', date: '2020-03-26',
       headline: ['코로나19 헤지 청산 후 주식에 재투자', 'Unwound pandemic hedges and redeployed proceeds into equities'],
       text: ['코로나19로 인한 급락에 대비한 신용 헤지를 청산해 26억 달러를 확보했고, 대부분을 신규 및 기존 주식 투자에 투입했다고 밝혔습니다.',
         'He disclosed realizing $2.6 billion in proceeds from pandemic-related credit hedges and redeploying most of it into new and existing equity investments.'],
@@ -362,7 +362,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
   ],
   'ray-dalio': [
     {
-      topic: 'archive', date: '2021-03-15',
+      topic: 'rates', date: '2021-03-15',
       headline: ['낮은 실질금리로 국채 투자 매력이 줄었다고 평가', 'Saw low real yields diminishing bond appeal'],
       text: ['채권의 명목 수익률과 물가를 감안한 실질 수익률이 낮아 채권 보유 매력이 떨어진다고 주장했습니다.',
         'He argued that low nominal and inflation-adjusted yields made bonds less attractive to hold.'],
@@ -370,7 +370,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://www.linkedin.com/pulse/why-world-would-you-own-bonds-when-ray-dalio',
     },
     {
-      topic: 'archive', date: '2022-09-13',
+      topic: 'rates', date: '2022-09-13',
       headline: ['금리 상승이 자산 가격과 성장을 압박한다고 분석', 'Analyzed how rising rates pressure asset prices and growth'],
       text: ['인플레이션을 억제하기 위한 금리 상승이 자산의 현재가치를 낮추고 실물경제 성장에도 부담을 준다고 설명했습니다.',
         'He explained how higher rates to contain inflation would reduce the present value of assets and weigh on growth.'],
@@ -378,7 +378,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://www.linkedin.com/pulse/starts-inflation-ray-dalio',
     },
     {
-      topic: 'archive', date: '2020-01-30',
+      topic: 'portfolio', date: '2020-01-30',
       headline: ['코로나19 초기 확산 위험에 분산·헤지 강조', 'Emphasized diversification and hedging early in the pandemic'],
       text: ['코로나19의 확산과 시장 영향을 예측하기 어려운 상황에서 과거 팬데믹을 연구하고 포트폴리오를 분산하거나 헤지하겠다고 밝혔습니다.',
         'Facing uncertainty about the virus and its market impact, he said he would study past pandemics and keep portfolios diversified or hedged.'],
@@ -386,7 +386,7 @@ export const investorArchive: Record<string, readonly ArchiveEntry[]> = {
       url: 'https://www.linkedin.com/pulse/our-early-thinking-coronavirus-pandemics-ray-dalio',
     },
     {
-      topic: 'archive', date: '2019-07-17',
+      topic: 'market', date: '2019-07-17',
       headline: ['지속되기 어려운 시장 체제의 전환 가능성 제기', 'Warned that prevailing market dynamics could reverse'],
       text: ['투자자가 오랫동안 이어진 시장 관계를 미래에도 그대로 적용하다 보면 과잉이 생기고, 그 결과 시장이 반대 방향으로 움직일 수 있다고 설명했습니다.',
         'He argued that extrapolating long-running market relationships can create excesses that ultimately lead those relationships to reverse.'],

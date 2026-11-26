@@ -263,18 +263,22 @@ export function MarketStance({ personId, personName }: { personId: string; perso
   </section>;
 }
 
-export function StanceEvidence({ personId }: { personId: string }) {
-  const { t } = useLang();
-  const evidence = stanceEvidence[personId]?.evidence;
-  if (!evidence) return null;
-  return <details className="mb-3 text-sm">
-    <summary className="w-fit cursor-pointer py-1 text-slate-300">
-      {t('스탠스 판단 근거', 'Evidence for this stance')}
-    </summary>
-    <p>{t(...evidence.text)}</p>
-    <time className="tl-muted" dateTime={evidence.date}>{evidence.date}</time>
-    {' · '}<a href={evidence.url} target="_blank" rel="noreferrer">{evidence.source} ↗</a>
-  </details>;
+const stanceTopics: Record<string, string> = {
+  'sam-altman': 'risks',
+  'elon-musk': 'ai-outlook',
+  'bill-ackman': 'market',
+  'sundar-pichai': 'company',
+  'satya-nadella': 'company',
+  'ray-dalio': 'market',
+  'jensen-huang': 'company',
+  'dario-amodei': 'company',
+};
+
+// The other people already have their stance evidence in their dedicated timelines.
+export function stanceHistoryEntry(personId: string) {
+  const topic = stanceTopics[personId];
+  const stance = stanceEvidence[personId];
+  return topic && stance ? { ...stance.evidence, topic, headline: stance.scope } : null;
 }
 
 export function SourcedInvestorEntry({ entry }: { entry: InvestorEntry }) {
@@ -287,22 +291,6 @@ export function SourcedInvestorEntry({ entry }: { entry: InvestorEntry }) {
     <h4 className="tl-milestone">{t(...entry.headline)}</h4>
     <p className="tl-text">{t(...entry.text)}</p>
   </HistoryEntry>;
-}
-
-export function InvestorArchive({ personId }: { personId: string }) {
-  const { t } = useLang();
-  const entries = investorArchive[personId]?.filter(entry => entry.topic === 'archive') ?? [];
-  if (!entries.length) return null;
-  return <details className="mb-4 text-sm">
-    <summary className="w-fit cursor-pointer py-1 text-slate-300">
-      {t(`과거 주요 발언 ${entries.length}건`, `Historical highlights · ${entries.length}`)}
-    </summary>
-    <ol className="tl-list mt-3">
-      {[...entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => (
-        <SourcedInvestorEntry key={entry.url} entry={entry}/>
-      ))}
-    </ol>
-  </details>;
 }
 
 export function InvestorHistory({ personId, profile }: { personId: string; profile: typeof investorProfiles[keyof typeof investorProfiles] }) {

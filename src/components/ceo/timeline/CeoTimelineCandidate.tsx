@@ -1,9 +1,9 @@
-import { InvestorArchive, InvestorHistory, MarketStance, StanceEvidence, investorProfiles } from './InvestorHistory';
-import React, { useMemo, useState } from 'react';
+import { InvestorHistory, MarketStance, SourcedInvestorEntry, investorProfiles, stanceHistoryEntry } from './InvestorHistory';
+import { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
 import { TrumpPolicyHistory } from './TrumpPolicyHistory';
 import { HistoryPanel, HistoryEntry } from './HistoryPanel';
-import { groupedCeoTopics, displayText, displaySummary } from './companyQuestions.mjs';
+import { groupedCeoTopics, displayText, displaySummary, matchesSourcedEntry } from './companyQuestions.mjs';
 import { CeoPersonPicker } from './CeoPersonPicker';
 import { investorArchive } from './investorArchive';
 import './timeline.css';
@@ -139,12 +139,26 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
   const scope = scopes.find(s => s.key === scopeKey);
   const CuratedHistory = curatedHistories.get(scope?.personId);
   const investor = investorProfiles[scope?.personId as keyof typeof investorProfiles];
+  const supplemental = useMemo(() => {
+    const archive = investorArchive[scopeKey] ?? [];
+    const evidence = stanceHistoryEntry(scopeKey);
+    return evidence ? [...archive, evidence] : archive;
+  }, [scopeKey]);
   const topics = useMemo(() => scope && !CuratedHistory && !investor
-    ? groupedCeoTopics(dataset.statements, scope.personId, scope.companyIds) : [], [dataset, scope, CuratedHistory, investor]);
+    ? groupedCeoTopics(dataset.statements, scope.personId, scope.companyIds, undefined, supplemental)
+    : [], [dataset, scope, CuratedHistory, investor, supplemental]);
   const [questionId, setQuestionId] = useState<string>('');
   const q = topics.find((x: any) => x.id === questionId) || topics[0];
 
-  const items: Item[] = (q?.items || []).slice().sort((a: Item, b: Item) => (b.date.value || '').localeCompare(a.date.value || ''));
+  const items: Item[] = q?.items ?? [];
+  const added = supplemental.filter(entry => entry.topic === q?.id);
+  const entries = [
+    ...items.filter(({ statement }) => !added.some(entry => matchesSourcedEntry(statement, entry)))
+      .map(item => ({ date: item.date.value ?? '', key: item.statement.statementId, item, entry: null })),
+    ...added.map(entry => ({ date: entry.date, key: entry.url + entry.headline[1], item: null, entry })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  const dates = [...new Set(entries.map(entry => entry.date).filter(Boolean))];
+  const range = dates.length ? [dates.at(-1)!, dates[0]] : null;
   const pickScope = (k: string) => {
     if (k === scopeKey) return;
     setScopeKey(k);
@@ -157,15 +171,9 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
 
     {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
     {investor ? <InvestorHistory key={scopeKey} personId={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
-      investorArchive[scopeKey]?.length
-        ? <InvestorArchive key={scopeKey} personId={scopeKey}/>
-        : <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
+      <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel
       title={t('발언 변화 이력', 'Statement history')}
-      evidence={<React.Fragment key={scopeKey}>
-        <StanceEvidence personId={scopeKey}/>
-        <InvestorArchive personId={scopeKey}/>
-      </React.Fragment>}
       topics={topics.map((entry: any) => ({
         id: entry.id,
         label: qLabel(entry),
@@ -174,20 +182,20 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       onSelect={pickQuestion}
       topicTitle={qLabel(q)}
       metadata={[
-        t(`${items.length}건`, `${items.length} ${items.length === 1 ? 'item' : 'items'}`),
-        q.range ? month(q.range[0]) + (q.range[1] === q.range[0] ? '' : ' ~ ' + month(q.range[1])) : null,
+        t(`${entries.length}건`, `${entries.length} ${entries.length === 1 ? 'item' : 'items'}`),
+        range ? month(range[0]) + (month(range[1]) === month(range[0]) ? '' : ' ~ ' + month(range[1])) : null,
       ].filter(Boolean).join(' · ')}
-      note={q.comparable ? undefined : t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}
+      note={dates.length >= 2 ? undefined : t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}
     >
-      {items.map(({ statement, date, metrics }) => <HistoryEntry
-        key={statement.statementId}
-        date={date.value}
-        dateLabel={fmt(date.value)}
-        dateBasis={lang === 'en' ? DATE_BASIS_EN[date.basis] || date.label : date.label}
-        source={<Source s={statement} />}
+      {entries.map(({ key, item, entry }) => entry ? <SourcedInvestorEntry key={key} entry={entry}/> : item && <HistoryEntry
+        key={key}
+        date={item.date.value}
+        dateLabel={fmt(item.date.value)}
+        dateBasis={lang === 'en' ? DATE_BASIS_EN[item.date.basis] || item.date.label : item.date.label}
+        source={<Source s={item.statement} />}
       >
-        <Body s={statement} />
-        <Metrics values={metrics} />
+        <Body s={item.statement} />
+        <Metrics values={item.metrics} />
       </HistoryEntry>)}
     </HistoryPanel>}
   </section>;

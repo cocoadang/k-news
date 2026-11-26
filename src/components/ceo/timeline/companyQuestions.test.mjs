@@ -1,10 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { companyQuestions, effectiveDate, literalMetrics, isComparableClaim, displayText, displaySummary } from './companyQuestions.mjs';
+import { companyQuestions, effectiveDate, literalMetrics, isComparableClaim, displayText, displaySummary, groupedCeoTopics, matchesSourcedEntry } from './companyQuestions.mjs';
 
 // Synthetic, clearly fictional fixtures. No production data.
 const st = (id, companyId, quoteText, extra = {}) => ({ statementId: id, personId: 'p', companyId, kind: 'direct_quote', quoteText, ...extra });
 const rel = v => ({ referenceDate: { value: v, basis: 'released', precision: 'day' } });
+
+test('a topic with curated entries is available even without collected statements', () => {
+  const topics = groupedCeoTopics([], 'ray-dalio', ['bridgewater'], undefined, [{ topic: 'rates' }, { topic: 'portfolio' }]);
+  assert.deepEqual(topics.map(topic => topic.id), ['rates', 'portfolio']);
+});
+
+test('same-source duplicates are merged without dropping distinct interview excerpts', () => {
+  const entry = { url: 'https://example.com/interview/', headline: ['금리 전망', 'Rate outlook'], text: ['금리가 오를 수 있다.', 'Rates may rise.'] };
+  const evidence = [{ url: 'https://www.example.com/interview?utm_source=feed' }];
+  assert.equal(matchesSourcedEntry({ evidence, quoteText: 'Rates may rise!' }, entry), true);
+  assert.equal(matchesSourcedEntry({ evidence, quoteText: 'Our capacity increased.' }, entry), false);
+  assert.equal(matchesSourcedEntry({ evidence: [], quoteText: 'Rates may rise.' }, entry), false);
+});
 
 test('interview summaries show the body when available and preserve reviewed translations', () => {
   const quote = { sourceType: 'interview', koSummary: { status: 'ready', title: '짧은 제목', summary: ' 자세한 내용 ' } };

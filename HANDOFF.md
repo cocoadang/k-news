@@ -1,11 +1,16 @@
 # Handoff
 
+## 2026-11-27 운영 배포 위임
+- 광수님은 2026-11-27 대화에서 향후 news.dsoom.com 구현 변경 시 K-news 운영 배포까지 진행하도록 위임했습니다. 필요한 검증을 마친 뒤 매번 별도로 배포 여부를 묻지 않습니다.
+- GitHub Actions의 `Validate and deploy K-news` 워크플로를 `main`에서 `workflow_dispatch`로 실행합니다. 푸시와 PR은 검증만 실행합니다.
+- 배포 성공과 운영 사이트의 변경 사항을 확인한 뒤 결과만 간단히 보고합니다. 도구가 승인을 요구하거나 배포가 실패하면 실제 상태와 차단 사유를 알립니다.
+
 ## 2026-11-17 Single-message YouTube Telegram digest
 - Detailed website `parts` remain unchanged. The scheduled worker stores a separate durable `telegramParts` outbox, claimed before HTTP; sent and ambiguous outcomes are never replayed. Old partially delivered outboxes remain held for review rather than being silently resent.
 - Future Luna summaries optionally produce a title plus one-sentence digest for every accepted source issue. Exhaustive source-index coverage, classification checks and an independent semantic audit guard merging/meaning preservation. One tighter compression is allowed for oversized drafts. These calls share the original per-video/day/month reservation and durable checkpoint; no spending ceilings are increased.
 - Both raw fallback text and parsed HTML are checked against 4096 UTF-16 units conservatively. If compression cannot fit, semantic audit fails, or remaining budget is insufficient, one sendDocument message retains all issues, labels and timestamp URLs with a Dsoom detail link. No source issue is sliced away. Existing published videos are not backfilled or resent.
 - Dsoom links use `?video=VIDEO_ID`; the YouTube page opens the matching stored detail. Provider wrappers now forward publication date and document metadata to the real Telegram transport.
-- Deployment and main commit were explicitly authorized by the owner in this chat. Prior manual-deploy policy remains in effect for future unrelated changes.
+- Deployment and main commit were explicitly authorized by the owner in this chat. The deployment process at that time required separate owner authorization.
 
 ## 2026-11-16 Future YouTube flow verification
 - `futureRecoveryFlow.test.mjs` exercises newly discovered videos through the production provider factory, OpenAI request adapter, Luna grounding/clarification/audit, transactional store, real schedule gating, budget ledger and Telegram adapter. Only external services are synthetic; no production content or spending is created.
@@ -70,7 +75,7 @@ CEO UI deployed as revision 00035-jbl, Ready with 100% traffic. The five deploye
 Read-only verification: CEO API 200/58 records, YouTube API 200/4 summaries, news API 200/100 records, anonymous wallstreet status 401. CEO timeline renders on production. No manual collection/model/caption/Telegram run.
 Deployment helper initially stopped because service latestReady still pointed to old traffic revision; new no-traffic revision itself was Ready/Retired. No redeploy: compared old/new settings, then promoted the existing ready revision. Both ledgers preserved in Cloud Shell validation folder: ceo-integration-deploy-ledger-v1.json and ceo-integration-traffic-verification.json.
 Claude GitHub App installation verified: only cocoadang/k-news selected; Claude access diagnostic passed. No Claude coding session started.
-Deployment (updated 2026-10-30): GitHub Actions + keyless WIF deploy is connected (run 40892432713 succeeded; last confirmed revision 00038-wzp; https://news.dsoom.com via Firebase Hosting). Deploy is MANUAL: push/PR to main only runs validation; production deploy runs only via 'Run workflow' (workflow_dispatch) on main, pressed by the owner. ops/deploy.py refuses any other event. AI agents must not trigger workflow_dispatch or merge PRs. Free GitHub plan: no branch protection on this private repo.
+Deployment (updated 2026-10-30): GitHub Actions + keyless WIF deploy is connected (run 40892432713 succeeded; last confirmed revision 00038-wzp; https://news.dsoom.com via Firebase Hosting). Deploy is MANUAL: push/PR to main only runs validation; production deploy runs only via 'Run workflow' (workflow_dispatch) on main. ops/deploy.py refuses any other event. See the 2026-11-27 section above for current authorization. Free GitHub plan: no branch protection on this private repo.
 
 ## 2026-10-30 (Claude)
 Deploy flow now: Claude opens PR → CI validate → owner-approved merge → workflow_dispatch deploy (owner has delegated merge+deploy to Claude in chat; report results after). WIF provider github-main attribute condition: repository_id 1438422736, ref main, event workflow_dispatch.

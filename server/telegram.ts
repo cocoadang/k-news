@@ -1,6 +1,6 @@
 import { NewsEvent, TelegramSubscriber, MonitorSettings } from './types';
 import { db } from './db';
-import { computeEventFingerprint, isFingerprintSpecific } from './dedup';
+import { getStoredEventFingerprint, isFingerprintSpecific, spaceDataCenterApprovalFingerprint } from './dedup';
 import { PUBLIC_CHANNEL_ID } from './wallstreet/publicChannel.mjs';
 
 
@@ -340,11 +340,7 @@ export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean
   }
 
   // 3. Compute deterministic event fingerprint
-  const rawFingerprint = event.eventFingerprint || computeEventFingerprint(
-    event.originalTitle || event.title,
-    (event.factualPoints || event.summaryBulletPoints || []).join(' '),
-    event.relatedCompanies
-  );
+  const rawFingerprint = getStoredEventFingerprint(event);
 
   // 너무 일반적인 지문(예: "googl:gemini")으로 잠그면 서로 다른 사건의 알림까지 영구 차단되므로,
   // 구체적인 지문이 아니면 이벤트 ID 기준으로만 중복 발송을 막습니다.
@@ -353,6 +349,15 @@ export async function sendEventToTelegram(event: NewsEvent, forceResend: boolean
   // 4. Atomic claim to guarantee exactly-once delivery across concurrent Cloud Run instances
   // and prevent duplicate alerts for the same event fingerprint even if assigned different event IDs
   if (!forceResend) {
+    // Previously sent copies used individual event-ID claims. Honor those records, too.
+    const approval = spaceDataCenterApprovalFingerprint(event.originalTitle || event.primarySource?.title || event.title);
+    if (approval && (await db.getEventsForRead()).some(previous =>
+      previous.id !== event.id &&
+      (previous.isSentToTelegram || previous.telegramDispatchStatus === 'sent') &&
+      getStoredEventFingerprint(previous) === approval
+    )) {
+      return { success: false, error: 'The same approval was already sent to Telegram.' };
+    }
     const claimed = await db.claimEventForTelegram(event.id, fingerprint);
     if (!claimed) {
       return { success: false, error: 'Event (or same event fingerprint) was already sent or is being actively processed by another instance.' };

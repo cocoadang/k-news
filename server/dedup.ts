@@ -9,6 +9,26 @@ export function computeNormalizedUrl(url: string): string {
   return url.trim().toLowerCase().split('?')[0].replace(/\/+$/, '');
 }
 
+// Distinguish the specific FCC grant from applications, appeals and later launches.
+export function spaceDataCenterApprovalFingerprint(title: string): string {
+  const text = title.toLowerCase().normalize('NFKC');
+  if (!/spacex|스페이스x|스페이스엑스/.test(text)) return '';
+  if (/\b(?:denies|rejects|revokes|reverses|challenges|appeals?|seeks|requests|proposes|could|may|would|expected to)\b|\bnot\b|철회|취소|반려|거부|승인 요청|승인 신청|승인 가능성/.test(text)) return '';
+  const scaledSatellitePlan = /(?:\b(?:1|one)\s+million\b|\b1[,.]000[,.]000\b|100\s*만)/.test(text)
+    && /satellites?|위성/.test(text)
+    && (/\b(?:ai|data[- ]cent(?:er|re)s?)\b|데이터\s*센터/.test(text) || /\bfcc\b|연방통신위원회/.test(text));
+  if (!scaledSatellitePlan && !/\bstarmind\b|스타마인드/.test(text)) return '';
+  const granted = /\b(?:authori[sz]es|authori[sz]ed|approves|approved|clears|signs off|gets approval|green light)\b|승인|허가/.test(text);
+  return granted ? 'spacex:starmind:fcc_approval:1000000' : '';
+}
+
+export function getStoredEventFingerprint(event: NewsEvent): string {
+  const title = event.originalTitle || event.primarySource?.title || event.title;
+  return spaceDataCenterApprovalFingerprint(title) || event.eventFingerprint || computeEventFingerprint(
+    title, (event.factualPoints || event.summaryBulletPoints || []).join(' '), event.relatedCompanies
+  );
+}
+
 /**
  * Generates a deterministic event fingerprint for cross-outlet duplicate detection.
  * Combines:
@@ -24,6 +44,8 @@ export function computeEventFingerprint(
   snippet: string = '',
   companyHints?: string[] | string
 ): string {
+  const approval = spaceDataCenterApprovalFingerprint(title);
+  if (approval) return approval;
   const combined = `${title} ${snippet}`.toLowerCase();
 
   // 1. Company Detection

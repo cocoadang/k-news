@@ -269,3 +269,27 @@ test('a confirmed caption quota limit stops further balance reads for that provi
  await x.run().run();
  assert.equal(balanceReads,2);
 });
+
+test('a quota-held Wall Street episode remains eligible after 48h and uses free native fallback', async () => {
+ const x=setup({summaryApproved:false,vidiqApproved:true,supadataApproved:true,
+   supadataOrganizationId:'expected',supadataCycleStart:now-1000,supadataCycleEnd:now+86400000,
+   supadataCycleLimit:90,supadataDailyLimit:6});
+ let primaryCalls=0, fallbackCalls=0;
+ x.deps.captions={balance:async()=>({type:'limited',renewableCredits:0,maxRenewableCredits:150,renewableResetsAt:'2026-11-28T00:00Z'}),
+   get:async()=>{primaryCalls++;}};
+ x.deps.supadata={balance:async()=>({organizationId:'expected',maximum:100,remaining:98}),
+   get:async()=>{fallbackCalls++;return {status:'ok',segments:[{start:0,text:'미국 증시 동향'}]};}};
+ const id='yo24thbKD4A';
+ await x.store.exclusive(async(s,save)=>{
+   s.videos[id]={video:video(id),programmes:['wallstreet'],recipient:'123',
+     stage:'text_waiting',firstSeen:now-3*86400000,hold:'vidiq_free_cycle_or_day_limit'};
+   await save();
+ });
+ await x.run().run();
+ await x.run().run();
+ assert.equal(primaryCalls,0);
+ assert.equal(fallbackCalls,1);
+ assert.equal(x.store.state.videos[id].source.method,'supadata_native');
+ assert.equal(x.store.state.videos[id].stage,'text_summary');
+ assert.equal(x.store.state.supadata.used,1);
+});

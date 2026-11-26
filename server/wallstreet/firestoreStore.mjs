@@ -1,13 +1,19 @@
 import { randomUUID, createHash } from 'node:crypto';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { emptyState } from './core.mjs';
 
 export const COLLECTION = 'wallstreet_newsletter_v1';
+const STATE_OUTPUT_LIMIT = 64*1024*1024;
 const digest = text => createHash('sha256').update(text).digest('hex');
 function encode(state) {
-  const json=JSON.stringify(state), base64=Buffer.from(json).toString('base64');
+  const json=JSON.stringify(state), bytes=Buffer.from(json);
+  if(bytes.length>STATE_OUTPUT_LIMIT)throw Error('wallstreet_state_capacity');
+  let base64=bytes.toString('base64'), encoding='json';
+  // Preserve captions and outbox state when verbose evidence approaches the transaction limit.
+  if(base64.length>24*300000){base64=gzipSync(bytes).toString('base64');encoding='gzip';}
   const chunks=base64.match(/.{1,300000}/g) || [''];
   if(chunks.length>24) throw Error('wallstreet_state_capacity'); // < 10 MiB transaction request
-  return {chunks,hash:digest(json)};
+  return {chunks,hash:digest(json),encoding};
 }
 function decode(head,snaps) {
   if(!head) return emptyState();
@@ -16,7 +22,8 @@ function decode(head,snaps) {
     if(!s.exists || d?.revision!==head.revision || d?.index!==i || typeof d?.base64!=='string') throw Error('wallstreet_state_corrupt');
     return d.base64;
   }).join('');
-  const json=Buffer.from(encoded,'base64').toString('utf8');
+  const bytes=Buffer.from(encoded,'base64');
+  const json=(head.encoding==='gzip'?gunzipSync(bytes,{maxOutputLength:STATE_OUTPUT_LIMIT}):bytes).toString('utf8');
   if(digest(json)!==head.hash) throw Error('wallstreet_state_corrupt');
   const state=JSON.parse(json);
   if(state.version!==1 || !state.videos || !state.budgets) throw Error('wallstreet_state_corrupt');
@@ -25,7 +32,7 @@ function decode(head,snaps) {
 function headOf(snap) {
   if(!snap.exists) return null;
   const h=snap.data();
-  if(h?.schema!==1 || !Number.isSafeInteger(h.revision) || h.revision<0 || !Number.isSafeInteger(h.count) || h.count<1 || h.count>24 || typeof h.hash!=='string') throw Error('wallstreet_head_corrupt');
+  if(h?.schema!==1 || !Number.isSafeInteger(h.revision) || h.revision<0 || !Number.isSafeInteger(h.count) || h.count<1 || h.count>24 || typeof h.hash!=='string' || (h.encoding!==undefined&&!['json','gzip'].includes(h.encoding))) throw Error('wallstreet_head_corrupt');
   return h;
 }
 /** Same injected @google-cloud/firestore instance and ADC as existing CEO store.
@@ -55,7 +62,7 @@ export class FirestoreWallstreetStore {
       const s=decode(head,snaps), enc=encode(s);
       revision=head?.revision ?? 0;
       if(!head) enc.chunks.forEach((base64,index)=>tx.set(this.chunk(index),{revision,index,base64}));
-      tx.set(this.head,{schema:1,revision,count:head?.count??enc.chunks.length,hash:head?.hash??enc.hash,owner,lockedAt:Date.now()});
+      tx.set(this.head,{schema:1,revision,count:head?.count??enc.chunks.length,hash:head?.hash??enc.hash,encoding:head?head.encoding??'json':enc.encoding,owner,lockedAt:Date.now()});
       return s;
     });
     const save=async()=>{
@@ -66,7 +73,7 @@ export class FirestoreWallstreetStore {
         const next=expected+1;
         enc.chunks.forEach((base64,index)=>tx.set(this.chunk(index),{revision:next,index,base64}));
         for(let i=enc.chunks.length;i<h.count;i++) tx.delete(this.chunk(i));
-        tx.set(this.head,{...h,revision:next,count:enc.chunks.length,hash:enc.hash});
+        tx.set(this.head,{...h,revision:next,count:enc.chunks.length,hash:enc.hash,encoding:enc.encoding});
       });
       revision=expected+1;
     };

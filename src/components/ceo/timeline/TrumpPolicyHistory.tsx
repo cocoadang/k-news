@@ -13,16 +13,12 @@ type Milestone = {
   summary: Localized;
   url: string;
 };
-type Topic = { id: string; title: Localized; takeaway: Localized; milestones: Milestone[] };
+type Topic = { id: string; title: Localized; milestones: Milestone[] };
 const truth = (id: string) => 'https://truthsocial.com/@realDonaldTrump/' + id;
 
 const topics: Topic[] = [
   {
     id: 'trade', title: ['관세·무역', 'Tariffs and trade'],
-    takeaway: [
-      '무역제도 개편 방침을 기본관세 10%와 국가별 추가 관세로 구체화한 뒤, 양자 협상에서 나라별로 인상과 인하를 모두 제시했습니다.',
-      'A pledge to overhaul trade became a 10% tariff baseline with higher country rates. Bilateral bargaining then produced announcements of both increases and reductions.',
-    ],
     milestones: [
       { date: '2025-01-20', kind: 'speech', change: ['무역제도 개편 예고', 'Pledged a trade overhaul'],
         summary: ['취임 연설에서 미국의 노동자와 가계를 보호하기 위해 무역제도를 개편하겠다고 밝혔습니다.', 'In his inaugural address, Trump pledged to overhaul trade policy to protect American workers and families.'],
@@ -43,10 +39,6 @@ const topics: Topic[] = [
   },
   {
     id: 'rates', title: ['금리·연준', 'Rates and the Fed'],
-    takeaway: [
-      '금리 인하 요구는 이어졌습니다. 초기 게시물에서는 주택시장 개선을 강조했고, 이후 물가와 이자 부담을 근거로 들다가 구체적인 금리 수준을 제시했습니다.',
-      'The call for rate cuts persisted. Trump first emphasized housing, then cited inflation and interest costs, and eventually named a specific rate.',
-    ],
     milestones: [
       { date: '2025-09-15', kind: 'post', change: ['즉시 더 큰 폭의 인하 요구', 'Called for a bigger, immediate cut'],
         summary: ['파월 의장에게 예상보다 큰 폭의 금리 인하를 요구하며 주택시장이 살아날 것이라고 주장했습니다.', 'Trump urged Chair Powell to cut rates more than planned, saying housing would benefit.'],
@@ -61,10 +53,6 @@ const topics: Topic[] = [
   },
   {
     id: 'rivalry', title: ['전쟁·미중 패권', 'War and US–China rivalry'],
-    takeaway: [
-      '2025년에는 중국과 희토류·수출통제 등 공급망 현안을 협상했고, 2026년에는 미·중·러 정상 협의에서 핵 위험과 국제 안보를 논의했습니다.',
-      'In 2025, talks with China addressed rare earths and export controls. In 2026, US, Chinese and Russian leaders discussed nuclear risk and international security.',
-    ],
     milestones: [
       { date: '2025-11-01', kind: 'release', change: ['미중 합의에 희토류 수출통제 유예 포함', 'US–China deal included a pause in rare earth export controls'],
         summary: ['백악관은 중국이 새 희토류 수출통제의 글로벌 시행을 유예하기로 했다고 발표했습니다.', 'The White House said China agreed to suspend global implementation of new rare earth export controls.'],
@@ -79,10 +67,6 @@ const topics: Topic[] = [
   },
   {
     id: 'investment', title: ['미국 투자', 'US investment'],
-    takeaway: [
-      'TSMC·애플의 미국 생산 투자 발표에 이어, 트럼프는 미국 반도체 산업을 이유로 젠슨 황의 엔비디아 CEO 복귀를 지지했습니다.',
-      'After US manufacturing announcements by TSMC and Apple, Trump backed Jensen Huang’s return as Nvidia CEO, citing the importance of the US semiconductor industry.',
-    ],
     milestones: [
       { date: '2026-11-23', kind: 'interview', change: ['CNBC에서 엔비디아 이사회를 설득했다고 설명', 'Told CNBC he persuaded Nvidia’s board'],
         summary: ['트럼프는 엔비디아 이사회와 접촉해 복귀를 설득했고, 복귀가 결정된 뒤 젠슨 황과 통화했다고 밝혔습니다. 복귀 후 엔비디아가 좋은 실적을 낼 것으로 기대했습니다.', 'Trump said he spoke with Nvidia’s board and persuaded it to reinstate Huang, then called Huang after the decision. He expected Nvidia to perform well after Huang’s return.'],
@@ -137,7 +121,6 @@ export function TrumpPolicyHistory() {
     activeId={active}
     onSelect={setActive}
     topicTitle={t(...topic.title)}
-    summary={t(...topic.takeaway)}
     metadata={t(
       `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,
       `Truth Social archive: ${postCount} posts as of 2026-11-22 · ${milestoneCount} selected statements and policy milestones shown`,

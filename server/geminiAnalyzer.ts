@@ -9,6 +9,7 @@ import {
   verifySameEventWithGemini, 
   isCandidateForGeminiClustering,
   computeEventFingerprint,
+  getStoredEventFingerprint,
   areFingerprintsMatching,
   computeNormalizedUrl,
   calculateWordOverlap
@@ -934,11 +935,7 @@ export async function clusterAndProcessArticles(
       }
 
       // 3. event fingerprint match (within 72h)
-      const evtFingerprint = evt.eventFingerprint || computeEventFingerprint(
-        evt.originalTitle || evt.title,
-        (evt.factualPoints || evt.summaryBulletPoints || []).join(' '),
-        evt.relatedCompanies
-      );
+      const evtFingerprint = getStoredEventFingerprint(evt);
       if (hoursDiff <= 72 && areFingerprintsMatching(artFingerprint, evtFingerprint, hoursDiff)) {
         matchedEvent = evt;
         db.addLog('Dedup', 'info', `[Dedup Step 3: Fingerprint Match (${artFingerprint} <=> ${evtFingerprint})] Matched to event "${evt.title.slice(0, 30)}..."`);

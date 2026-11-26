@@ -3,13 +3,12 @@ import { useLang } from '../../../i18n';
 
 type HistoryTopic = { id: string; label: string; badge?: string };
 
-export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, summary, metadata, note, children }: {
+export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, metadata, note, children }: {
   title: string;
   topics: HistoryTopic[];
   activeId: string;
   onSelect: (id: string) => void;
   topicTitle: string;
-  summary?: string;
   metadata?: string;
   note?: string;
   children: ReactNode;
@@ -27,7 +26,6 @@ export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, su
     </div>
     <div className="tl-history-heading">
       <h3>{topicTitle}</h3>
-      {summary && <p>{summary}</p>}
       {metadata && <p className="tl-muted">{metadata}</p>}
     </div>
     {note && <p className="tl-notice">{note}</p>}

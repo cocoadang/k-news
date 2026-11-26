@@ -129,3 +129,27 @@ test('runtime cadence is persistent across different runtime instances',async()=
   assert.equal((await createWallstreetRuntime(options).run()).status,'processed');
   assert.equal((await createWallstreetRuntime(options).run()).status,'throttled');assert.equal(calls,1);
 });
+
+test('large evidence state compresses and preserves existing delivery state across reads and updates', async () => {
+  const db=new FakeFirestore(),store=new FirestoreWallstreetStore(db);
+  await store.exclusive(async(s,save)=>{
+    s.videos.old={stage:'sent',parts:[{status:'sent',messageId:'123'}]};
+    await save();
+  });
+  delete db.data.get(COLLECTION+'/head').encoding; // Existing production format.
+  const transcript='미국 주식시장 요약\n'.repeat(300000);
+  await store.exclusive(async(s,save)=>{
+    s.videos.latest={stage:'text_summary',transcript};
+    await save();
+  });
+  assert.equal(db.data.get(COLLECTION+'/head').encoding,'gzip');
+  const state=await store.read();
+  assert.equal(state.videos.latest.transcript,transcript);
+  assert.equal(state.videos.old.parts[0].messageId,'123');
+  await store.exclusive(async(s,save)=>{
+    delete s.videos.latest.transcript;
+    await save();
+  });
+  assert.equal(db.data.get(COLLECTION+'/head').encoding,'json');
+  assert.equal((await store.read()).videos.old.parts[0].messageId,'123');
+});

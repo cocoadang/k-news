@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import crypto from 'node:crypto';
 import { db } from './db';
 import { 
-  computeEventFingerprint, 
+  computeEventFingerprint, getStoredEventFingerprint, spaceDataCenterApprovalFingerprint,
   areFingerprintsMatching, 
   computeNormalizedUrl 
 } from './dedup';
@@ -211,6 +211,15 @@ async function runMonitoringAndDedupTests() {
     console.log(`  Reuters Fingerprint: ${fpReuters}`);
     console.log(`  CNBC Fingerprint:    ${fpCnbc}`);
     assert.strictEqual(areFingerprintsMatching(fpReuters, fpCnbc, 1), true, 'Reuters and CNBC fingerprints must match');
+
+    const reutersFcc = 'US authorizes SpaceX to deploy 1 million satellites for data centers in space';
+    const vergeFcc = 'FCC signs off on SpaceX’s plan to put up to 1 million data center satellites into space';
+    const fccFingerprint = computeEventFingerprint(vergeFcc);
+    assert.ok(areFingerprintsMatching(computeEventFingerprint(reutersFcc), fccFingerprint, 1));
+    assert.equal(getStoredEventFingerprint({ originalTitle: reutersFcc, eventFingerprint: 'event:old' } as NewsEvent), fccFingerprint);
+    assert.equal(spaceDataCenterApprovalFingerprint('FCC rejects SpaceX plan for 1 million data center satellites'), '');
+    assert.equal(spaceDataCenterApprovalFingerprint('SpaceX seeks approval to launch 1 million AI satellites'), '');
+    assert.equal(spaceDataCenterApprovalFingerprint('FCC approves launch of 500 new SpaceX Starlink satellites'), '');
 
     // Process both articles through clustering without AI API call
     const test1Events = await clusterAndProcessArticles([reutersArticle, cnbcArticle], false);

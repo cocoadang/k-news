@@ -16,11 +16,10 @@ const sources = {
   bloomberg: { name: 'Bloomberg · Interview transcript', url: 'https://www.bishoprockcap.com/assets/library/stan-druckenmiller/October%202024%20Stan%20Druckenmiller%20on%20Fed%20Policy%2C%20Election%2C%20Bonds%2C%20Nvidia%20%28transcript%29' },
 };
 
-const topics: { id: string; label: Localized; summary: Localized; entries: Entry[] }[] = [
+const topics: { id: string; label: Localized; entries: Entry[] }[] = [
   {
     id: 'portfolio',
     label: ['시장 전망', 'Market outlook'],
-    summary: ['2026년 초 주식과 구리에 매수 포지션을 두었지만, 11월에는 시장 방향의 불확실성을 이유로 자본 보전을 우선한다고 밝혔습니다.', 'Early in 2026 he was long equities and copper. By November, uncertainty about market direction led him to prioritize preserving capital.'],
     entries: [
       { date: '2026-11-18', source: 'tomorrowx',
         headline: ['자본 보전 우선', 'Prioritized capital preservation'],
@@ -36,7 +35,6 @@ const topics: { id: string; label: Localized; summary: Localized; entries: Entry
   {
     id: 'ai',
     label: ['투자 전략', 'Investment strategy'],
-    summary: ['AI의 장기 잠재력을 보고도 엔비디아를 매도했습니다. 이후 포트폴리오에서 AI 비중을 줄였고, 새 상승장이 온다면 AI 응용 분야가 주도할 수 있다고 봤습니다.', 'He sold Nvidia while retaining a long-term AI thesis, later reduced AI’s role in the portfolio, and said AI applications could lead another rally.'],
     entries: [
       { date: '2026-11-18', source: 'tomorrowx',
         headline: ['AI 응용 분야에 주목', 'Shifted attention toward AI applications'],
@@ -52,7 +50,6 @@ const topics: { id: string; label: Localized; summary: Localized; entries: Entry
   {
     id: 'rates',
     label: ['금리·인플레이션', 'Rates and inflation'],
-    summary: ['2024년에는 금리 인하가 인플레이션을 다시 자극할 가능성을 보고 채권을 매도했고, 2026년 초에는 채권 매도를 위험자산의 헤지로 설명했습니다.', 'In 2024 he shorted bonds on inflation risk after a rate cut. In early 2026 he described the short as a hedge for risk assets.'],
     entries: [
       { date: '2026-02-27', source: 'morgan',
         headline: ['채권 매도를 포트폴리오 헤지로 활용', 'Used short bonds as a portfolio hedge'],
@@ -78,7 +75,6 @@ export function DruckenmillerHistory() {
     activeId={active}
     onSelect={setActive}
     topicTitle={t(...topic.label)}
-    summary={t(...topic.summary)}
     metadata={t('인터뷰·행사 공개일 기준 · 최신순', 'Interview and event publication dates · newest first')}
   >
     {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}

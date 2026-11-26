@@ -13,51 +13,57 @@ type Item = { statement: any; matchedTerms: string[]; date: { value: string | nu
 
 const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : tr('날짜 미확인', 'Date unconfirmed'));
 const DATE_BASIS_EN: Record<string, string> = { posted: 'Interview published · recording date unknown', spoken: 'Spoken', released: 'Press release', written: 'Posted', reported: 'Reported', video: 'Video posted', unknown: 'Date unconfirmed' };
-const month = (d: string) => d.slice(0, 7).replace('-', '.');
 
 function Metrics({ values }: { values: string[] }) {
   if (!values.length) return null;
   return <div className="tl-metrics">{values.map(m => <span key={m}>{m}</span>)}</div>;
 }
 
+function statementSource(s: any) {
+  return s.evidence?.find((item: { url?: string }) => item?.url);
+}
+
 function Source({ s }: { s: any }) {
-  const e = (s.evidence || [])[0];
+  const e = statementSource(s);
   return e?.url ? <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{e.sourceName || tr('출처', 'Source')} ↗</a> : null;
 }
 
-function Body({ s, open = false }: { s: any; open?: boolean }) {
+function Body({ s }: { s: any }) {
   const t = displayText(s);
-  const socialPlatform = s.socialPlatform || 'X';
+  const sourceExcerpt = !statementSource(s) && s.quoteText && (s.quoteText !== t.text || s.curatedSummaryKo)
+    ? <details className="tl-original">
+        <summary>{tr('원문 발췌', 'Original excerpt')}</summary>
+        <blockquote lang={s.quoteLanguage || 'en'}>{s.quoteText}</blockquote>
+      </details>
+    : null;
   if (getLang() === 'en' && s.kind !== 'reported_excerpt') {
     // 영어 화면: 번역 대신 영어 원문을 그대로 보여 줍니다(추가 비용 없음)
     const kind = s.kind === 'video_quote' ? `From video captions${s.videoTitle ? ` · ${s.videoTitle}` : ''}`
-      : s.kind === 'social_post' ? `Own post on ${socialPlatform}${s.curatedSummaryKo ? ' · excerpt' : ''}`
       : s.kind === 'reported_headline' ? `Press headline · not a direct quote${s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount} outlets` : ''}`
-      : 'Original quote';
+      : null;
     const warn = s.kind === 'reported_headline';
-    return <><p className={'tl-text tl-en' + (s.kind === 'reported_headline' ? ' tl-milestone' : '')} lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p><span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>
+    return <><p className={'tl-text tl-en' + (s.kind === 'reported_headline' ? ' tl-milestone' : '')} lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p>{kind && <span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>}
       {warn && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>{s.relatedHeadlines.length} other headlines on this</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
   if (s.kind === 'video_quote') {
     return <>
       <p className="tl-text">{t.kind === 'ai_translation' ? t.text : <span lang="en">{t.text}</span>}</p>
       <span className="tl-tag">영상 자막에서 확인한 발언{t.kind === 'ai_translation' ? ' · AI 번역' : ''}{s.videoTitle ? ` · ${s.videoTitle}` : ''}</span>
-      <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+      {sourceExcerpt}
     </>;
   }
   if (s.curatedSummaryKo) {
     return <>
       <p className="tl-text">{s.curatedSummaryKo}</p>
-      <span className="tl-tag">{s.kind === 'social_post' ? `${socialPlatform} 본인 게시물` : '백악관 공식 발언'} · 요약</span>
-      <details className="tl-original" open={open}><summary>원문 발췌 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+      <span className="tl-tag">발언 요약</span>
+      {sourceExcerpt}
     </>;
   }
   if (s.kind === 'social_post') {
     const ko = t.kind === 'ai_translation';
     return <>
       <p className="tl-text">{ko ? t.text : <span lang="en">{t.text}</span>}</p>
-      <span className="tl-tag">본인 {socialPlatform} 게시물{ko ? ' · AI 번역' : ' · 원문'}</span>
-      {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
+      {ko && sourceExcerpt}
     </>;
   }
   if (s.kind === 'reported_excerpt') {
@@ -66,7 +72,7 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
   if (s.kind === 'reported_headline') {
     const ko = t.kind === 'ai_translation';
     return <><p className={'tl-text tl-milestone' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p><span className="tl-tag tl-warn">{ko ? 'AI 번역 · ' : ''}언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span>
-      {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
+      {ko && sourceExcerpt}
       {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
   const summary = displaySummary(s);
@@ -75,16 +81,16 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
       <h4 className="tl-milestone">{summary.title}</h4>
       <p className="tl-text">{summary.summary}</p>
       <span className="tl-tag">{summary.reviewed ? '원문 검토 요약' : s.sourceType === 'authored_post' ? '블로그 발췌 요약' : 'AI 발언 요약'}</span>
-      <details className="tl-original" open={open}><summary>원문 발췌 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+      {sourceExcerpt}
     </>;
   }
   if (t.kind === 'original') {
-    return <><p className="tl-text tl-en" lang="en">{t.text}</p><span className="tl-tag">원문 · 한국어 번역 없음</span></>;
+    return <p className="tl-text tl-en" lang="en">{t.text}</p>;
   }
   return <>
     <p className="tl-text">{t.text}</p>
     <span className="tl-tag">{t.kind === 'translation' ? '검토된 번역' : 'AI 요약 제목'}</span>
-    <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>
+    {sourceExcerpt}
   </>;
 }
 
@@ -158,7 +164,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
     ...added.map(entry => ({ date: entry.date, key: entry.url + entry.headline[1], item: null, entry })),
   ].sort((a, b) => b.date.localeCompare(a.date));
   const dates = [...new Set(entries.map(entry => entry.date).filter(Boolean))];
-  const range = dates.length ? [dates.at(-1)!, dates[0]] : null;
   const pickScope = (k: string) => {
     if (k === scopeKey) return;
     setScopeKey(k);
@@ -180,10 +185,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       }))}
       activeId={q.id}
       onSelect={pickQuestion}
-      metadata={[
-        t(`${entries.length}건`, `${entries.length} ${entries.length === 1 ? 'item' : 'items'}`),
-        range ? month(range[0]) + (month(range[1]) === month(range[0]) ? '' : ' ~ ' + month(range[1])) : null,
-      ].filter(Boolean).join(' · ')}
       note={dates.length >= 2 ? undefined : t('날짜가 다른 발언이 2건 이상 있어야 변화를 비교할 수 있습니다.', 'At least two statements on different dates are needed to compare change.')}
     >
       {entries.map(({ key, item, entry }) => entry ? <SourcedInvestorEntry key={key} entry={entry}/> : item && <HistoryEntry

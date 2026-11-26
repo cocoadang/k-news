@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useLang } from '../../../i18n';
 
 type HistoryTopic = { id: string; label: string; badge?: string };
@@ -12,10 +12,8 @@ export function HistoryPanel({ title, topics, activeId, onSelect, metadata, note
   note?: string;
   children: ReactNode;
 }) {
-  const id = useId();
   const { t } = useLang();
-  return <section aria-labelledby={id} className="tl-history tl-card">
-    <h2 id={id}>{title}</h2>
+  return <section aria-label={title} className="tl-history tl-card">
     <div role="group" aria-label={t('비교 주제', 'Comparison topics')} className="tl-scopes tl-history-topics" data-topic-count={topics.length}>
       {topics.map(topic => <button type="button" key={topic.id}
         className={'tl-chip' + (topic.id === activeId ? ' on' : '')}
@@ -38,8 +36,7 @@ export function HistoryEntry({ date, dateLabel, dateBasis, source, children }: {
 }) {
   return <li>
     <div className="tl-date">
-      <strong>{date ? <time dateTime={date}>{dateLabel}</time> : dateLabel}</strong>
-      {dateBasis && <small>{dateBasis}</small>}
+      <strong title={dateBasis}>{date ? <time dateTime={date}>{dateLabel}</time> : dateLabel}</strong>
     </div>
     <div className="tl-card">
       {children}

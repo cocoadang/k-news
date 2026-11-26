@@ -304,7 +304,6 @@ export function InvestorHistory({ personId, profile }: { personId: string; profi
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.label) }))}
     activeId={topic.id}
     onSelect={setActive}
-    metadata={t('발언일 또는 보도일 기준 · 최신순', 'Statement or publication dates · newest first')}
   >
     {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}
   </HistoryPanel>;

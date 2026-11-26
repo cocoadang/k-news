@@ -100,7 +100,7 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
       return store.exclusive(async(s,save)=>{const old=s.videos[video.id];if(old&&old.stage!=='text_waiting')return {status:'already_recorded'};
         s.videos[video.id]={video,programmes,recipient:c.recipient,stage:'text_summary',transcript,source:{...provenance,sha256:hash(text)},firstSeen:old?.firstSeen||now};await save();return {status:'imported'};});},
     async run({manualRunId}={}){if(manualRunId!==undefined&&(typeof manualRunId!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_-]{15,79}$/.test(manualRunId)))throw Error('invalid_manual_run_id');if(!c.enabled)return {status:'disabled'};check();
-      return store.exclusive(async(s,save)=>{const now=clock();s.text ||= {coverage:{}};
+      return store.exclusive(async(s,save,{recoveredLock=false}={})=>{const now=clock();s.text ||= {coverage:{}};
         if(manualRunId){
           s.text.manualRuns ||= {};
           if(s.text.manualRuns[manualRunId])return {status:'manual_run_already_recorded'};
@@ -111,6 +111,14 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         if(!manualRunId&&c.dailyCheckTimes){const slot=twiceDailySlot(now,c.dailyCheckTimes);if(!slot||s.text.lastScheduledSlot===slot)return {status:'scheduled_slot_already_processed_or_not_due'};s.text.lastScheduledSlot=slot;await save();}
         for(const r of Object.values(s.videos))if(r.stage==='text_summary_inflight'){r.stage='text_review_required';r.hold='summary_outcome_unknown';}
         for(const r of Object.values(s.videos))if(['vidiq_inflight','supadata_inflight'].includes(r.stage)){r.stage='text_review_required';r.hold='caption_outcome_unknown_no_retry';}
+        if(recoveredLock){
+          for(const r of Object.values(s.videos)){
+            for(const part of r.telegramParts||[])if(part.status==='inflight')part.status='unknown';
+          }
+          for(const r of Object.values(s.ceoVideos||{})){
+            if(r.stage==='caption_inflight'||r.stage==='extract_inflight')r.stage='outcome_unknown';
+          }
+        }
         if(discovery&&(!s.text.lastCollectionAt||now-s.text.lastCollectionAt>=600000)){
           for(const channel of [...new Set(PROGRAMMES.map(p=>p.channelId))])try{const batch=await discovery.list(channel);
             for(const video of batch){if(c.excludedVideoIds?.includes(video.id))continue;const programmes=matchProgrammes(video,{activatedAt:c.activatedAt,now,maxAgeMs:c.maxAgeMs,allowProviderVerification:true});if(programmes.length&&!programmes.some(p=>c.disabledProgrammes?.includes(p))&&!s.videos[video.id])s.videos[video.id]={video,programmes,stage:'text_waiting',recipient:c.recipient,firstSeen:now,hold:'authorized_automatic_caption_source_unavailable'};}
@@ -281,8 +289,8 @@ export function createTextRuntime({store,discovery,summarizer,telegram,captions,
         // CEO 발언 영상: 프로그램 처리 뒤 남는 Supadata 여유로 최대 1편. 실패해도 유튜브 요약 결과에 영향 없음.
         let ceoVideo={status:'ceo_video_disabled'};
         try{ceoVideo=await runCeoVideoStep({s,save,now,c,discovery:ceoDiscovery,supadata,extractor:ceoExtractor});}catch{ceoVideo={status:'ceo_video_error'};}
-        if(manualRunId)s.text.manualRuns[manualRunId]={status:'completed',startedAt:now,completedAt:clock()};await save();return {status:'processed',acquisition:'routed_native_captions_and_ui_import',ceoVideo,stages:Object.fromEntries(Object.entries(s.videos).map(([id,r])=>[id,r.stage]))};
-      });}
+        if(manualRunId)s.text.manualRuns[manualRunId]={status:'completed',startedAt:now,completedAt:clock()};await save();return {status:'processed',acquisition:'routed_native_captions_and_ui_import',recoveredLock,ceoVideo,stages:Object.fromEntries(Object.entries(s.videos).map(([id,r])=>[id,r.stage]))};
+      },{recoverStale:Boolean(manualRunId)});}
   };
 }
 

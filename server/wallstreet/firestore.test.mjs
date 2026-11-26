@@ -153,3 +153,33 @@ test('large evidence state compresses and preserves existing delivery state acro
   assert.equal(db.data.get(COLLECTION+'/head').encoding,'json');
   assert.equal((await store.read()).videos.old.parts[0].messageId,'123');
 });
+
+test('only an authenticated manual run can reclaim old ownership without replaying uncertain effects', async () => {
+ const db=new FakeFirestore(),store=new FirestoreWallstreetStore(db);
+ const now=Date.now();
+ await store.exclusive(async(s,save)=>{
+   s.videos.pending={video:{id:'pending'},recipient:'mock',stage:'vidiq_inflight',firstSeen:now};
+   s.videos.delivery={video:{id:'delivery'},recipient:'mock',stage:'text_delivery',firstSeen:now,telegramParts:[{text:'claimed',status:'inflight'}]};
+   s.ceoVideos={lecture:{stage:'extract_inflight'}};
+   s.budgets.month=80;
+   await save();
+ });
+ const lockedHead=db.data.get(COLLECTION+'/head');
+ lockedHead.owner='worker-from-before-deploy';
+ lockedHead.lockedAt=now;
+ await assert.rejects(store.exclusive(async()=>{}, {recoverStale:true}),/wallstreet_locked/);
+ lockedHead.lockedAt=now-3*3600000;
+ await assert.rejects(store.exclusive(async()=>{}),/wallstreet_locked/);
+ let calls=0;
+ const config={enabled:true,mode:'caption_text',projectId:'gen-lang-client-0064554427',paidFallback:false,activatedAt:0,recipient:'mock',deliveryApproved:true,deliveryMode:'immediate'};
+ const runtime=createConfiguredWallstreetRuntime({getFirestore:()=>db,config,textDependencies:{telegram:{send:async()=>{calls++;}}}});
+ const result=await runtime.run({manualRunId:'reclaim-test-request'});
+ assert.equal(result.recoveredLock,true);
+ const state=await store.read();
+ assert.equal(state.videos.pending.hold,'caption_outcome_unknown_no_retry');
+ assert.equal(state.videos.delivery.telegramParts[0].status,'unknown');
+ assert.equal(state.ceoVideos.lecture.stage,'outcome_unknown');
+ assert.equal(state.budgets.month,80);
+ assert.equal(calls,0);
+ assert.equal(db.data.get(COLLECTION+'/head').owner,null);
+});

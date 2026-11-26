@@ -11,8 +11,8 @@ export function WallstreetRunButton({onDone,onStatus}:{onDone:()=>void;onStatus:
       const r=await fetch('/api/admin/wallstreet/run',{method:'POST',credentials:'include',headers:{'X-Knews-Run-Id':id}});
       const b=await r.json().catch(()=>({}));
       if(r.status===401||r.status===403){onStatus('관리자 로그인이 필요합니다.');return;}
-      const text:Record<string,string>={processed:'수집 완료',manual_throttled:'10분 이내 재실행은 막혀 있습니다. 잠시 후 다시 눌러주세요.',disabled:'자동 요약이 꺼져 있습니다.'};
-      onStatus((text[b.status]||`결과: ${b.status||r.status}`)+(b.ceoVideo?.status?` · CEO 영상: ${b.ceoVideo.status}`:''));
+      const text:Record<string,string>={processed:'수집 완료',manual_throttled:'10분 이내 재실행은 막혀 있습니다. 잠시 후 다시 눌러주세요.',disabled:'자동 요약이 꺼져 있습니다.',wallstreet_locked:'이전 요약 작업이 잠겨 있습니다.'};
+      onStatus((text[b.status]||`결과: ${b.status||r.status}`)+(b.recoveredLock===true?' · 이전 작업 잠금 복구':'')+(b.ceoVideo?.status?` · CEO 영상: ${b.ceoVideo.status}`:''));
       onDone();
     }catch{onStatus('응답을 받지 못했습니다. 서버에서는 계속 실행될 수 있으니 잠시 후 새로고침하세요.');}
     finally{setBusy(false);}

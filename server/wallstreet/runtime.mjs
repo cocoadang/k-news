@@ -55,6 +55,9 @@ export function registerWallstreetRoutes(app,{runtime,verifyAdmin,verifyJob,publ
     const manualRunId=req.get('X-Knews-Run-Id');
     if(typeof manualRunId!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_-]{15,79}$/.test(manualRunId))return res.status(400).json({status:'manual_run_id_required'});
     try {res.json(await runtime.run({manualRunId}));onRunFinished?.();}
-    catch {res.status(503).json({status:'unavailable',message:'Wallstreet job unavailable; inspect durable state before retry.'});}
+    catch(error) {
+      const status=error?.message==='wallstreet_locked'?'wallstreet_locked':'unavailable';
+      res.status(503).json({status,message:'Wallstreet job unavailable; inspect durable state before retry.'});
+    }
   });
 }

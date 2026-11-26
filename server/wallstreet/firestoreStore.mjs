@@ -3,6 +3,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import { emptyState } from './core.mjs';
 
 export const COLLECTION = 'wallstreet_newsletter_v1';
+const STALE_OWNERSHIP_MS = 2*60*60*1000;
 const STATE_OUTPUT_LIMIT = 64*1024*1024;
 const digest = text => createHash('sha256').update(text).digest('hex');
 function encode(state) {
@@ -37,7 +38,8 @@ function headOf(snap) {
 }
 /** Same injected @google-cloud/firestore instance and ADC as existing CEO store.
  * All state, cost reservations, chunks and lock ownership use Firestore transactions.
- * Non-expiring lock intentionally requires manual recovery after an uncertain operation.
+ * Scheduled jobs never reclaim ownership. An authenticated manual run may
+ * reclaim after two hours without a checkpoint; the revision fences the old worker.
  * No external API calls run inside a transaction callback (Firestore may replay callbacks).
  */
 export class FirestoreWallstreetStore {
@@ -52,11 +54,14 @@ export class FirestoreWallstreetStore {
       return decode(head,snaps);
     }, {readOnly:true});
   }
-  async exclusive(fn) {
-    const owner=randomUUID(); let revision;
+  async exclusive(fn,{recoverStale=false}={}) {
+    const owner=randomUUID(); let revision, recoveredLock=false;
     const state=await this.db.runTransaction(async tx=>{
       const head=headOf(await tx.get(this.head));
-      if(head?.owner) throw Error('wallstreet_locked');
+      recoveredLock=Boolean(head?.owner);
+      if(recoveredLock&&(!recoverStale||!Number.isFinite(head.lockedAt)||Date.now()-head.lockedAt<STALE_OWNERSHIP_MS)){
+        throw Error('wallstreet_locked');
+      }
       const snaps=[];
       if(head) for(let i=0;i<head.count;i++) snaps.push(await tx.get(this.chunk(i)));
       const s=decode(head,snaps), enc=encode(s);
@@ -73,12 +78,12 @@ export class FirestoreWallstreetStore {
         const next=expected+1;
         enc.chunks.forEach((base64,index)=>tx.set(this.chunk(index),{revision:next,index,base64}));
         for(let i=enc.chunks.length;i<h.count;i++) tx.delete(this.chunk(i));
-        tx.set(this.head,{...h,revision:next,count:enc.chunks.length,hash:enc.hash,encoding:enc.encoding});
+        tx.set(this.head,{...h,revision:next,count:enc.chunks.length,hash:enc.hash,encoding:enc.encoding,lockedAt:Date.now()});
       });
       revision=expected+1;
     };
     // Deliberately no finally/unlock on failure: uncertain commits must fail closed.
-    const result=await fn(state,save);
+    const result=await fn(state,save,{recoveredLock});
     await this.db.runTransaction(async tx=>{
       const h=headOf(await tx.get(this.head));
       if(h?.owner!==owner || h.revision!==revision) throw Error('wallstreet_lock_lost');

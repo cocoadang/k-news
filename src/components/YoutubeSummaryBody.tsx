@@ -10,9 +10,9 @@ export function YoutubeSummaryBody({text,videoId}:{text:string;videoId:string}) 
   return <div className="youtube-reading">
     {headings.length>0&&<nav className="youtube-toc" aria-label={tr('요약 주제 바로가기','Jump to topic')}><details open>
       <summary>{tr('주제와 타임스탬프','Topics and timestamps')}</summary>
-      <ol>{headings.map(h=><li key={h.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <ol>{headings.map(h=><li key={h.id} className="youtube-topic-row">
         <a href={`#${h.id}`}><span>{h.number}</span>{h.text}</a>
-        {h.time&&<a href={h.time.url} target="_blank" rel="noopener noreferrer" aria-label={`${h.text} · ${h.time.text}`}>{h.time.text} ↗</a>}
+        {h.time&&<a className="youtube-topic-time" href={h.time.url} target="_blank" rel="noopener noreferrer" aria-label={`${h.text} · ${h.time.text}`}>{h.time.text} ↗</a>}
       </li>)}</ol>
     </details></nav>}
     <div className="youtube-prose">{blocks.map((block,i)=>{

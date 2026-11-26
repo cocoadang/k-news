@@ -486,7 +486,7 @@ export default function App() {
         ) : mainView === 'system' ? (
           <SystemHealthMenu />
         ) : (<>
-        <div className="mb-3 flex min-w-0 items-center gap-2 sm:mb-4 sm:gap-3">
+        <div className="news-filters mb-3 flex min-w-0 flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:gap-3">
           <CompanyTabs companies={companies} selectedCompany={selectedCompany} onSelectCompany={setSelectedCompany} events={events} />
           <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         </div>

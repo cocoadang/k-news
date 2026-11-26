@@ -10,7 +10,7 @@ interface FilterBarProps {
 export const FilterBar: React.FC<FilterBarProps> = ({ searchQuery, setSearchQuery }) => {
   const { t } = useLang();
   return (
-    <div className="relative w-[42%] min-w-24 max-w-sm shrink-0 sm:w-64">
+    <div className="relative w-full shrink-0 sm:w-64">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"

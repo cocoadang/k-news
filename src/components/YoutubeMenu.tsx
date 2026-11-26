@@ -34,7 +34,7 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
     {     status==='loading'?<p role="status">{t('저장된 요약을 불러오는 중입니다.','Loading saved summaries…')}</p>:
      status==='error'?<p role="alert">{t('요약을 불러오지 못했습니다. 잠시 후 다시 접속해 주세요.','Could not load saved results. Please refresh in a moment.')}</p>:
      video?<article className="youtube-detail min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
-       <div className="youtube-detail-header"><div className="youtube-detail-actions"><button className={button} onClick={closeVideo}>← {t('영상 목록','Video list')}</button></div>
+       <div className="youtube-detail-header"><button type="button" className={`${button} youtube-list-back`} onClick={closeVideo}>← {t('영상 목록','Video list')}</button>
        <p className="mt-5 text-sm text-cyan-300">{video.programmes.map(p=>programmes[p]).join(' · ')||t('코너 정보 없음','No programme info')}</p>
        <h2 className="mt-3 break-words text-xl font-bold leading-relaxed text-white">{video.title}</h2>
        <p className="mt-2 text-sm text-slate-400">{date(video.publishedAt)} · {statuses[video.status]||t('상태 확인 필요','Status unknown')}</p>

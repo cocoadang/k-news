@@ -55,10 +55,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onOpenDetail }) => 
       aria-label={`${title} · ${t('자세히', 'Details')}`}>
       {companies && <p className="mb-1 text-xs font-semibold text-cyan-300">{companies}</p>}
       <div className="flex items-start justify-between gap-2">
-        <h2 className="min-w-0 break-words text-sm font-bold leading-snug text-white group-hover:text-cyan-200 sm:text-base">{title}</h2>
+        <h2 className="min-w-0 break-words text-base font-bold leading-snug text-white group-hover:text-cyan-200">{title}</h2>
         <ChevronRight className="size-4 shrink-0 text-cyan-300" aria-hidden="true"/>
       </div>
-      {summary && <p className="mt-1 line-clamp-1 text-sm leading-relaxed text-slate-300">{summary}</p>}
+      {summary && <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-300 sm:line-clamp-1">{summary}</p>}
     </button>
   </article>;
 };

@@ -32,6 +32,7 @@ function parseAutomatic(text, videoId){
 export function parseSummary(text, videoId) {
   if(/^•\s*\[(?:방송에서 소개한 내용|출연자의 해석·전망)\]/m.test(text))return parseAutomatic(text,videoId);
   const blocks=[];
+  let legacyTopic = 0;
   for(const raw of text.split(/\r?\n/)) {
     const line=raw.trim(); if(!line) continue;
     const url=line.match(/^https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})(?:&t=(\d+)s)?$/);
@@ -43,8 +44,35 @@ export function parseSummary(text, videoId) {
       const label=paired?blocks.pop().text:(url[2]?`${stamp} 근거 장면`:'원문 영상');
       blocks.push({kind:'link',text:label,url:line}); continue;
     }
+    const legacy = line.match(/^•\s*(.{2,42}?):\s+(.+)$/);
+    if (legacy) {
+      blocks.push({kind:'heading', text:legacy[1], number:String(++legacyTopic)}, {kind:'paragraph', text:legacy[2]});
+      continue;
+    }
     const heading=line.match(/^(\d{1,2})\.\s+(.+)$/);
     blocks.push(heading?{kind:'heading',text:heading[2],number:heading[1]}:{kind:'paragraph',text:raw});
   }
   return blocks;
+}
+
+// Select actual saved content. A numbered/topic section takes precedence over introductory notes.
+export function summaryPreview(text, videoId) {
+  const blocks = parseSummary(text, videoId);
+  const start = blocks.findIndex(block => block.kind === 'heading');
+  const body = blocks.slice(start + 1).find(block => block.kind === 'paragraph'
+    && (start >= 0 || /^\s*•/.test(block.text)))?.text.trim().replace(/^•\s*/, '');
+  return body?.split(/(?<=[.!?。])\s+/, 1)[0] ?? '';
+}
+
+export function summaryTopics(blocks, videoId) {
+  const topics = [];
+  for (const block of blocks) {
+    if (block.kind === 'heading') topics.push({ ...block, id: `topic-${videoId}-${topics.length}`, time: null });
+    const active = topics.at(-1);
+    if (active && !active.time && block.kind === 'link') {
+      const seconds = new URL(block.url).searchParams.get('t');
+      if (seconds) active.time = { url: block.url, text: block.text.split(/\s/, 1)[0] };
+    }
+  }
+  return topics;
 }

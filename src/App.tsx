@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { CompanyTabs } from './components/CompanyTabs';
 import { FilterBar } from './components/FilterBar';
 import { EventCard } from './components/EventCard';
+import { groupNewsFeed } from './newsFeed';
 import { EventDetailModal } from './components/EventDetailModal';
 import { TelegramPreviewModal } from './components/TelegramPreviewModal';
 import { AdminSettings as SettingsModal } from './components/AdminSettings';
@@ -378,7 +379,8 @@ export default function App() {
   };
 
   // Filtered Events
-  const filteredEvents = events.filter((e) => {
+  const newsFeed = useMemo(() => groupNewsFeed(events), [events]);
+  const filteredEvents = newsFeed.filter((e) => {
     // 1. Company Filter
     if (selectedCompany !== 'all') {
       const target = selectedCompany.toLowerCase();
@@ -401,28 +403,19 @@ export default function App() {
     // Search query
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
-      const matchTitle = e.title.toLowerCase().includes(q) || e.originalTitle.toLowerCase().includes(q);
+      const matchTitle = e.title.toLowerCase().includes(q) || e.originalTitle?.toLowerCase().includes(q) || e.titleKo?.toLowerCase().includes(q);
       const matchBullets = e.summaryBulletPoints.some((b) => b.toLowerCase().includes(q));
       const matchCompanies = e.relatedCompanies?.some((c) => c.toLowerCase().includes(q));
       const matchImpacts = e.companyImpacts?.some((ci) => ci.companyName.toLowerCase().includes(q) || ci.rationale.toLowerCase().includes(q));
       const matchBiz = e.relatedBusinesses.some((b) => b.toLowerCase().includes(q));
-      const matchSource = e.primarySource.name.toLowerCase().includes(q);
+      const matchSource = [e.primarySource, ...(e.relatedSources || [])].some(source =>
+        source.name.toLowerCase().includes(q) || source.title?.toLowerCase().includes(q));
       if (!matchTitle && !matchBullets && !matchCompanies && !matchImpacts && !matchBiz && !matchSource) {
         return false;
       }
     }
     return true;
   });
-
-  const sortedAndFilteredEvents = useMemo(() => {
-    return [...filteredEvents].sort((a, b) => {
-      const timeA = new Date(a.primarySource?.publishedAt || a.firstSeenAt).getTime();
-      const timeB = new Date(b.primarySource?.publishedAt || b.firstSeenAt).getTime();
-      const safeA = isNaN(timeA) || timeA <= 0 ? new Date(a.updatedAt || 0).getTime() || 0 : timeA;
-      const safeB = isNaN(timeB) || timeB <= 0 ? new Date(b.updatedAt || 0).getTime() || 0 : timeB;
-      return safeB - safeA;
-    });
-  }, [filteredEvents]);
 
 
   return (
@@ -501,7 +494,7 @@ export default function App() {
         </div>
 
         {/* Events Feed */}
-        {sortedAndFilteredEvents.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="py-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
             <Newspaper className="w-8 h-8 text-slate-500 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-slate-300">
@@ -513,13 +506,10 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-3 sm:space-y-4">
-            {sortedAndFilteredEvents.map((event) => (
+            {filteredEvents.map((event) => (
               <EventCard
                 key={event.id}
                 event={event}
-                onSendTelegram={handleSendTelegram}
-                onReanalyze={handleReanalyze}
-                onPreviewTelegram={(evt) => setPreviewTelegramEvent(evt)}
                 onOpenDetail={(evt) => setDetailEvent(evt)}
               />
             ))}
@@ -542,7 +532,7 @@ export default function App() {
       {/* Modals */}
       {detailEvent && (
         <EventDetailModal
-          event={detailEvent}
+          event={newsFeed.find(event => event.id === detailEvent.id) ?? detailEvent}
           onClose={() => setDetailEvent(null)}
           onSendTelegram={handleSendTelegram}
           onReanalyze={handleReanalyze}

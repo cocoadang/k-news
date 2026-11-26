@@ -12,13 +12,64 @@ const format = (value: number | null, unit: string, digits = 1) => value === nul
 const scaled = (value: number | null, divisor: number) => value === null ? null : value / divisor;
 const sourceLink = 'text-cyan-300 underline underline-offset-2';
 const panel = 'rounded-xl border border-slate-700 bg-slate-900 p-4';
-const seedUsMetrics = [
-  ['실질 GDP 성장률', '3.4%', '2026년 3분기 · 전분기 대비 연율', 'https://fred.stlouisfed.org/series/A191RL1Q225SBEA'],
-  ['기업 이익 (세전)', '4.28조 달러', '2026년 2분기 · 연율', 'https://fred.stlouisfed.org/series/CP'],
-  ['중앙정부 부채 / GDP', '115.8%', '2024년', 'https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US'],
-  ['미국 금융여건 (NFCI)', '-0.478', '2026-11-13 · 0은 장기 평균', 'https://fred.stlouisfed.org/series/NFCI'],
-  ['광의 달러 지수', '122.65', '2026-11-13 · 2006년 1월=100', 'https://fred.stlouisfed.org/series/DTWEXBGS'],
-] as const;
+const usMetricInfo = {
+  growth: { label: '실질 GDP 성장률', value: 3.4, date: '2026-07-01', unit: '%', changeUnit: '%p', digits: 2, scale: 1,
+    basis: '전분기 대비 연율 · 0%가 성장과 위축의 경계', rule: '0%보다 높으면 실질 GDP가 전분기보다 늘었고, 낮으면 줄었습니다.', url: 'https://fred.stlouisfed.org/series/A191RL1Q225SBEA' },
+  profits: { label: '기업 이익 (세전)', value: 4280, date: '2026-04-01', unit: '조 달러', changeUnit: '조 달러', digits: 2, scale: 1000,
+    basis: '직전 분기 · 계절조정 연율', rule: '직전 분기와 비교한 명목 세전 이익의 증감입니다. 물가 변화가 포함됩니다.', url: 'https://fred.stlouisfed.org/series/CP' },
+  debt: { label: '중앙정부 부채 / GDP', value: 115.8, date: '2024', unit: '%', changeUnit: '%p', digits: 1, scale: 1,
+    basis: '직전 공개 연도', rule: '비율이 오르면 GDP 대비 중앙정부 부채가 늘었다는 뜻입니다. 재정 위험은 이자 부담과 만기 구조도 함께 봐야 합니다.', url: 'https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US' },
+  nfci: { label: '미국 금융여건 (NFCI)', value: -0.478, date: '2026-11-13', unit: '', changeUnit: '포인트', digits: 3, scale: 1,
+    basis: '장기 평균 0', rule: '0보다 낮으면 평균보다 완화된 금융여건, 높으면 긴축적인 금융여건을 뜻합니다.', url: 'https://fred.stlouisfed.org/series/NFCI' },
+  dollar: { label: '광의 달러 지수', value: 122.65, date: '2026-11-13', unit: '', changeUnit: '포인트', digits: 2, scale: 1,
+    basis: '2006년 1월 = 100', rule: '지수가 오르면 무역 상대국 통화에 비해 달러가 강해졌다는 뜻입니다.', url: 'https://fred.stlouisfed.org/series/DTWEXBGS' },
+} as const;
+type UsMetricKey = keyof typeof usMetricInfo;
+const usKeys = Object.keys(usMetricInfo) as UsMetricKey[];
+
+function observationPeriod(key: UsMetricKey, date: string) {
+  if (key === 'growth' || key === 'profits') return `${date.slice(0, 4)}년 ${Math.ceil(Number(date.slice(5, 7)) / 3)}분기`;
+  return key === 'debt' ? `${date}년` : date;
+}
+
+function UsMetrics({ snapshot }: { snapshot?: SystemHealth }) {
+  const [selected, setSelected] = useState<UsMetricKey | null>(null);
+  const active = selected ? usMetricInfo[selected] : null;
+  const history = selected ? snapshot?.usHistory?.[selected] ?? [] : [];
+  return <section className={panel}>
+    <h2 className="font-semibold">미국 경제·금융 지표</h2>
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      {usKeys.map(key => {
+        const info = usMetricInfo[key];
+        const reading = snapshot ? snapshot.us[key] : info;
+        const previous = snapshot?.usHistory?.[key]?.at(-2);
+        const delta = reading && previous ? Number(((reading.value - previous.value) / info.scale).toFixed(info.digits)) : null;
+        return <button key={key} type="button" aria-expanded={selected === key}
+          aria-controls={selected === key ? 'us-metric-detail' : undefined}
+          className={`min-w-0 rounded-lg border bg-slate-800/70 p-2.5 text-left focus-visible:outline-2 focus-visible:outline-cyan-400 ${selected === key ? 'border-cyan-400' : 'border-transparent hover:border-slate-500'}`}
+          onClick={() => setSelected(current => current === key ? null : key)}>
+          <span className="block text-xs text-cyan-300">{info.label}</span>
+          <strong className="mt-1 block tabular-nums">{format(scaled(reading?.value ?? null, info.scale), info.unit, info.digits)}</strong>
+          <span className="mt-1 block text-xs text-slate-400">{reading ? observationPeriod(key, reading.date) : '관측값 없음'}{!snapshot && ' · 저장값'}</span>
+          <span className="mt-1 block text-xs text-slate-300">{info.basis}</span>
+          <span className="mt-1 block text-xs text-slate-300">{delta === null ? '최근 방향 자료 없음' : delta === 0 ? '직전 관측 대비 보합' : `직전 관측 대비 ${delta > 0 ? '상승' : '하락'} ${format(Math.abs(delta), info.changeUnit, info.digits)}`}</span>
+        </button>;
+      })}
+    </div>
+    {selected && active && <section id="us-metric-detail" className="mt-3 rounded-lg border border-slate-700 p-3" aria-label={active.label + ' 추이 및 해석'}>
+      <h3 className="text-sm font-semibold">{active.label} 추이</h3>
+      <p className="mt-1 text-sm leading-6 text-slate-300">{active.rule}</p>
+      {history.length > 1 ? <table className="mt-2 w-full text-sm">
+        <thead><tr className="border-b border-slate-700 text-slate-400"><th scope="col" className="py-1 text-left">관측 시기</th><th scope="col" className="py-1 text-right">관측값</th></tr></thead>
+        <tbody>{[...history].reverse().map(({date, value}) => <tr key={date} className="border-b border-slate-800">
+          <th scope="row" className="py-1 text-left font-normal">{observationPeriod(selected, date)}</th>
+          <td className="py-1 text-right tabular-nums">{format(scaled(value, active.scale), active.unit, active.digits)}</td>
+        </tr>)}</tbody>
+      </table> : <p className="mt-2 text-xs text-slate-400">비교할 이전 관측값이 없습니다.</p>}
+      <a href={active.url} className={`mt-3 inline-flex min-h-11 items-center text-sm ${sourceLink}`} target="_blank" rel="noopener noreferrer">공식 출처 ↗ {selected === 'debt' ? '세계은행' : 'FRED'}</a>
+    </section>}
+  </section>;
+}
 const sections = [
   { title: 'A. 미국 내부 시스템 건전성', rows: [
     ['기업 이익·생산성', 'BEA', 'https://www.bea.gov/'],
@@ -77,15 +128,6 @@ export function SystemHealthMenu() {
   const worldBank = snapshot?.worldBank ?? seedWorldBank;
   const updated = snapshot?.updated ?? seedUpdated;
   const year = yearChoice !== undefined && years.includes(yearChoice) ? yearChoice : snapshot?.latestYear ?? 2025;
-  const quarter = (date: string) => `${date.slice(0, 4)}년 ${Math.ceil(Number(date.slice(5, 7)) / 3)}분기`;
-  const us = snapshot?.us;
-  const usMetrics = us ? [
-    ['실질 GDP 성장률', format(us.growth.value, '%', 2), `${quarter(us.growth.date)} · 전분기 대비 연율`, seedUsMetrics[0][3]],
-    ['기업 이익 (세전)', format(us.profits.value / 1000, '조 달러', 2), `${quarter(us.profits.date)} · 연율`, seedUsMetrics[1][3]],
-    ['중앙정부 부채 / GDP', format(us.debt?.value ?? null, '%'), us.debt ? `${us.debt.date}년` : '자료 없음', seedUsMetrics[2][3]],
-    ['미국 금융여건 (NFCI)', format(us.nfci.value, '', 3), `${us.nfci.date} · 0은 장기 평균`, seedUsMetrics[3][3]],
-    ['광의 달러 지수', format(us.dollar.value, '', 2), `${us.dollar.date} · 2006년 1월=100`, seedUsMetrics[4][3]],
-  ] : seedUsMetrics;
   const index = years.indexOf(year);
   const [gdp, growth, productivity, fdi, equity] = worldBank[selected][index];
   const worldGdp = worldBank.WLD[index][0];
@@ -108,16 +150,7 @@ export function SystemHealthMenu() {
         <p className="mt-2 text-sm text-slate-300">장기 경쟁력 · 국가별 상대 성장 · 국제 자본 흐름</p>
         <p className="mt-2 text-xs text-slate-400">최근 수집 {snapshot ? new Date(snapshot.collectedAt).toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'}) : '2026-11-21'} · 세계은행 WDI 갱신일 {updated}{refreshFailed ? ' · 갱신 지연' : ''}</p>
       </header>
-      <section className={panel}>
-        <h2 className="font-semibold">미국 경제·금융 지표</h2>
-        <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {usMetrics.map(([label, value, period, url]) => <div key={label} className="min-w-0 rounded-lg bg-slate-800/70 p-2.5">
-            <dt className="text-xs"><a href={url} className={sourceLink}>{label}</a></dt>
-            <dd className="mt-1 font-semibold tabular-nums">{value}</dd>
-            <dd className="mt-1 text-xs text-slate-400">{period}</dd>
-          </div>)}
-        </dl>
-      </section>
+      <UsMetrics snapshot={snapshot}/>
       <section className={panel}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">국가 비교</h2>

@@ -13,7 +13,7 @@ type YahooChart = {
   indicators?: { adjclose?: { adjclose?: number[] }[]; quote?: { close?: number[] }[] };
 };
 
-export async function fetchYahooChart(symbol: string, range: '1y' | '5d'): Promise<YahooChart> {
+export async function fetchYahooChart(symbol: string, range: '1y' | '5d' | 'max'): Promise<YahooChart> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
   const response = await fetch(url, {
     headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },

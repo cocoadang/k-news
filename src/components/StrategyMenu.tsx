@@ -20,7 +20,6 @@ const RULES = (): Record<string, string> => ({
   mubot: tr('라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식', 'Approximation of Laoer\'s Infinite Buying V4.0 (TQQQ, 20 splits)'),
   qqq: tr('같은 날 같은 금액을 QQQ에 적립', 'Same amount into QQQ on the same days'),
 });
-const VIX_EN: Record<string, string> = {'데이터 없음': 'No data', '낮은 변동성': 'Low', '보통 변동성': 'Normal', '변동성 확대': 'Elevated', '높은 변동성': 'High', '매우 높은 변동성': 'Very high', '극단적 변동성': 'Extreme', '초극단적 변동성': 'Ultra-extreme'};
 const VARIANT_EN: Record<string, [string, string]> = {
   gfc: ['GFC low', 'Starts at the Nasdaq-100 closing low on Nov 20, 2008 (1,037), −54% from the Oct 2007 peak.'],
   trade: ['US–China trade war low', 'Starts at the Dec 24, 2018 low (5,899), −23% from the Aug 2018 peak.'],
@@ -222,7 +221,7 @@ const quoteTime = new Intl.DateTimeFormat('sv-SE', {
 });
 
 function MarketIndicatorCards({live}: {live: Live | null}) {
-  const {t, lang} = useLang();
+  const {t} = useLang();
   const [quotes, setQuotes] = useState<MarketIndicators | null>(null);
   const [drawdownsOpen, setDrawdownsOpen] = useState(false);
   const [activeIndicator, setActiveIndicator] = useState<IndicatorHistoryKey | null>(null);
@@ -253,7 +252,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
   const m = live?.market;
   const ndx = quotes?.ndx;
   const usableNdx = ndx && (!live || quoteDate.format(new Date(ndx.asOf)) >= live.asOf) ? ndx : null;
-  const peak = usableNdx ? Math.max(num(m?.peak) ?? 0, usableNdx.recentClosingPeak, usableNdx.value) : num(m?.peak);
+  const peak = usableNdx ? Math.max(num(m?.peak) ?? 0, usableNdx.drawdownAverage?.peak ?? 0, usableNdx.recentClosingPeak, usableNdx.value) : num(m?.peak);
   const dd = usableNdx && peak ? (1 - usableNdx.value / peak) * 100 : num(m?.dd);
   const vixQuote = quotes?.vix && (!live || quoteDate.format(new Date(quotes.vix.asOf)) >= live.asOf) ? quotes.vix : null;
   const vix = vixQuote?.value ?? num(m?.vix?.value);
@@ -262,17 +261,23 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
   const formatted = (date: string | number) => `${quoteTime.format(new Date(date))} KST`;
   const saved = (asOf?: string) => asOf ? `${t('저장값', 'Saved')} · ${asOf}` : undefined;
   const availability = quotes ? t('데이터를 불러올 수 없음', 'Data unavailable') : t('불러오는 중', 'Loading');
-  const rating = (quotes?.fearGreed?.label || m?.fearGreed?.label)?.toLowerCase();
+  const drawdownAverage = ndx?.drawdownAverage;
+  const compare = (value: number | null, mean?: number, unit = 'p') => {
+    if (value === null || mean === undefined || !Number.isFinite(mean)) return t('평균 비교 자료 없음', 'Mean comparison unavailable');
+    const delta = value - mean;
+    return t(`평균 ${mean.toFixed(2)}${unit === '%p' ? '%' : ''} 대비 ${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit}`,
+      `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit === '%p' ? ' pp' : ' pts'} vs. mean ${mean.toFixed(2)}${unit === '%p' ? '%' : ''}`);
+  };
   const toggleIndicator = (indicator: IndicatorHistoryKey) => {
     setDrawdownsOpen(false);
     setActiveIndicator(current => current === indicator ? null : indicator);
   };
   return <>
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5">
       <div className="relative min-w-0">
         <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : dd === 0 ? '0.00%' : `−${dd.toFixed(2)}%`}
-          sub={peak ? `${t('전고점', 'Peak')} ${Math.round(peak).toLocaleString('en-US')}` : availability}
-          time={usableNdx ? t(`지연 시세 · ${formatted(usableNdx.asOf)}`, `Delayed quote · ${formatted(usableNdx.asOf)}`) : saved(live?.asOf)}
+          sub={compare(dd === null ? null : -dd, drawdownAverage ? -drawdownAverage.mean : undefined, '%p')}
+          time={usableNdx ? t(`지연 시세 · ${formatted(usableNdx.asOf)}`, `Delayed quote · ${formatted(usableNdx.asOf)}`) : dd !== null ? saved(live?.asOf) : availability}
           tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
         <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
           aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
@@ -283,28 +288,29 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       </div>
       <div className="relative min-w-0">
         <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)}
-          sub={vixQuote ? t('Yahoo Finance 시세', 'Yahoo Finance quote') : m?.vix?.label ? (lang === 'en' ? VIX_EN[m.vix.label] || m.vix.label : m.vix.label) : availability}
-          time={vixQuote ? formatted(vixQuote.asOf) : saved(live?.asOf)}
+          sub={compare(vix, indicatorHistory.vix.mean)}
+          time={vixQuote ? formatted(vixQuote.asOf) : vix !== null ? saved(live?.asOf) : availability}
           tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
         <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
       </div>
       <div className="relative min-w-0">
         <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)}
-          sub={rating ? (lang === 'en' ? rating.replace(/\b\w/g, char => char.toUpperCase()) : indicatorRatingKo[rating] || rating) : availability}
-          time={quotes?.fearGreed ? `CNN · ${formatted(quotes.fearGreed.asOf)}` : live && fg !== null ? t(`저장 시각 · ${formatted(live.updatedAt)}`, `Saved at · ${formatted(live.updatedAt)}`) : undefined}
+          sub={compare(fg, indicatorHistory.fear.mean)}
+          time={quotes?.fearGreed ? `CNN · ${formatted(quotes.fearGreed.asOf)}` : live && fg !== null ? t(`저장 시각 · ${formatted(live.updatedAt)}`, `Saved at · ${formatted(live.updatedAt)}`) : availability}
           tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
         <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
       </div>
       <div className="relative min-w-0">
         <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')} value={rsi ? rsi.value.toFixed(1) : '—'}
-          sub={rsi ? rsi.intraday ? t('장중 잠정치 · 일봉 기준', 'Intraday estimate · daily RSI') : t('미국장 종가', 'US close') : availability}
-          time={rsi ? rsi.intraday ? formatted(rsi.asOf) : rsi.asOf : undefined}/>
+          sub={compare(rsi?.value ?? null, indicatorHistory.rsi.mean)}
+          time={rsi ? rsi.intraday ? t(`장중 · ${formatted(rsi.asOf)}`, `Intraday · ${formatted(rsi.asOf)}`) : t(`${rsi.asOf} 미국장 종가`, `${rsi.asOf} US close`) : availability}/>
         <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
       </div>
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        <p className="mt-1 text-xs text-slate-400">1986-01-02~2026-11-20</p>
+        {drawdownAverage && <p className="mt-1 text-xs text-slate-400">{drawdownAverage.start}~{drawdownAverage.end} · {t('나스닥100 일별 종가의 전고점 대비 하락폭 평균', 'Mean drawdown from the running high of Nasdaq-100 daily closes')} −{drawdownAverage.mean.toFixed(2)}%</p>}
+        {peak !== null && <p className="mt-1 text-xs text-slate-400">{t('전고점', 'Peak')} {Math.round(peak).toLocaleString('en-US')}</p>}
         <div className="mt-2 text-xs sm:text-sm"><Table history head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
           t('발생 횟수', 'Entries'),

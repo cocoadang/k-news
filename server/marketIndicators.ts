@@ -1,15 +1,48 @@
 import { fetchQqqRsi, fetchYahooChart, readRegularQuote } from './qqqRsi';
 
+type DrawdownAverage = { mean: number; start: string; end: string; peak: number };
 type TimedValue = { value: number; asOf: string };
 export type MarketIndicators = {
-  ndx: (TimedValue & { recentClosingPeak: number }) | null;
+  ndx: (TimedValue & { recentClosingPeak: number; drawdownAverage?: DrawdownAverage }) | null;
   vix: TimedValue | null;
   fearGreed: (TimedValue & { label: string }) | null;
   rsi: Awaited<ReturnType<typeof fetchQqqRsi>> | null;
 };
 
+// The full daily series feeds only the historical average. Reuse it across quote refreshes.
+let savedDrawdown: { data?: DrawdownAverage; expiresAt: number } | undefined;
+let pendingDrawdown: Promise<DrawdownAverage | undefined> | undefined;
+
+function fetchDrawdownAverage() {
+  if (savedDrawdown && savedDrawdown.expiresAt > Date.now()) return Promise.resolve(savedDrawdown.data);
+  return pendingDrawdown ??= fetchYahooChart('^NDX', 'max').then(chart => {
+    const prices = chart.indicators?.quote?.[0]?.close ?? [];
+    const time = chart.timestamp ?? [];
+    const beforeToday = new Date().toISOString().slice(0, 10);
+    const closes = time.flatMap((stamp, index) => {
+      if (!Number.isFinite(stamp) || stamp <= 0 || stamp >= Date.now() / 1000 ||
+          !Number.isFinite(prices[index]) || prices[index] <= 0) return [];
+      const date = new Date(stamp * 1000).toISOString().slice(0, 10);
+      return date < beforeToday ? [{ date, value: prices[index] }] : [];
+    }).sort((a, b) => a.date.localeCompare(b.date));
+    if (closes.length < 252) throw new Error('Insufficient drawdown history');
+    let peak = 0, total = 0;
+    for (const { value } of closes) {
+      peak = Math.max(peak, value);
+      total += (1 - value / peak) * 100;
+    }
+    const data = { mean: total / closes.length, start: closes[0].date, end: closes[closes.length - 1].date, peak };
+    savedDrawdown = { data, expiresAt: Date.now() + 24 * 60 * 60_000 };
+    return data;
+  }).catch(() => {
+    const data = savedDrawdown?.data;
+    savedDrawdown = { data, expiresAt: Date.now() + 60 * 60_000 };
+    return data;
+  }).finally(() => { pendingDrawdown = undefined; });
+}
+
 async function fetchNasdaq(): Promise<NonNullable<MarketIndicators['ndx']>> {
-  const chart = await fetchYahooChart('^NDX', '1y');
+  const [chart, drawdownAverage] = await Promise.all([fetchYahooChart('^NDX', '1y'), fetchDrawdownAverage()]);
   const quote = readRegularQuote(chart);
   const closingPrices = chart.indicators?.quote?.[0]?.close;
   if (!Array.isArray(chart.timestamp) || !Array.isArray(closingPrices)) throw new Error('NDX history unavailable');
@@ -20,7 +53,7 @@ async function fetchNasdaq(): Promise<NonNullable<MarketIndicators['ndx']>> {
   const peak = Math.max(0, ...closingPrices.filter((price, i) =>
     Number.isFinite(price) && Number.isFinite(chart.timestamp![i]) && chart.timestamp![i] < cutoff));
   if (!peak) throw new Error('No NDX closing peak');
-  return { ...quote, recentClosingPeak: peak };
+  return { ...quote, recentClosingPeak: peak, drawdownAverage };
 }
 
 async function requestFearGreed(): Promise<NonNullable<MarketIndicators['fearGreed']>> {

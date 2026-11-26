@@ -11,25 +11,27 @@ async function source(url: string) {
   return response;
 }
 
-async function latestFred(id: typeof fredIds[number], collectedAt: string): Promise<Observation> {
-  const start = Number(collectedAt.slice(0, 4)) - 1;
+async function recentFred(id: typeof fredIds[number], collectedAt: string): Promise<Observation[]> {
+  const start = Number(collectedAt.slice(0, 4)) - 2;
   const response = await source(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&cosd=${start}-01-01`);
   const [header, ...rows] = (await response.text()).trim().split(/\r?\n/);
   if (!header.endsWith(`,${id}`)) throw new Error(`Unexpected FRED header for ${id}`);
-  for (const row of rows.reverse()) {
+  const dates = new Map<string, number>();
+  for (const row of rows) {
     const [date, raw] = row.split(',');
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= collectedAt && raw?.trim() && Number.isFinite(Number(raw))) {
-      return { date, value: Number(raw) };
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date <= collectedAt.slice(0, 10) && raw?.trim() && Number.isFinite(Number(raw))) {
+      dates.set(date, Number(raw));
     }
   }
-  throw new Error(`Missing FRED observation for ${id}`);
+  if (!dates.size) throw new Error(`Missing FRED observation for ${id}`);
+  return [...dates].sort(([a], [b]) => a.localeCompare(b)).slice(-8).map(([date, value]) => ({ date, value }));
 }
 
 export async function fetchSystemHealth() {
   const collectedAt = new Date().toISOString();
   const currentYear = Number(collectedAt.slice(0, 4));
   const request = `https://api.worldbank.org/v2/country/${economies.join(';')}/indicator/${[...indicators, debtId].join(';')}?source=2&format=json&date=2022:${currentYear}&per_page=500`;
-  const [wdiResponse, ...fred] = await Promise.all([source(request), ...fredIds.map(id => latestFred(id, collectedAt))] as const);
+  const [wdiResponse, ...fred] = await Promise.all([source(request), ...fredIds.map(id => recentFred(id, collectedAt))] as const);
   const [metadata, records] = await wdiResponse.json() as [{ lastupdated: string; pages: number }, WorldBankRow[]];
   if (metadata?.pages !== 1 || !metadata.lastupdated || !Array.isArray(records)) throw new Error('Incomplete World Bank response');
   const rows = records.filter(row => typeof row.value === 'number' && Number.isFinite(row.value) && row.obs_status !== 'F');
@@ -40,7 +42,10 @@ export async function fetchSystemHealth() {
   ]));
   const latestYear = [...years].reverse().find(year => economies.every(code => values.has(`${code}:${indicators[0]}:${year}`)));
   if (latestYear === undefined) throw new Error('Missing comparable GDP observations');
-  const debt = rows.filter(row => row.countryiso3code === 'USA' && row.indicator.id === debtId).sort((a, b) => b.date.localeCompare(a.date))[0];
-  return { collectedAt, updated: metadata.lastupdated, years, latestYear, worldBank,
-    us: { profits: fred[0], nfci: fred[1], dollar: fred[2], growth: fred[3], debt: debt ? {date: debt.date, value: debt.value} : null } };
+  const debt = rows.filter(row => row.countryiso3code === 'USA' && row.indicator.id === debtId)
+    .sort((a, b) => a.date.localeCompare(b.date)).slice(-8).map(({ date, value }) => ({ date, value: value! }));
+  const usHistory = { profits: fred[0], nfci: fred[1], dollar: fred[2], growth: fred[3], debt };
+  return { collectedAt, updated: metadata.lastupdated, years, latestYear, worldBank, usHistory,
+    us: { profits: fred[0].at(-1)!, nfci: fred[1].at(-1)!, dollar: fred[2].at(-1)!,
+      growth: fred[3].at(-1)!, debt: debt.at(-1) ?? null } };
 }

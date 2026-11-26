@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import truthSocialManifest from './truthSocialManifest.json';
 import { useLang } from '../../../i18n';
 import { HistoryPanel } from './HistoryPanel';
 import { SourcedInvestorEntry } from './InvestorHistory';
@@ -105,9 +104,7 @@ export function TrumpPolicyHistory() {
   const { t } = useLang();
   const [active, setActive] = useState(topics[0].id);
   const topic = topics.find(entry => entry.id === active) || topics[0];
-  const postCount = truthSocialManifest.reduce((total, year) => total + year.count, 0).toLocaleString();
   const archive = investorArchive['donald-trump'];
-  const milestoneCount = topics.reduce((total, entry) => total + entry.milestones.length, archive.length);
   const entries = [
     ...topic.milestones.map(entry => ({
       date: entry.date, headline: entry.change, text: entry.summary,
@@ -120,10 +117,6 @@ export function TrumpPolicyHistory() {
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.title) }))}
     activeId={active}
     onSelect={setActive}
-    metadata={t(
-      `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,
-      `Truth Social archive: ${postCount} posts as of 2026-11-22 · ${milestoneCount} selected statements and policy milestones shown`,
-    )}
   >
     {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}
   </HistoryPanel>;

@@ -9,15 +9,10 @@ import { investorArchive } from './investorArchive';
 import './timeline.css';
 import { useLang, tr, getLang } from '../../../i18n';
 
-type Item = { statement: any; matchedTerms: string[]; date: { value: string | null; basis: string; label: string }; metrics: string[] };
+type Item = { statement: any; date: { value: string | null; basis: string; label: string } };
 
 const fmt = (d: string | null) => (d ? d.replace(/-/g, '.') : tr('날짜 미확인', 'Date unconfirmed'));
 const DATE_BASIS_EN: Record<string, string> = { posted: 'Interview published · recording date unknown', spoken: 'Spoken', released: 'Press release', written: 'Posted', reported: 'Reported', video: 'Video posted', unknown: 'Date unconfirmed' };
-
-function Metrics({ values }: { values: string[] }) {
-  if (!values.length) return null;
-  return <div className="tl-metrics">{values.map(m => <span key={m}>{m}</span>)}</div>;
-}
 
 function statementSource(s: any) {
   return s.evidence?.find((item: { url?: string }) => item?.url);
@@ -25,7 +20,10 @@ function statementSource(s: any) {
 
 function Source({ s }: { s: any }) {
   const e = statementSource(s);
-  return e?.url ? <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{e.sourceName || tr('출처', 'Source')} ↗</a> : null;
+  if (!e?.url) return null;
+  const sourceName = e.sourceName || tr('출처', 'Source');
+  const label = s.kind === 'reported_headline' ? `${tr('보도', 'Report')} · ${sourceName}` : sourceName;
+  return <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{label} ↗</a>;
 }
 
 function Body({ s }: { s: any }) {
@@ -38,17 +36,13 @@ function Body({ s }: { s: any }) {
     : null;
   if (getLang() === 'en' && s.kind !== 'reported_excerpt') {
     // 영어 화면: 번역 대신 영어 원문을 그대로 보여 줍니다(추가 비용 없음)
-    const kind = s.kind === 'video_quote' ? `From video captions${s.videoTitle ? ` · ${s.videoTitle}` : ''}`
-      : s.kind === 'reported_headline' ? `Press headline · not a direct quote${s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount} outlets` : ''}`
-      : null;
     const warn = s.kind === 'reported_headline';
-    return <><p className={'tl-text tl-en' + (s.kind === 'reported_headline' ? ' tl-milestone' : '')} lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p>{kind && <span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>}
+    return <><p className={'tl-text tl-en' + (warn ? ' tl-milestone' : '')} lang="en">{warn ? s.quoteText : <>“{s.quoteText}”</>}</p>
       {warn && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>{s.relatedHeadlines.length} other headlines on this</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
   if (s.kind === 'video_quote') {
     return <>
       <p className="tl-text">{t.kind === 'ai_translation' ? t.text : <span lang="en">{t.text}</span>}</p>
-      <span className="tl-tag">영상 자막에서 확인한 발언{t.kind === 'ai_translation' ? ' · AI 번역' : ''}{s.videoTitle ? ` · ${s.videoTitle}` : ''}</span>
       {sourceExcerpt}
     </>;
   }
@@ -71,7 +65,7 @@ function Body({ s }: { s: any }) {
   }
   if (s.kind === 'reported_headline') {
     const ko = t.kind === 'ai_translation';
-    return <><p className={'tl-text tl-milestone' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p><span className="tl-tag tl-warn">{ko ? 'AI 번역 · ' : ''}언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span>
+    return <><p className={'tl-text tl-milestone' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p>
       {ko && sourceExcerpt}
       {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
@@ -80,7 +74,7 @@ function Body({ s }: { s: any }) {
     return <>
       <h4 className="tl-milestone">{summary.title}</h4>
       <p className="tl-text">{summary.summary}</p>
-      <span className="tl-tag">{summary.reviewed ? '원문 검토 요약' : s.sourceType === 'authored_post' ? '블로그 발췌 요약' : 'AI 발언 요약'}</span>
+      {s.sourceType !== 'authored_post' && <span className="tl-tag">{summary.reviewed ? '원문 검토 요약' : 'AI 발언 요약'}</span>}
       {sourceExcerpt}
     </>;
   }
@@ -195,7 +189,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
         source={<Source s={item.statement} />}
       >
         <Body s={item.statement} />
-        <Metrics values={item.metrics} />
       </HistoryEntry>)}
     </HistoryPanel>}
   </section>;

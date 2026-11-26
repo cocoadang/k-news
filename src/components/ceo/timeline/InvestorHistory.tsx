@@ -250,7 +250,7 @@ export function MarketStance({ personId, personName }: { personId: string; perso
     : t(...stanceLabels[stance.level + 2]);
   return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card tl-stance">
     {stance ? <>
-      <p className="tl-stance-line"><strong>{label}</strong><span>{t(...stance.scope)}</span></p>
+      <p className="tl-stance-line"><strong>{label}</strong></p>
       <div className="tl-stance-track" role="meter" aria-label={`${personName} · ${t(...stance.scope)}`}
         aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label}>
         <div className="relative h-1 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
@@ -277,17 +277,17 @@ const stanceTopics: Record<string, string> = {
 export function stanceHistoryEntry(personId: string) {
   const topic = stanceTopics[personId];
   const stance = stanceEvidence[personId];
-  return topic && stance ? { ...stance.evidence, topic, headline: stance.scope } : null;
+  return topic && stance ? { ...stance.evidence, topic, headline: stance.scope, hideHeadline: true } : null;
 }
 
-export function SourcedInvestorEntry({ entry }: { entry: InvestorEntry }) {
+export function SourcedInvestorEntry({ entry }: { entry: InvestorEntry & { hideHeadline?: boolean } }) {
   const { t } = useLang();
   return <HistoryEntry
     date={entry.date}
     dateLabel={entry.date.replace(/-/g, '.')}
     source={<a className="tl-source" href={entry.url} target="_blank" rel="noreferrer">{entry.source} ↗</a>}
   >
-    <h4 className="tl-milestone">{t(...entry.headline)}</h4>
+    {!entry.hideHeadline && <h4 className="tl-milestone">{t(...entry.headline)}</h4>}
     <p className="tl-text">{t(...entry.text)}</p>
   </HistoryEntry>;
 }

@@ -74,7 +74,6 @@ export function DruckenmillerHistory() {
     topics={[topics[0], topics[2], topics[1]].map(entry => ({ id: entry.id, label: t(...entry.label) }))}
     activeId={active}
     onSelect={setActive}
-    topicTitle={t(...topic.label)}
     metadata={t('인터뷰·행사 공개일 기준 · 최신순', 'Interview and event publication dates · newest first')}
   >
     {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}

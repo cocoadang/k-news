@@ -248,18 +248,17 @@ export function MarketStance({ personId, personName }: { personId: string; perso
   const label = !stance ? null : personId === 'stanley-druckenmiller'
     ? t('중립·관망', 'Neutral / wait and see')
     : t(...stanceLabels[stance.level + 2]);
-  return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card mb-4">
-    {stance ? <div className="mx-2" role="meter" aria-label={`${personName} · ${t(...stance.scope)}`}
+  return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card tl-stance">
+    {stance ? <>
+      <p className="tl-stance-line"><strong>{label}</strong><span>{t(...stance.scope)}</span></p>
+      <div className="tl-stance-track" role="meter" aria-label={`${personName} · ${t(...stance.scope)}`}
         aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label}>
-        <div className="relative h-2 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
-          <span className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-950 shadow"
+        <div className="relative h-1 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
+          <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-950"
             style={{left: `${(stance.level + 2) * 25}%`}}/>
         </div>
-        <div className="mt-2 grid grid-cols-3 text-xs text-slate-300" aria-hidden="true">
-          <span>{t('부정', 'Bearish')}</span><span className="text-center">{t('중립', 'Neutral')}</span><span className="text-right">{t('긍정', 'Bullish')}</span>
-        </div>
       </div>
-    : <p className="tl-muted">{t('평가 근거 부족', 'Insufficient evidence')}</p>}
+    </> : <p className="tl-muted">{t('평가 근거 부족', 'Insufficient evidence')}</p>}
   </section>;
 }
 
@@ -305,7 +304,6 @@ export function InvestorHistory({ personId, profile }: { personId: string; profi
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.label) }))}
     activeId={topic.id}
     onSelect={setActive}
-    topicTitle={t(...topic.label)}
     metadata={t('발언일 또는 보도일 기준 · 최신순', 'Statement or publication dates · newest first')}
   >
     {entries.map(entry => <SourcedInvestorEntry key={entry.url} entry={entry}/>)}

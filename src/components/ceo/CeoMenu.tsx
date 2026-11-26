@@ -68,7 +68,7 @@ export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adm
 
   return (
     <div>
-      <PageHeader title={t('CEO 발언', 'CEO Quotes')} description={t('주제별 최신 발언과 원문을 확인하세요.', 'What CEOs said on the same questions, newest first. Changes in stance are not judged automatically — check the original wording and numbers.')}
+      <PageHeader title={t('CEO 발언', 'CEO Quotes')}
         status={notice || undefined}
         />
       {state.status === 'ready' ? (

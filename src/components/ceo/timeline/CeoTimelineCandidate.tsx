@@ -35,7 +35,7 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
       : s.kind === 'reported_headline' ? `Press headline · not a direct quote${s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount} outlets` : ''}`
       : 'Original quote';
     const warn = s.kind === 'reported_headline';
-    return <><p className="tl-text tl-en" lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p><span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>
+    return <><p className={'tl-text tl-en' + (s.kind === 'reported_headline' ? ' tl-milestone' : '')} lang="en">{s.kind === 'reported_headline' ? s.quoteText : <>“{s.quoteText}”</>}</p><span className={'tl-tag' + (warn ? ' tl-warn' : '')}>{kind}</span>
       {warn && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>{s.relatedHeadlines.length} other headlines on this</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
   if (s.kind === 'video_quote') {
@@ -65,7 +65,7 @@ function Body({ s, open = false }: { s: any; open?: boolean }) {
   }
   if (s.kind === 'reported_headline') {
     const ko = t.kind === 'ai_translation';
-    return <><p className={'tl-text' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p><span className="tl-tag tl-warn">{ko ? 'AI 번역 · ' : ''}언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span>
+    return <><p className={'tl-text tl-milestone' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p><span className="tl-tag tl-warn">{ko ? 'AI 번역 · ' : ''}언론 보도 헤드라인 · 직접 인용 아님{s.reportedSourceCount > 1 ? ` · ${s.reportedSourceCount}개 매체` : ''}</span>
       {ko && <details className="tl-original" open={open}><summary>원문 보기</summary><blockquote lang="en">{s.quoteText}</blockquote></details>}
       {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
   }
@@ -180,7 +180,6 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
       }))}
       activeId={q.id}
       onSelect={pickQuestion}
-      topicTitle={qLabel(q)}
       metadata={[
         t(`${entries.length}건`, `${entries.length} ${entries.length === 1 ? 'item' : 'items'}`),
         range ? month(range[0]) + (month(range[1]) === month(range[0]) ? '' : ' ~ ' + month(range[1])) : null,

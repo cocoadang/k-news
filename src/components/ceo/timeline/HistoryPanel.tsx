@@ -3,12 +3,11 @@ import { useLang } from '../../../i18n';
 
 type HistoryTopic = { id: string; label: string; badge?: string };
 
-export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, metadata, note, children }: {
+export function HistoryPanel({ title, topics, activeId, onSelect, metadata, note, children }: {
   title: string;
   topics: HistoryTopic[];
   activeId: string;
   onSelect: (id: string) => void;
-  topicTitle: string;
   metadata?: string;
   note?: string;
   children: ReactNode;
@@ -17,17 +16,14 @@ export function HistoryPanel({ title, topics, activeId, onSelect, topicTitle, me
   const { t } = useLang();
   return <section aria-labelledby={id} className="tl-history tl-card">
     <h2 id={id}>{title}</h2>
-    <div role="group" aria-label={t('비교 주제', 'Comparison topics')} className="tl-scopes tl-history-topics">
+    <div role="group" aria-label={t('비교 주제', 'Comparison topics')} className="tl-scopes tl-history-topics" data-topic-count={topics.length}>
       {topics.map(topic => <button type="button" key={topic.id}
         className={'tl-chip' + (topic.id === activeId ? ' on' : '')}
         aria-pressed={topic.id === activeId} onClick={() => onSelect(topic.id)}>
         {topic.label}{topic.badge && <span className="tl-topic-badge">{topic.badge}</span>}
       </button>)}
     </div>
-    <div className="tl-history-heading">
-      <h3>{topicTitle}</h3>
-      {metadata && <p className="tl-muted">{metadata}</p>}
-    </div>
+    {metadata && <p className="tl-muted tl-history-meta">{metadata}</p>}
     {note && <p className="tl-notice">{note}</p>}
     <ol className="tl-list">{children}</ol>
   </section>;

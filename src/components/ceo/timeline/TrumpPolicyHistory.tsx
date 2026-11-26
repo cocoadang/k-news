@@ -120,7 +120,6 @@ export function TrumpPolicyHistory() {
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.title) }))}
     activeId={active}
     onSelect={setActive}
-    topicTitle={t(...topic.title)}
     metadata={t(
       `Truth Social 보관본 ${postCount}건 · 2026-11-22 기준 · 이 화면은 주요 발언·정책 ${milestoneCount}건 선별`,
       `Truth Social archive: ${postCount} posts as of 2026-11-22 · ${milestoneCount} selected statements and policy milestones shown`,

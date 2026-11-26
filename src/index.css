@@ -22,7 +22,6 @@ body,button,input,select,textarea{font-family:inherit;}
 .news-filters button:focus-visible,.news-card-actions button:focus-visible,.news-card-actions a:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;}
 /* Keep mobile controls easy to tap; reclaim space from framing and gaps. */
 @media(max-width:639px){
-  .page-header{margin-bottom:12px;}
   .news-filters input,.news-filters select{min-height:44px;font-size:16px;}
   .news-filter-options{display:grid;grid-template-columns:minmax(0,1fr) auto;}
   .news-importance{grid-column:1/-1;}

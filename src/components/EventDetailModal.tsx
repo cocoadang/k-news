@@ -221,11 +221,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             <h2 id="news-detail-title" className="text-base sm:text-lg font-bold text-white leading-relaxed pt-1 break-words">
               {lang === 'en' ? (event.originalTitle || event.title) : (event.titleKo || event.title)}
             </h2>
-            {lang === 'ko' && (event.originalTitle || event.title) !== (event.titleKo || event.title) && (
-              <p className="text-xs text-slate-400 italic">
-                {event.titleKo ? 'AI 번역 제목 · ' : ''}원문: {event.originalTitle || event.title}
-              </p>
-            )}
           </div>
         </div>
 
@@ -419,10 +414,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Model info metadata */}
-          <div className="text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+          <div className="text-xs text-slate-400 border-t border-slate-800 pt-3">
             <span>{t('최초 발견', 'First seen')}: {new Date(event.firstSeenAt).toLocaleString(locale)}</span>
-            <span>{t('분석 모델', 'Model')}: {event.geminiModelUsed || 'gemini-3.7-flash'}</span>
           </div>
 
         </div>

@@ -1,7 +1,7 @@
 import React, {useEffect,useState,useRef} from 'react';
 import {YoutubeSummaryBody} from './YoutubeSummaryBody';
 import {summaryPreview} from './youtubeSummary.mjs';
-import {PageHeader,TelegramSubscribeButton,chipClass,buttonClass} from './ui';
+import {chipClass,buttonClass} from './ui';
 import {useLang,tr,getLang} from '../i18n';
 
 type Video={id:string;title:string;publishedAt:number|null;programmes:string[];status:string;source:string;url:string;summary:string|null};
@@ -31,7 +31,6 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
   const video=videos.find(v=>v.id===selected);
   const button=buttonClass.secondary;
   return <section aria-label={t('유튜브 요약','YouTube summaries')} className="min-w-0 space-y-4 text-slate-200">
-    <PageHeader title={t('유튜브 요약','YouTube Summaries')} description={t('영상의 핵심 내용과 근거 장면','Detailed per-video summaries with timestamped evidence. Summaries are in Korean; times are KST.')} actions={<TelegramSubscribeButton />} />
     {     status==='loading'?<p role="status">{t('저장된 요약을 불러오는 중입니다.','Loading saved summaries…')}</p>:
      status==='error'?<p role="alert">{t('요약을 불러오지 못했습니다. 잠시 후 다시 접속해 주세요.','Could not load saved results. Please refresh in a moment.')}</p>:
      video?<article className="youtube-detail min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">

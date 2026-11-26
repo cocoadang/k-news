@@ -1,4 +1,3 @@
-import { PageHeader, TelegramSubscribeButton } from './components/ui';
 import { AdminOperations } from './components/AdminOperations';
 import { startVisiblePolling } from './screenPolling';
 import { YoutubeMenu } from './components/YoutubeMenu';
@@ -487,7 +486,6 @@ export default function App() {
         ) : mainView === 'system' ? (
           <SystemHealthMenu />
         ) : (<>
-        <PageHeader title={t('뉴스 피드', 'News Feed')} description={t('관심 기업의 주요 뉴스와 분석', 'Key news and analysis on tracked companies')} actions={<TelegramSubscribeButton />} />
         <div className="mb-3 flex min-w-0 items-center gap-2 sm:mb-4 sm:gap-3">
           <CompanyTabs companies={companies} selectedCompany={selectedCompany} onSelectCompany={setSelectedCompany} events={events} />
           <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />

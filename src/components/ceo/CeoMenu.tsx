@@ -4,7 +4,7 @@ import { fetchCeoDataset, requestCeoRefresh } from '../../ceo/dataSource';
 import type { CeoViewState } from './CeoStatementsView';
 import { CeoTimeline } from './timeline/CeoTimelineCandidate';
 import { CeoKoAdmin } from './CeoKoAdmin';
-import { PageHeader, RefreshButton, CollectButton } from '../ui';
+import { RefreshButton, CollectButton } from '../ui';
 import { useLang } from '../../i18n';
 
 let lastPublicDataset: { api: CeoApiResponse; fetchedAt: number } | undefined;
@@ -68,9 +68,6 @@ export function CeoMenu({ isAdmin,adminToolsOnly=false }: { isAdmin: boolean;adm
 
   return (
     <div>
-      <PageHeader title={t('CEO 발언', 'CEO Quotes')}
-        status={notice || undefined}
-        />
       {state.status === 'ready' ? (
         <SectionBoundary label={t('CEO 발언 타임라인', 'CEO timeline')}>
           <CeoTimeline dataset={state.dataset} />

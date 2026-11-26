@@ -143,7 +143,7 @@ export function StrategyMenu() {
 // Historical daily-close snapshot. The current market cards update independently.
 const indicatorHistory = {
   vix: {
-    start: '1990-01-02', end: '2026-11-20', mean: 19.42, close: 35.89,
+    start: '1990-01-02', end: '2026-11-20', mean: 19.42,
     rows: [
       ["≥ 20",258,"2026-11-16",15],
       ["≥ 25",171,"2026-11-19",21],
@@ -152,7 +152,7 @@ const indicatorHistory = {
     ],
   },
   fear: {
-    start: '2021-02-01', end: '2026-11-20', mean: 46.84, close: 9.67,
+    start: '2021-02-01', end: '2026-11-20', mean: 46.84,
     rows: [
       ["extreme fear",39,"2026-11-19",21],
       ["fear",88,"2026-11-09",14],
@@ -162,7 +162,7 @@ const indicatorHistory = {
     ],
   },
   rsi: {
-    start: '2016-12-12', end: '2026-11-20', mean: 56.21, close: 26.63,
+    start: '2016-12-12', end: '2026-11-20', mean: 56.21,
     rows: [
       ["≤ 20",0,null,null],
       ["≤ 30",18,"2026-11-20",109],
@@ -186,11 +186,8 @@ function annualEntryRate(count: number, start: string, end: string) {
 function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   const {t, lang} = useLang();
   const history = indicatorHistory[indicator];
-  const delta = history.close - history.mean;
-  const formattedDelta = `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}`;
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
-    <p className="mt-1 text-xs text-slate-400">{history.start}~{history.end} · {t('평균', 'Mean')} {history.mean.toFixed(2)} · {t('마지막 관측값', 'Last observation')} {history.close.toFixed(2)} ({t('평균 대비', 'vs. mean')} {formattedDelta})</p>
     <div className="mt-2 text-xs sm:text-sm"><Table history head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
       {history.rows.map(([threshold, count, date, median]) => <tr key={threshold}>
         <th scope="row" className={`${tdL} font-medium`}>{lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold}</th>
@@ -200,8 +197,6 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
         <td className={td}>{median === null ? '—' : t(`${median}일`, `${median} days`)}</td>
       </tr>)}
     </Table></div>
-    <p className="mt-2 text-xs leading-5 text-slate-400">{t('구간에 처음 진입한 날을 집계합니다. 연속 체류는 1회이며, 간격은 달력일 기준입니다.', 'Each entry into a band counts once. Consecutive sessions in the same band count as one entry. Gaps use calendar days.')}</p>
-    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다.', 'Uses archived CNN daily observations.')}</p>}
   </section>;
 }
 
@@ -292,8 +287,6 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        {drawdownAverage && <p className="mt-1 text-xs text-slate-400">{drawdownAverage.start}~{drawdownAverage.end} · {t('나스닥100 일별 종가의 조회 기간 내 전고점 대비 하락폭 평균', 'Mean drawdown from the running high within the displayed Nasdaq-100 daily series')} −{drawdownAverage.mean.toFixed(2)}%</p>}
-        {peak !== null && <p className="mt-1 text-xs text-slate-400">{t('전고점', 'Peak')} {Math.round(peak).toLocaleString('en-US')}</p>}
         <div className="mt-2 text-xs sm:text-sm"><Table history head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
           t('발생 횟수', 'Entries'),

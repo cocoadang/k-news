@@ -106,12 +106,14 @@ const tdL = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-left whitespa
 const mh = 'hidden sm:table-cell';
 const card = 'strategy-card min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
 
-function Kpi({title, value, sub, tone}: {title: string; value: string; sub: string; tone?: 'ok' | 'warn' | 'bad'}) {
-  const c = tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-300' : tone === 'ok' ? 'text-emerald-300' : 'text-white';
+function Kpi({title, average}: {title: string; average: string}) {
+  const {t} = useLang();
   return <div className="strategy-kpi h-full min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 sm:px-3.5 sm:py-3">
     <p className="pr-4 text-xs leading-4 text-slate-400">{title}</p>
-    <p className={`mt-1 text-xl font-bold leading-6 tabular-nums ${c}`}>{value}</p>
-    <p className="mt-0.5 text-xs leading-4 text-slate-400">{sub}</p>
+    <p className="mt-1 flex items-baseline gap-1.5">
+      <span className="text-xs text-slate-400">{t('평균', 'Mean')}</span>
+      <span className="text-xl font-bold leading-6 tabular-nums text-white">{average}</span>
+    </p>
   </div>;
 }
 
@@ -200,7 +202,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
       </tr>)}
     </Table></div>
     <p className="mt-2 text-xs leading-5 text-slate-400">{t('구간에 처음 진입한 날을 집계합니다. 연속 체류는 1회이며, 간격은 달력일 기준입니다.', 'Each entry into a band counts once. Consecutive sessions in the same band count as one entry. Gaps use calendar days.')}</p>
-    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다. 위 카드의 최신 표시값과 관측 시점이 다를 수 있습니다.', 'Uses archived CNN daily observations. Their observation times can differ from the latest reading above.')}</p>}
+    {indicator === 'fear' && <p className="mt-1 text-xs leading-5 text-slate-400">{t('CNN 일별 기록의 보관본을 사용했습니다.', 'Uses archived CNN daily observations.')}</p>}
   </section>;
 }
 
@@ -249,20 +251,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
   const ndx = quotes?.ndx;
   const usableNdx = ndx && (!live || quoteDate.format(new Date(ndx.asOf)) >= live.asOf) ? ndx : null;
   const peak = usableNdx ? Math.max(num(m?.peak) ?? 0, usableNdx.drawdownAverage?.peak ?? 0, usableNdx.recentClosingPeak, usableNdx.value) : num(m?.peak);
-  const dd = usableNdx && peak ? (1 - usableNdx.value / peak) * 100 : num(m?.dd);
-  const vixQuote = quotes?.vix && (!live || quoteDate.format(new Date(quotes.vix.asOf)) >= live.asOf) ? quotes.vix : null;
-  const vix = vixQuote?.value ?? num(m?.vix?.value);
-  const fg = quotes?.fearGreed?.value ?? num(m?.fearGreed?.score);
-  const rsi = quotes?.rsi;
-  const availability = quotes ? t('데이터를 불러올 수 없음', 'Data unavailable') : t('불러오는 중', 'Loading');
   const drawdownAverage = ndx?.drawdownAverage;
-  const compare = (value: number | null, mean?: number, unit = 'p') => {
-    if (value === null) return availability;
-    if (mean === undefined || !Number.isFinite(mean)) return t('평균 비교 자료 없음', 'Mean comparison unavailable');
-    const delta = value - mean;
-    return t(`평균 ${mean.toFixed(2)}${unit === '%p' ? '%' : ''} 대비 ${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit}`,
-      `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}${unit === '%p' ? ' pp' : ' pts'} vs. mean ${mean.toFixed(2)}${unit === '%p' ? '%' : ''}`);
-  };
   const toggleIndicator = (indicator: IndicatorHistoryKey) => {
     setDrawdownsOpen(false);
     setActiveIndicator(current => current === indicator ? null : indicator);
@@ -270,9 +259,8 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
   return <>
     <div className="grid grid-cols-2 gap-2.5">
       <div className="relative min-w-0">
-        <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')} value={dd === null ? '—' : dd === 0 ? '0.00%' : `−${dd.toFixed(2)}%`}
-          sub={compare(dd === null ? null : -dd, drawdownAverage ? -drawdownAverage.mean : undefined, '%p')}
-          tone={dd === null ? undefined : dd < 10 ? 'ok' : dd < 20 ? 'warn' : 'bad'}/>
+        <Kpi title={t('나스닥100 하락폭', 'Nasdaq-100 drawdown')}
+          average={drawdownAverage ? `−${drawdownAverage.mean.toFixed(2)}%` : '—'}/>
         <button type="button" aria-expanded={drawdownsOpen} aria-controls="nasdaq-drawdown-history"
           aria-label={t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}
           className="absolute inset-0 cursor-pointer rounded-xl text-slate-400 hover:ring-1 hover:ring-cyan-400/60 focus-visible:outline focus-visible:outline-cyan-400"
@@ -281,20 +269,15 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
         </button>
       </div>
       <div className="relative min-w-0">
-        <Kpi title="VIX" value={vix === null ? '—' : vix.toFixed(2)}
-          sub={compare(vix, indicatorHistory.vix.mean)}
-          tone={vix === null ? undefined : vix < 20 ? 'ok' : vix < 30 ? 'warn' : 'bad'}/>
+        <Kpi title="VIX" average={indicatorHistory.vix.mean.toFixed(2)}/>
         <IndicatorHistoryButton label={t('VIX 과거 발생 통계', 'VIX historical entries')} open={activeIndicator === 'vix'} onToggle={() => toggleIndicator('vix')}/>
       </div>
       <div className="relative min-w-0">
-        <Kpi title="Fear & Greed" value={fg === null ? '—' : fg.toFixed(1)}
-          sub={compare(fg, indicatorHistory.fear.mean)}
-          tone={fg === null ? undefined : fg < 25 || fg > 75 ? 'bad' : fg < 45 || fg > 55 ? 'warn' : undefined}/>
+        <Kpi title="Fear & Greed" average={indicatorHistory.fear.mean.toFixed(2)}/>
         <IndicatorHistoryButton label={t('Fear & Greed 과거 발생 통계', 'Fear & Greed historical entries')} open={activeIndicator === 'fear'} onToggle={() => toggleIndicator('fear')}/>
       </div>
       <div className="relative min-w-0">
-        <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')} value={rsi ? rsi.value.toFixed(1) : '—'}
-          sub={compare(rsi?.value ?? null, indicatorHistory.rsi.mean)}/>
+        <Kpi title={t('QQQ RSI(14) · 참고용', 'QQQ RSI(14) · Reference')} average={indicatorHistory.rsi.mean.toFixed(2)}/>
         <IndicatorHistoryButton label={t('QQQ RSI 과거 발생 통계', 'QQQ RSI historical entries')} open={activeIndicator === 'rsi'} onToggle={() => toggleIndicator('rsi')}/>
       </div>
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}

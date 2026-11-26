@@ -426,11 +426,11 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-white font-sans">
+    <div className="flex min-h-screen flex-col bg-[#090d16] pb-[var(--main-nav-space)] font-sans text-slate-100 selection:bg-cyan-500 selection:text-white [--main-nav-space:calc(60px_+_env(safe-area-inset-bottom,0px))]">
       
       {/* Toast Banner */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-[calc(var(--main-nav-space)_+_12px)] right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
           <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold backdrop-blur-md ${
             toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200' :
             toast.type === 'error' ? 'bg-rose-950/90 border-rose-700 text-rose-200' :
@@ -458,10 +458,8 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
-
-        <nav className="mb-4 grid grid-cols-5 gap-0.5 sm:gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1" aria-label={t('주 메뉴', 'Main menu')}>
+      <nav className="fixed inset-x-0 bottom-0 z-40 h-[var(--main-nav-space)] border-t border-slate-800 bg-[#0b1220]" aria-label={t('주 메뉴', 'Main menu')}>
+        <div className="mx-auto grid h-[59px] max-w-7xl grid-cols-5 gap-0.5 px-2 py-1 sm:gap-1 sm:px-6 lg:px-8">
           {([
             ['youtube', t('유튜브 요약', 'YouTube'), PlaySquare],
             ['news', t('뉴스 피드', 'News'), Newspaper],
@@ -473,16 +471,22 @@ export default function App() {
               key={key}
               type="button"
               aria-current={mainView === key ? 'page' : undefined}
-              onClick={() => setMainView(key)}
-              className={`flex min-w-0 min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1 text-[11px] sm:flex-row sm:gap-2 sm:px-4 sm:text-sm leading-tight break-keep font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
-                mainView === key ? 'bg-cyan-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+              onClick={() => {
+                if (key === mainView) return;
+                setMainView(key);
+                window.scrollTo({top: 0, behavior: 'instant'});
+              }}
+              className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-center text-[11px] font-semibold leading-tight break-keep focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:text-xs ${
+                mainView === key ? 'bg-cyan-950 text-cyan-200' : 'text-slate-300 hover:bg-slate-800'}`}
             >
-              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <Icon className="size-5 shrink-0" aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
-        </nav>
+        </div>
+      </nav>
 
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
         {mainView === 'youtube' ? (<YoutubeMenu key={viewVersion} isAdmin={false} onLogin={() => setIsLoginModalOpen(true)} />) : mainView === 'ceo' ? (
           <CeoMenu key={viewVersion} isAdmin={false} />
         ) : mainView === 'strategy' ? (

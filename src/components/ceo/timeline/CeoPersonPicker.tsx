@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef, useState, type PointerEvent } from 'react';
 import { useLang } from '../../../i18n';
 import portraits from './portraits.json';
 
@@ -18,6 +17,7 @@ function Portrait({ person }: { person: Person }) {
       height={112}
       loading="lazy"
       decoding="async"
+      draggable={false}
       onError={() => setFailed(true)}
     />}
   </span>;
@@ -29,49 +29,37 @@ export function CeoPersonPicker({ people, selected, onSelect }: {
   onSelect: (id: string) => void;
 }) {
   const { t } = useLang();
-  const rail = useRef<HTMLUListElement>(null);
-  const [edges, setEdges] = useState({ start: true, end: true });
+  const drag = useRef<{ pointer: number; x: number; scroll: number; moved: boolean } | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    const list = rail.current;
-    if (!list) return;
-    const update = () => {
-      const start = list.scrollLeft < 2;
-      const end = list.scrollWidth - list.clientWidth - list.scrollLeft < 2;
-      setEdges(old => old.start === start && old.end === end ? old : { start, end });
-    };
-    const observer = new ResizeObserver(update);
-    observer.observe(list);
-    list.addEventListener('scroll', update, { passive: true });
-    update();
-    return () => {
-      observer.disconnect();
-      list.removeEventListener('scroll', update);
-    };
-  }, [people.length]);
-
-  const move = (direction: number) => {
-    const list = rail.current;
-    if (!list) return;
-    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
-    list.scrollBy({ left: direction * list.clientWidth * 0.8, behavior });
+  const startDrag = (event: PointerEvent<HTMLUListElement>) => {
+    const list = event.currentTarget;
+    if (event.pointerType !== 'mouse' || event.button !== 0 || list.scrollWidth <= list.clientWidth) return;
+    drag.current = { pointer: event.pointerId, x: event.clientX, scroll: list.scrollLeft, moved: false };
+  };
+  const moveDrag = (event: PointerEvent<HTMLUListElement>) => {
+    const start = drag.current;
+    if (!start || start.pointer !== event.pointerId) return;
+    const distance = event.clientX - start.x;
+    if (!start.moved) {
+      if (Math.abs(distance) < 6) return;
+      start.moved = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDragging(true);
+    }
+    event.currentTarget.scrollLeft = start.scroll - distance;
+  };
+  const endDrag = (event: PointerEvent<HTMLUListElement>) => {
+    if (drag.current?.pointer !== event.pointerId) return;
+    drag.current = null;
+    setDragging(false);
   };
 
   return <section className="tl-head tl-person-picker" aria-label={t('인물 선택', 'Select a person')}>
-    <div className="tl-person-picker-head">
-      <a className="tl-photo-credits" href="/ceo-portraits/credits.html" target="_blank" rel="noreferrer">
-        {t('사진 출처', 'Photo credits')}
-      </a>
-      <div className="tl-person-arrows">
-        <button type="button" aria-label={t('앞 인물 목록', 'Previous people')} disabled={edges.start} onClick={() => move(-1)}>
-          <ChevronLeft size={18} aria-hidden="true"/>
-        </button>
-        <button type="button" aria-label={t('뒤 인물 목록', 'Next people')} disabled={edges.end} onClick={() => move(1)}>
-          <ChevronRight size={18} aria-hidden="true"/>
-        </button>
-      </div>
-    </div>
-    <ul className="tl-people" ref={rail}>
+    <ul className={dragging ? 'tl-people is-dragging' : 'tl-people'}
+      onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag}
+      onPointerCancel={endDrag} onLostPointerCapture={endDrag}
+      onPointerLeave={event => { if (!drag.current?.moved) endDrag(event); }}>
       {people.map(person => <li key={person.id}>
         <button type="button" className="tl-person" disabled={person.disabled}
           aria-label={`${person.name} · ${person.company}`} aria-pressed={selected === person.id}

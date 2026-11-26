@@ -249,11 +249,7 @@ export function MarketStance({ personId, personName }: { personId: string; perso
     ? t('중립·관망', 'Neutral / wait and see')
     : t(...stanceLabels[stance.level + 2]);
   return <section aria-label={t('시장 스탠스', 'Market stance')} className="tl-card mb-4">
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <h2>{t('시장 스탠스', 'Market stance')} · {personName}</h2>
-      {stance && <strong>{label} · {t(...stance.scope)}</strong>}
-    </div>
-    {stance ? <div className="mx-2 mt-3" role="meter" aria-label={t('공개 자료 기반 5단계 스탠스', 'Five-level stance based on public sources')}
+    {stance ? <div className="mx-2" role="meter" aria-label={`${personName} · ${t(...stance.scope)}`}
         aria-valuemin={-2} aria-valuemax={2} aria-valuenow={stance.level} aria-valuetext={label}>
         <div className="relative h-2 rounded-full bg-gradient-to-r from-rose-500 via-slate-400 to-emerald-500">
           <span className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-950 shadow"

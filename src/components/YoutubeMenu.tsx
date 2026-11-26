@@ -45,7 +45,7 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
        <div className="flex flex-wrap gap-2" aria-label={t('프로그램 필터','Programme filter')}>{Object.entries({all:t('전체','All'),...programmes}).map(([key,label])=><button key={key} className={chipClass(filter===key)} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>
        <div className="grid min-w-0 gap-3 md:grid-cols-2">{videos.filter(v=>filter==='all'||v.programmes.includes(filter)).map(v=><button key={v.id} id={`video-${v.id}`} onClick={()=>openVideo(v.id)} className="min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-5 text-left hover:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-400">
          <span className="text-sm text-cyan-300">{v.programmes.map(p=>programmes[p]).join(' · ')||t('코너 정보 없음','No programme info')}</span><h2 className="my-2 break-words font-semibold leading-7 text-white">{v.title}</h2><p className="text-sm text-slate-400">{date(v.publishedAt)}</p>{v.status==='ready'&&v.summary
-           ? <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-200">{summaryPreview(v.summary,v.id)}</p>
+           ? <p className="mt-2 text-sm leading-relaxed text-slate-200">{summaryPreview(v.summary,v.id)}</p>
            : <p className="mt-2 text-sm text-slate-400">{statuses[v.status]||t('상태 확인 필요','Status unknown')}</p>}
        </button>)}</div>
        {!videos.some(v=>filter==='all'||v.programmes.includes(filter))&&<p className="rounded-xl border border-dashed border-slate-700 p-6 text-slate-400">{t('이 코너에 저장된 영상이 없습니다. 새 결과가 저장되면 여기에 표시됩니다.','No saved videos for this programme yet.')}</p>}

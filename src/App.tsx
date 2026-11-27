@@ -418,7 +418,7 @@ export default function App() {
 
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#090d16] pb-[var(--main-nav-space)] font-sans text-slate-100 selection:bg-cyan-500 selection:text-white [--main-nav-space:calc(60px_+_env(safe-area-inset-bottom,0px))]">
+    <div className="app-shell flex min-h-screen flex-col bg-[#090d16] pb-[var(--main-nav-space)] font-sans text-slate-100 selection:bg-cyan-500 selection:text-white [--main-nav-space:calc(60px_+_env(safe-area-inset-bottom,0px))]">
       
       {/* Toast Banner */}
       {toast && (
@@ -450,7 +450,7 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 h-[var(--main-nav-space)] border-t border-slate-800 bg-[#0b1220]" aria-label={t('주 메뉴', 'Main menu')}>
+      <nav className="app-navigation fixed inset-x-0 bottom-0 z-40 h-[var(--main-nav-space)] border-t border-slate-800 bg-[#0b1220]" aria-label={t('주 메뉴', 'Main menu')}>
         <div className="mx-auto grid h-[59px] max-w-7xl grid-cols-5 gap-0.5 px-2 py-1 sm:gap-1 sm:px-6 lg:px-8">
           {([
             ['youtube', t('유튜브 요약', 'YouTube'), PlaySquare],

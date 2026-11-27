@@ -2,6 +2,12 @@
 
 https://news.dsoom.com 운영 소스. 운영 현황·배포 절차는 HANDOFF.md를 보세요.
 
+## 홈 화면에 설치
+- Android Chrome 메뉴에서 **앱 설치** 또는 **홈 화면에 추가**를 선택합니다.
+- iPhone Safari의 공유 메뉴에서 **홈 화면에 추가**를 선택하고 **웹 앱으로 열기**를 켭니다.
+
+설치 아이콘을 누르면 주소창 없이 시작합니다. 화면과 데이터는 운영 사이트에서 불러옵니다.
+
 ## Local development
 Node.js 22; `npm install`, `npm run dev`. Configure your own local environment and replace Firebase configuration placeholders first. Never use production credentials for local tests.
 

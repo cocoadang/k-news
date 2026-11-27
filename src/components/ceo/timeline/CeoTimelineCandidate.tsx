@@ -80,8 +80,6 @@ function Body({ s }: { s: any }) {
   const lang = english || (!summary && display.kind === 'original') ? (s.quoteLanguage || 'en') : 'ko';
   return <>
     {text && <p className="tl-text" lang={lang}>{text}</p>}
-    {summary && <span className="tl-tag">{tr('요약', 'Summary')}</span>}
-    {showExcerpt && <span className="tl-tag">{tr('발췌', 'Excerpt')}</span>}
     {s.kind === 'reported_excerpt' && <span className="tl-tag tl-warn">{tr('기사 요약 속 인용 · 공식 원문 아님', 'Quote inside an article summary · not an official source')}{s.context ? ` · ${tr('기사', 'Article')}: ${s.context}` : ''}</span>}
     {showStoredText && <details className="tl-original">
       <summary>{tr('원문 발췌 보기', 'View original excerpt')}</summary>

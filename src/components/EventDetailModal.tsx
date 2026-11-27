@@ -239,11 +239,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 {t('이슈 흐름', 'Issue timeline')} · {issueFlow.title[lang === 'en' ? 1 : 0]}
               </summary>
               <ol className="space-y-3 border-l border-slate-700 pl-3 pb-3">
-                {issueFlow.entries.map(entry => {
-                  const date = new Date(entry.primarySource.publishedAt || entry.firstSeenAt);
+                {issueFlow.entries.map(({event: entry, date}) => {
                   const title = lang === 'en' ? entry.originalTitle || entry.title : entry.titleKo || entry.title;
                   return <li key={entry.id}>
-                    <p className="text-xs text-slate-400">{Number.isFinite(date.valueOf()) && date.toLocaleDateString(locale, {timeZone: 'Asia/Seoul'})}</p>
+                    <p className="text-xs text-slate-400">{new Date(date).toLocaleDateString(locale, {timeZone: 'Asia/Seoul'})}</p>
                     <p className="text-slate-100">{title}</p>
                     <ul className="flex flex-wrap gap-x-3">
                       {[entry.primarySource, ...entry.relatedSources].map(source => <li key={source.url}>

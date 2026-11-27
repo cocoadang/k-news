@@ -15,7 +15,7 @@ test('issue timelines require distinct milestones for the same project', () => {
   const speculation = event('e', 'Could Tesla expand robotaxi service in Austin?', '2026-07-06');
   strictEqual(buildIssueFlows([launch, duplicate, differentCity, speculation]).size, 0);
   const flows = buildIssueFlows([duplicate, speculation, launch, expansion, differentCity]);
-  deepStrictEqual(flows.get('c')?.entries.map(item => item.id), ['a', 'c']);
+  deepStrictEqual(flows.get('c')?.entries.map(item => item.event.id), ['a', 'c']);
   strictEqual(flows.has('d'), false);
   strictEqual(flows.has('e'), false);
 });
@@ -24,5 +24,5 @@ test('Starship separates the first catch from preparations for a different fligh
   const catch1 = event('one', 'SpaceX catches Starship upper stage for the first time', '2026-11-21');
   const catch2 = event('two', 'Starship achieves historic first catch from orbit', '2026-11-22');
   const cryo = event('three', 'SpaceX Starship Flight 17 booster begins cryogenic testing', '2026-11-24');
-  deepStrictEqual(buildIssueFlows([catch2, cryo, catch1]).get('three')?.entries.map(item => item.id), ['one', 'three']);
+  deepStrictEqual(buildIssueFlows([catch2, cryo, catch1]).get('three')?.entries.map(item => item.event.id), ['one', 'three']);
 });

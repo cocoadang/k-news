@@ -58,12 +58,26 @@ const milestones = [
   { id: 'announcement', pattern: /\b(?:announces?|unveils?|details?|reveals?)\b.{0,45}\b(?:plans?|proposal)\b|계획\s*(?:공개|발표)/i },
 ] as const;
 
-export type IssueFlow = { title: readonly [string, string]; entries: NewsEvent[] };
+const stageLabels = {
+  catch: ['첫 포획', 'First catch'],
+  fuel: ['연료 보급 진전', 'Refueling progress'],
+  cryo: ['17차 비행 시험 준비', 'Flight 17 test preparation'],
+  approval: ['승인', 'Approval'],
+  application: ['신청', 'Application'],
+  expansion: ['운영 확대', 'Expansion'],
+  opening: ['운영 시작·착공', 'Opening or construction'],
+  agreement: ['계약 체결', 'Agreement'],
+  announcement: ['계획 발표', 'Plan announced'],
+} as const;
+
+type StageId = keyof typeof stageLabels;
+type IssueStep = {id: StageId; event: NewsEvent; date: number; label: readonly [string, string]};
+export type IssueFlow = { title: readonly [string, string]; entries: IssueStep[] };
 
 export function buildIssueFlows(events: NewsEvent[]) {
   const byEvent = new Map<string, IssueFlow>();
   for (const issue of trackedIssues) {
-    const entriesByStage = new Map<string, NewsEvent>();
+    const entriesByStage = new Map<StageId, NewsEvent>();
     const members: NewsEvent[] = [];
     for (const event of events) {
       if (!newsTime(event) || event.contentType === 'rumor' || event.contentType === 'analyst_opinion') continue;
@@ -76,8 +90,10 @@ export function buildIssueFlows(events: NewsEvent[]) {
       const previous = entriesByStage.get(stage.id);
       if (!previous || newsTime(event) < newsTime(previous)) entriesByStage.set(stage.id, event);
     }
-    const entries = [...entriesByStage.values()].sort((a, b) => newsTime(a) - newsTime(b));
-    if (entries.length < 2 || newsTime(entries.at(-1)!) - newsTime(entries[0]) > 365 * 86400_000) continue;
+    const entries = [...entriesByStage].map(([id, event]) => ({id, event, date: newsTime(event), label: stageLabels[id]}))
+      .sort((a, b) => a.date - b.date);
+    const latest = entries.at(-1);
+    if (entries.length < 2 || !latest || latest.date - entries[0].date > 365 * 86400_000) continue;
     const flow = { title: issue.label, entries };
     for (const member of members) byEvent.set(member.id, flow);
   }

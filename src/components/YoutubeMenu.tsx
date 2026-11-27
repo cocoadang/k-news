@@ -1,5 +1,4 @@
 import React, {useEffect,useState,useRef} from 'react';
-import {MarketSessionCard} from './MarketSessionCard';
 import {YoutubeSummaryBody} from './YoutubeSummaryBody';
 import {summaryPreview} from './youtubeSummary.mjs';
 import {chipClass,buttonClass} from './ui';
@@ -41,7 +40,6 @@ export function YoutubeMenu({isAdmin,onLogin}:{isAdmin:boolean;onLogin:()=>void}
        <p className="mt-2 text-sm text-slate-400">{date(video.publishedAt)} · {statuses[video.status]||t('상태 확인 필요','Status unknown')}</p>
        </div>{video.status==='ready'&&video.summary?<YoutubeSummaryBody text={video.summary} videoId={video.id}/>:<div className="mt-5 rounded-lg bg-amber-950/30 p-4 leading-7 text-amber-200">{t('아직 표시할 완료 요약이 없습니다. 검증 보류·미생성·처리 실패 결과를 완료 요약으로 표시하지 않습니다. 채팅에서 직접 검토해 전달한 요약은 이 저장소에 자동으로 등록되지 않습니다.','No finished summary to show yet. Held, missing or failed results are not shown as summaries.')}</div>}
      </article>:<>
-       <MarketSessionCard videos={videos} programmes={programmes} onVideo={openVideo}/>
        <div className="flex flex-wrap gap-2" aria-label={t('프로그램 필터','Programme filter')}>{Object.entries({all:t('전체','All'),...programmes}).map(([key,label])=><button key={key} className={chipClass(filter===key)} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>
        <div className="grid min-w-0 gap-3 md:grid-cols-2">{videos.filter(v=>filter==='all'||v.programmes.includes(filter)).map(v=><button key={v.id} id={`video-${v.id}`} onClick={()=>openVideo(v.id)} className="min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-5 text-left hover:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-400">
          <span className="text-sm text-cyan-300">{v.programmes.map(p=>programmes[p]).join(' · ')||t('코너 정보 없음','No programme info')}</span><h2 className="my-2 break-words font-semibold leading-7 text-white">{v.title}</h2><p className="text-sm text-slate-400">{date(v.publishedAt)}</p>{v.status==='ready'&&v.summary

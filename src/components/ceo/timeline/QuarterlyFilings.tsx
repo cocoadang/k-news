@@ -5,11 +5,9 @@ const duquesne = {
   manager: 'Duquesne Family Office LLC',
   prior: {
     period: '2026-06-30', filed: '2026-08-14',
-    source: 'https://www.sec.gov/Archives/edgar/data/1536411/000153641126000006/0001536411-26-000006-index.html',
   },
   latest: {
     period: '2026-09-30', filed: '2026-11-16',
-    source: 'https://www.sec.gov/Archives/edgar/data/1536411/000153641126000011/0001536411-26-000011-index.html',
   },
   // Same CUSIP and share class in both SEC information tables. Options and debt are excluded.
   rows: [
@@ -33,9 +31,10 @@ export function QuarterlyFilings({personId}: {personId: string}) {
     <div className="space-y-3 border-t border-slate-800 py-3">
       <p className="text-sm text-slate-300">{t('운용사 분기말 공개 보유 · 주요 종목 주식 수', 'Manager’s disclosed quarter-end holdings · selected share counts')}</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        {[prior, latest].map(period => <a key={period.period} className="inline-flex min-h-11 items-center rounded-lg border border-slate-800 px-3 text-sm text-cyan-200 hover:underline" href={period.source} target="_blank" rel="noopener noreferrer">
-          {period.period} · {t('공개', 'Filed')} {period.filed} ↗
-        </a>)}
+        {[prior, latest].map(period => <p key={period.period} className="rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-200">
+          <span className="block text-xs text-slate-400">{t('분기 말', 'Quarter ended')} {period.period}</span>
+          <span className="mt-0.5 block font-semibold">{t('공개일', 'Filed')} <time dateTime={period.filed}>{period.filed}</time></span>
+        </p>)}
       </div>
       <ul className="divide-y divide-slate-800 text-sm">
         {rows.map(row => <li key={row.name} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">

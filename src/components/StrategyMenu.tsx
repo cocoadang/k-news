@@ -1,3 +1,4 @@
+import {MarketScheduleStrip} from './MarketScheduleStrip';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {chipClass} from './ui';
 import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
@@ -135,6 +136,7 @@ export function StrategyMenu() {
     {status === 'loading' && <p role="status">{t('자료를 불러오는 중입니다.', 'Loading…')}</p>}
     {status === 'error' && <p role="alert">{t('자료를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.', 'Could not load data. Please refresh in a moment.')}</p>}
     <MarketIndicatorCards live={live}/>
+    <MarketScheduleStrip/>
     {live && <LiveSection live={live}/>}
     {bt && variant && <BacktestSection key={lang} bt={bt} variant={variant} setVariant={setVariant}/>}
   </section>;

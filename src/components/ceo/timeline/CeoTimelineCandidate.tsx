@@ -1,3 +1,4 @@
+import { QuarterlyFilings } from './QuarterlyFilings';
 import { InvestorHistory, MarketStance, SourcedInvestorEntry, investorProfiles, stanceHistoryEntry } from './InvestorHistory';
 import { useMemo, useState } from 'react';
 import { DruckenmillerHistory, druckenmillerPersonId } from './DruckenmillerHistory';
@@ -169,6 +170,7 @@ export function CeoTimeline({ dataset }: { dataset: any }) {
     {people.length > 0 && <CeoPersonPicker people={people} selected={scopeKey} onSelect={pickScope} />}
 
     {scope && <MarketStance personId={scope.personId} personName={scope.name}/>}
+    <QuarterlyFilings key={scopeKey} personId={scopeKey}/>
     {investor ? <InvestorHistory key={scopeKey} personId={scopeKey} profile={investor}/> : CuratedHistory ? <CuratedHistory /> : !q ? (
       <p className="tl-empty">{t('이 인물의 주제별 발언을 준비 중입니다.', 'Topic timelines are not available for this person yet.')}</p>
     ) : <HistoryPanel

@@ -5,6 +5,7 @@ import { useLang } from '../i18n';
 
 interface EventCardProps {
   event: NewsEvent;
+  hasIssueFlow?: boolean;
   onOpenDetail: (event: NewsEvent) => void;
 }
 
@@ -42,7 +43,7 @@ export function getEventBadgeInfo(stars: number, status?: string): {
   return { type: 'rated', label: '★☆☆☆☆', starsText: '★☆☆☆☆' };
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, onOpenDetail }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, hasIssueFlow, onOpenDetail }) => {
   const { t, lang } = useLang();
   const title = lang === 'en' ? event.originalTitle || event.title : event.titleKo || event.title;
   const companies = (event.relatedCompanies?.length ? event.relatedCompanies : event.companyImpacts?.map(impact => impact.companyName) || []).slice(0, 3).join(' · ');
@@ -54,6 +55,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onOpenDetail }) => 
       className="group block w-full rounded-xl border border-slate-800 bg-slate-900/90 p-3 text-left hover:border-cyan-800 focus-visible:outline-2 focus-visible:outline-cyan-400 sm:p-4"
       aria-label={`${title} · ${t('자세히', 'Details')}`}>
       {companies && <p className="mb-1 text-xs font-semibold text-cyan-300">{companies}</p>}
+      {hasIssueFlow && <span className="mb-1 inline-block text-xs text-slate-300">{t('이슈 흐름', 'Issue timeline')}</span>}
       <div className="flex items-start justify-between gap-2">
         <h2 className="min-w-0 break-words text-base font-bold leading-snug text-white group-hover:text-cyan-200">{title}</h2>
         <ChevronRight className="size-4 shrink-0 text-cyan-300" aria-hidden="true"/>

@@ -6,7 +6,7 @@ import { Header } from './components/Header';
 import { CompanyTabs } from './components/CompanyTabs';
 import { FilterBar } from './components/FilterBar';
 import { EventCard } from './components/EventCard';
-import { groupNewsFeed } from './newsFeed';
+import { buildIssueFlows, groupNewsFeed } from './newsFeed';
 import { EventDetailModal } from './components/EventDetailModal';
 import { TelegramPreviewModal } from './components/TelegramPreviewModal';
 import { AdminSettings as SettingsModal } from './components/AdminSettings';
@@ -379,6 +379,7 @@ export default function App() {
 
   // Filtered Events
   const newsFeed = useMemo(() => groupNewsFeed(events), [events]);
+  const issueFlows = useMemo(() => buildIssueFlows(newsFeed), [newsFeed]);
   const filteredEvents = newsFeed.filter((e) => {
     // 1. Company Filter
     if (selectedCompany !== 'all') {
@@ -508,6 +509,7 @@ export default function App() {
               <EventCard
                 key={event.id}
                 event={event}
+                hasIssueFlow={issueFlows.has(event.id)}
                 onOpenDetail={(evt) => setDetailEvent(evt)}
               />
             ))}
@@ -521,6 +523,7 @@ export default function App() {
       {detailEvent && (
         <EventDetailModal
           event={newsFeed.find(event => event.id === detailEvent.id) ?? detailEvent}
+          issueFlow={issueFlows.get(detailEvent.id)}
           onClose={() => setDetailEvent(null)}
           onSendTelegram={handleSendTelegram}
           onReanalyze={handleReanalyze}

@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { fetchSystemHealth } from './server/systemHealth';
 import { fetchTripod, fetchTripodPortfolio } from './server/tripod';
 import { fetchMarketIndicators } from './server/marketIndicators';
+import { fetchMarketRecap } from './server/marketSessions';
 import { fetchQqqRsi } from './server/qqqRsi';
 import express from 'express';
 import path from 'path';
@@ -726,6 +727,17 @@ export function createServerApp(options?: { isTest?: boolean; ceoRuntime?: CeoRu
       sendPacked(req, res, packed);
     } catch {
       res.status(503).set('Cache-Control', 'no-store').json({error: 'Market indicators unavailable'});
+    }
+  });
+
+  const marketSessionsCache = packedCache(fetchMarketRecap, 15 * 60_000);
+  app.get('/api/market/sessions', async (req, res) => {
+    try {
+      const {packed} = await marketSessionsCache.get();
+      res.setHeader('Cache-Control', publicCdnHeader(300, 60));
+      sendPacked(req, res, packed);
+    } catch {
+      res.status(503).set('Cache-Control', 'no-store').json({error: 'Market sessions unavailable'});
     }
   });
 

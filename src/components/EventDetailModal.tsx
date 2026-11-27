@@ -12,10 +12,12 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { NewsEvent } from '../types';
+import type { IssueFlow } from '../newsFeed';
 import { useLang, categoryLabel } from '../i18n';
 
 interface EventDetailModalProps {
   event: NewsEvent | null;
+  issueFlow?: IssueFlow;
   onClose: () => void;
   onSendTelegram: (id: string) => Promise<void>;
   onReanalyze: (id: string) => Promise<void>;
@@ -24,6 +26,7 @@ interface EventDetailModalProps {
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   event,
+  issueFlow,
   onClose,
   onSendTelegram,
   onReanalyze,
@@ -230,6 +233,28 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         {/* Content Body */}
         <div className="news-detail-sections p-3 sm:p-6 space-y-3 sm:space-y-4 text-sm text-slate-200">
           
+          {issueFlow && (
+            <details className="rounded-xl border border-slate-700 px-3 sm:px-4">
+              <summary className="cursor-pointer py-3 font-semibold text-cyan-200">
+                {t('이슈 흐름', 'Issue timeline')} · {issueFlow.title[lang === 'en' ? 1 : 0]}
+              </summary>
+              <ol className="space-y-3 border-l border-slate-700 pl-3 pb-3">
+                {issueFlow.entries.map(entry => {
+                  const date = new Date(entry.primarySource.publishedAt || entry.firstSeenAt);
+                  const title = lang === 'en' ? entry.originalTitle || entry.title : entry.titleKo || entry.title;
+                  return <li key={entry.id}>
+                    <p className="text-xs text-slate-400">{Number.isFinite(date.valueOf()) && date.toLocaleDateString(locale, {timeZone: 'Asia/Seoul'})}</p>
+                    <p className="text-slate-100">{title}</p>
+                    <ul className="flex flex-wrap gap-x-3">
+                      {[entry.primarySource, ...entry.relatedSources].map(source => <li key={source.url}>
+                        <a className="text-xs text-cyan-300 underline-offset-2 hover:underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.name} ↗</a>
+                      </li>)}
+                    </ul>
+                  </li>;
+                })}
+              </ol>
+            </details>
+          )}
           {/* Analysis Status Details (Failed, Skipped, Pending reasons) */}
           {event.analysisStatus === 'failed' && (
             <div className="bg-rose-950/60 p-3.5 sm:p-4 rounded-xl border border-rose-800/80">

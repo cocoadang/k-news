@@ -147,12 +147,18 @@ export function QuarterlyFilings({personId}: {personId: string}) {
         <thead>
           <tr className="border-b border-slate-700 text-slate-200">
             <th scope="col" className="py-2 pr-2 text-left align-bottom">{t('종목', 'Company')}</th>
-            {[prior, latest].map(period => <th key={period.period} scope="col" className="py-2 pl-1 text-right align-bottom">
-              <span className="block text-xs">{period.period}</span>
-              <span className="block text-xs font-normal text-slate-400">
-                <span className="block sm:inline">{t('공개', 'Filed')} </span><time className="whitespace-nowrap" dateTime={period.filed}>{period.filed}</time>
-              </span>
-            </th>)}
+            {[prior, latest].map(({period, filed}) => {
+              const compactDate = filed.slice(filed.slice(0, 4) === period.slice(0, 4) ? 5 : 2).replaceAll('-', '.');
+              return <th key={period} scope="col" className="py-2 pl-1 text-right align-bottom">
+                <time dateTime={period} className="block whitespace-nowrap text-xs tabular-nums">{period}</time>
+                <span className="mt-0.5 block whitespace-nowrap text-[11px] font-normal tabular-nums text-slate-400">
+                  {t('공개', 'Filed')} <time dateTime={filed} title={filed}>
+                    <span className="sm:hidden" aria-hidden="true">{compactDate}</span>
+                    <span className="sr-only sm:not-sr-only">{filed}</span>
+                  </time>
+                </span>
+              </th>;
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">

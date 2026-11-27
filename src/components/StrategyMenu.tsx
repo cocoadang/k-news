@@ -1,6 +1,5 @@
 import {MarketScheduleCalendar} from './MarketScheduleCalendar';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {chipClass} from './ui';
 import {tripodVariants, tripodLiveSeed} from './tripodBacktest';
 import {useLang, tr, getLang} from '../i18n';
 import {startVisiblePolling} from '../screenPolling';
@@ -21,11 +20,11 @@ const RULES = (): Record<string, string> => ({
   mubot: tr('라오어 무한매수 V4.0(TQQQ 20분할) 근사 이식', 'Approximation of Laoer\'s Infinite Buying V4.0 (TQQQ, 20 splits)'),
   qqq: tr('같은 날 같은 금액을 QQQ에 적립', 'Same amount into QQQ on the same days'),
 });
-const VARIANT_EN: Record<string, string> = {
-  gfc: 'GFC low',
-  trade: 'US–China trade war low',
-  covid: 'COVID low',
-  rate: '2022 rate-hike low',
+const VARIANT_LABELS: Record<string, [string, string]> = {
+  gfc: ['금융위기', 'Financial crisis'],
+  trade: ['미중 무역분쟁', 'US–China trade war'],
+  covid: ['코로나', 'COVID'],
+  rate: ['2022 금리 인상', '2022 rate hikes'],
 };
 const ASSUMPTIONS_EN = [
   'First contribution on each low date, then a fixed amount on the first trading day of every month; signal from the prior close, trades at the same-day close; 0.25% fee on each buy and sell',
@@ -393,7 +392,10 @@ function LiveSection({live}: {live: Live}) {
 
 function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: string; setVariant: (v: string) => void}) {
   const {t, lang} = useLang();
-  const vName = (k: string, v: Variant) => (lang === 'en' ? VARIANT_EN[k] ?? v.name : v.name);
+  const vName = (key: string, v: Variant) => {
+    const labels = VARIANT_LABELS[key];
+    return labels ? t(...labels) : v.name;
+  };
   const order = bt.order || ORDER, V = bt.variants[variant] || Object.values(bt.variants)[0];
   const comparison = tripodVariants[variant];
   const includeTripod = comparison && comparison.start === V.period[0] && comparison.end === V.period[1]
@@ -412,10 +414,18 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   }, [bt, variant, lang]);
   const M = bt.summary;
   return <div className={card}>
-    <h2 className="text-base font-semibold text-white">{lang === 'en' ? `Backtest — start at a crisis low, add ${won(bt.monthly)} every month` : `백테스트 — 위기 저점에서 시작해 매달 ${Math.round(bt.monthly / 1e4)}만 원 적립`}</h2>
-    <div className="mt-3 flex flex-wrap gap-2" aria-label={t('시작 시점', 'Start point')}>{Object.entries(bt.variants).map(([k, v]) =>
-      <button key={k} type="button" className={chipClass(k === variant)} aria-pressed={k === variant} onClick={() => setVariant(k)}>{vName(k, v)}</button>)}</div>
-    <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span></p>
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <h2 className="text-base font-semibold text-white">{t('백테스트', 'Backtest')}</h2>
+      <p className="text-xs text-slate-400">{t(`매달 ${won(bt.monthly)} 원 적립`, `${won(bt.monthly)} monthly`)}</p>
+    </div>
+    <div role="group" aria-label={t('시작 저점', 'Starting low')} className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-800 bg-slate-950/60 p-1 sm:grid-cols-4">
+      {Object.entries(bt.variants).map(([key, v]) =>
+        <button key={key} type="button" aria-pressed={key === variant} onClick={() => setVariant(key)}
+          className="min-h-11 rounded-lg px-2 py-1 text-center text-xs font-medium leading-snug text-slate-300 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-cyan-400 aria-pressed:bg-cyan-950 aria-pressed:font-semibold aria-pressed:text-cyan-100 sm:text-sm">
+          {vName(key, v)}
+        </button>)}
+    </div>
+    <p className="mt-3 text-xs tabular-nums text-slate-400"><span className="font-medium text-slate-300">{t('기간', 'Period')}</span> <time dateTime={V.period[0]}>{dot(V.period[0])}</time> – <time dateTime={V.period[1]}>{dot(V.period[1])}</time></p>
     <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]} mobileHide={[4]}>
       {primaryOrder.map(k => { const s = S[k]; if (!s) return null; return s.na
         ? <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={`${tdL} text-slate-400`} colSpan={3}>{s.na}</td></tr>

@@ -3,17 +3,18 @@ import { useLang } from '../../../i18n';
 
 type HistoryTopic = { id: string; label: string; badge?: string };
 
-export function HistoryPanel({ title, topics, activeId, onSelect, note, children }: {
+export function HistoryPanel({ title, topics, activeId, onSelect, note, segmented = false, children }: {
   title: string;
   topics: HistoryTopic[];
   activeId: string;
   onSelect: (id: string) => void;
   note?: string;
+  segmented?: boolean;
   children: ReactNode;
 }) {
   const { t } = useLang();
   return <section aria-label={title} className="tl-history tl-card">
-    <div role="group" aria-label={t('비교 주제', 'Comparison topics')} className="tl-scopes tl-history-topics" data-topic-count={topics.length}>
+    <div role="group" aria-label={t('비교 주제', 'Comparison topics')} className={`tl-scopes tl-history-topics${segmented ? ' tl-history-segmented' : ''}`} data-topic-count={topics.length}>
       {topics.map(topic => <button type="button" key={topic.id}
         className={'tl-chip' + (topic.id === activeId ? ' on' : '')}
         aria-pressed={topic.id === activeId} onClick={() => onSelect(topic.id)}>

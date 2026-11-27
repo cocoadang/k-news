@@ -27,15 +27,6 @@ const VARIANT_EN: Record<string, string> = {
   covid: 'COVID low',
   rate: '2022 rate-hike low',
 };
-const ASSUMPTIONS_EN = [
-  'First contribution on each low date, then a fixed amount on the first trading day of every month; signal from the prior close, trades at the same-day close; 0.25% fee on each buy and sell',
-  'USD price returns (FX ignored), dividends reinvested (adjusted close)',
-  'After tax: (annual realized gain − ₩2.5M) × 22%, paid the following June, assuming everything is sold at the end',
-  'Max drawdown measured on unit value (contribution effect removed)',
-  'Before TQQQ listed (2010-02-11), TQQQ is synthesized as 3× daily QQQ (net of fees and rates). Infinite Buying open/high use QQQ open/high change vs prior close × 3 (may differ from the real intraday 3× path) — affects the GFC-start result',
-  'Infinite Buying is an approximation: an external check (original bot) gave 12.72% pre-tax and −55.40% max drawdown for a 20-split start in 2011-11',
-];
-
 type Live = {asOf: string; start: string; updatedAt: number; order?: string[];
   market: {dd?: number; peak?: number; vix?: {value?: number; label?: string; percentile?: number}; fearGreed?: {score?: number; label?: string}; stale?: boolean};
   virtual: Record<string, {label: string; twr: number | null; mdd: number; series: [string, number][]; bucket: string | null; deployLeft: number | null;
@@ -459,16 +450,14 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const bI = bestMetric(ok.map(k => S[k].irr));
   const bL = bestMetric(ok.map(k => S[k].irrLiq));
   const bM = bestMetric(ok.map(k => S[k].mdd), true);
-  const historicalCells = (returns: unknown[], drawdowns: unknown[], benchmark?: unknown): ComparisonCell[] => {
+  const historicalCells = (returns: unknown[], drawdowns: unknown[]): ComparisonCell[] => {
     const topReturn = bestMetric(returns);
     const shallowestDrawdown = bestMetric(drawdowns, true);
-    const benchmarkReturn = num(benchmark);
     return returns.map((irr, i) => {
       const drawdown = highlightedPct(drawdowns[i], shallowestDrawdown, 0, true);
-      const returnValue = num(irr);
       return {
         value: <>
-          <span className={benchmarkReturn !== null && returnValue !== null && returnValue < benchmarkReturn ? 'text-rose-300' : undefined}>{highlightedPct(irr, topReturn)}</span>
+          {highlightedPct(irr, topReturn)}
           {num(drawdowns[i]) !== null && <span className="ml-1 hidden text-xs text-slate-400 sm:inline">{drawdown}</span>}
         </>,
         mobileDrawdown: drawdown,
@@ -482,8 +471,6 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   </>;
   const lines: Line[] = useMemo(() => {
     const ls: Line[] = ok.map(k => ({key: k, label: label(k, S[k].label), color: COLORS[k], dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined, points: (S[k].curve || []).map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[1]}))}));
-    const inv = S[ok[0]]?.curve || [];
-    ls.push({key: 'inv', label: t('넣은 돈', 'Contributed'), color: '#94a3b8', dashed: true, points: inv.map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[2]}))});
     return ls;
   }, [bt, variant, lang]);
   const M = bt.summary;
@@ -531,22 +518,14 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
           key: r.year, title: r.year,
           cells: historicalCells(order.map(k => r[k]?.[0]), order.map(k => r[k]?.[0] == null ? undefined : r[k][1])),
         }))}/></div>
-      <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭), 각 연도 1월 시작 ~ 현재.', 'IRR · (max drawdown), from January of each year to today.')}</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('5년 보유 구간별 결과', '5-year holding windows')} ({lang === 'en' ? `starts ${bt.fiveRange[0]}–${bt.fiveRange[1]}` : `${bt.fiveRange[0]}~${bt.fiveRange[1]}년 시작`})</summary>
       <div className="mt-3"><ComparisonTable historical head={[t('구간', 'Window'), ...order.map(k => label(k))]}
         shortHead={[t('구간', 'Window'), ...order.map(strategyShortName)]} columnWidths={['w-[24%] sm:w-[20%]']}
         rows={bt.fiveYear.map(r => ({
           key: r.year, title: `${r.year}~${r.year + 5}`,
-          cells: historicalCells(order.map(k => r[k]), order.map(k => r.mdd?.[k]), r.qqq),
+          cells: historicalCells(order.map(k => r[k]), order.map(k => r.mdd?.[k])),
         }))}/></div>
-      <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭). 빨간색: 같은 기간 QQQ 적립보다 IRR이 낮음. 구간이 겹치므로 독립 표본이 아닙니다.', 'IRR · (max drawdown). Red: lower IRR than QQQ DCA over the same window. Windows overlap, so they are not independent samples.')}</p>
-    </details>
-    <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('계산 기준', 'Method')}</summary>
-      <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-400">
-        {primaryOrder.map(k => <li key={k}><Dot k={k}/>{label(k)}: {RULES()[k]}</li>)}
-        {(lang === 'en' ? ASSUMPTIONS_EN : bt.assumptions || []).map((a, i) => <li key={i}>· {a}</li>)}
-      </ul>
     </details>
   </div>;
 }

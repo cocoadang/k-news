@@ -96,15 +96,42 @@ function LineChart({lines, yFormat, height = 240, ariaLabel, showHint = true}: {
   </div>;
 }
 
-function Table({head, children, mobileHide = [], history = false}: {head: string[]; children: React.ReactNode; mobileHide?: number[]; history?: boolean}) {
-  return <div role="region" aria-label={tr('전략 비교 표 · 좌우로 이동', 'Strategy comparison table · scroll horizontally')} tabIndex={0} className="strategy-table -mx-1 overflow-x-auto px-1 focus-visible:outline-2 focus-visible:outline-cyan-400"><table className={`w-full border-collapse text-[13px] sm:text-sm ${history ? 'min-w-[520px] table-fixed' : ''}`}>
-    {history && <colgroup><col className="w-[24%]"/><col className="w-[19%]"/><col className="w-[19%]"/><col className="w-[19%]"/><col className="w-[19%]"/></colgroup>}
-    <thead><tr>{head.map((h, i) => <th key={h} className={`border-b border-slate-800 px-1.5 sm:px-2 py-2 text-xs font-medium text-slate-400 ${i ? 'text-right' : 'text-left'} ${mobileHide.includes(i) ? 'hidden sm:table-cell' : ''}`}>{h}</th>)}</tr></thead>
-    <tbody>{children}</tbody></table></div>;
+function Table({head, children}: {head: string[]; children: React.ReactNode}) {
+  return <table className="w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
+    <thead><tr>{head.map((h, i) => <th key={h} scope="col" className={`border-b border-slate-800 px-2 py-2 text-xs font-medium text-slate-400 ${i ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+    <tbody>{children}</tbody>
+  </table>;
 }
-const td = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-right tabular-nums whitespace-nowrap';
-const tdL = 'border-b border-slate-800/70 px-1.5 sm:px-2 py-2 text-left whitespace-nowrap';
-const mh = 'hidden sm:table-cell';
+const td = 'border-b border-slate-800/70 px-2 py-2 text-right tabular-nums';
+const tdL = 'border-b border-slate-800/70 px-2 py-2 text-left';
+type ComparisonCell = {value: React.ReactNode; className?: string};
+type ComparisonRow = {key: string | number; title: React.ReactNode; cells: ComparisonCell[]; note?: string};
+
+function ComparisonTable({head, rows}: {head: string[]; rows: ComparisonRow[]}) {
+  const columns = head.slice(1);
+  return <>
+    <div className="hidden sm:block"><Table head={head}>
+      {rows.map(row => <tr key={row.key}>
+        <th scope="row" className={`${tdL} font-medium`}>{row.title}</th>
+        {row.note ? <td colSpan={columns.length} className={`${tdL} text-slate-400`}>{row.note}</td> :
+          row.cells.map((cell, i) => <td key={columns[i]} className={`${td} ${cell.className ?? ''}`}>{cell.value}</td>)}
+      </tr>)}
+    </Table></div>
+    <ul role="list" className="space-y-2 sm:hidden">
+      {rows.map(row => <li key={row.key} className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/50 p-2.5">
+        <p className="text-sm font-semibold text-slate-100">{row.title}</p>
+        {row.note ? <p className="mt-1 text-xs text-slate-400">{row.note}</p> :
+          <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-2">
+            {row.cells.map((cell, i) => <div key={columns[i]} className="min-w-0 border-t border-slate-800 pt-1">
+              <dt className="text-xs leading-4 text-slate-400">{columns[i]}</dt>
+              <dd className={`mt-0.5 text-sm leading-5 tabular-nums ${cell.className ?? ''}`}>{cell.value}</dd>
+            </div>)}
+          </dl>}
+      </li>)}
+    </ul>
+  </>;
+}
+
 const card = 'strategy-card min-w-0 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5';
 
 function Kpi({title, value, average, tone}: {title: string; value: string; average: string; tone?: 'ok' | 'warn' | 'bad'}) {
@@ -190,15 +217,17 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   const history = indicatorHistory[indicator];
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
-    <div className="mt-2 text-xs sm:text-sm"><Table history head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}>
-      {history.rows.map(([threshold, count, date, median]) => <tr key={threshold}>
-        <th scope="row" className={`${tdL} font-medium`}>{lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold}</th>
-        <td className={td}>{count.toLocaleString()}</td>
-        <td className={td}>{annualEntryRate(count, history.start, history.end)}{t('회/년', '/year')}</td>
-        <td className={td}>{date ?? '—'}</td>
-        <td className={td}>{median === null ? '—' : t(`${median}일`, `${median} days`)}</td>
-      </tr>)}
-    </Table></div>
+    <div className="mt-2"><ComparisonTable head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}
+      rows={history.rows.map(([threshold, count, date, median]) => ({
+        key: threshold,
+        title: lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold,
+        cells: [
+          {value: count.toLocaleString()},
+          {value: annualEntryRate(count, history.start, history.end) + t('회/년', '/year')},
+          {value: date ?? '—'},
+          {value: median === null ? '—' : t(`${median}일`, `${median} days`)},
+        ],
+      }))}/></div>
   </section>;
 }
 
@@ -289,27 +318,28 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
         <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
-        <div className="mt-2 text-xs sm:text-sm"><Table history head={[
+        <div className="mt-2 text-xs sm:text-sm"><ComparisonTable head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
           t('발생 횟수', 'Entries'),
           t('발생 빈도', 'Frequency'),
           t('최근 도달일', 'Last entry'),
           t('간격 중앙값', 'Median gap'),
-        ]}>
-          {([
+        ]}
+          rows={([
             [10, 35, '2026-11-02', t('약 7개월', '≈7 months')],
             [20, 8, '2025-04-04', t('약 2.8년', '≈2.8 years')],
             [30, 4, '2022-06-13', t('약 9.5년', '≈9.5 years')],
             [40, 1, '2000-11-20', '—'],
             [50, 1, '2000-12-20', '—'],
-          ] as const).map(([threshold, count, date, median]) => <tr key={threshold}>
-            <th scope="row" className={`${tdL} font-medium`}>−{threshold}%</th>
-            <td className={td}>{count}</td>
-            <td className={td}>{annualEntryRate(count, '1986-01-02', '2026-11-20')}{t('회/년', '/year')}</td>
-            <td className={td}>{date}</td>
-            <td className={td}>{median}</td>
-          </tr>)}
-        </Table></div>
+          ] as const).map(([threshold, count, date, median]) => ({
+            key: threshold, title: `−${threshold}%`,
+            cells: [
+              {value: count},
+              {value: annualEntryRate(count, '1986-01-02', '2026-11-20') + t('회/년', '/year')},
+              {value: date},
+              {value: median},
+            ],
+          }))}/></div>
         <p className="mt-2 text-xs leading-5 text-slate-400">{t(
           '1986.01.02~2026.11.20 나스닥100 일별 종가. 전고점 회복 전에는 각 하락폭의 첫 도달만 집계했습니다. 간격 중앙값은 연속 도달일 사이의 간격으로, 1회 발생 시에는 표시하지 않습니다.',
           'Nasdaq-100 daily closes, Jan 2, 1986–Nov 20, 2026. Each threshold is counted on its first hit before recovery to the previous peak. The median uses gaps between successive hits and is unavailable for a single hit.',
@@ -403,7 +433,13 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const ok = primaryOrder.filter(k => S[k] && !S[k].na);
   const best = (f: (k: string) => number | undefined) => Math.max(...ok.map(f).filter((v): v is number => num(v) !== null));
   const bI = best(k => S[k].irr), bL = best(k => S[k].irrLiq), bM = best(k => S[k].mdd);
-  const cls = (v: number | undefined, b: number) => `${td} ${v === b ? 'font-bold text-white' : ''}`;
+  const performanceCell = (value: number | undefined, bestValue: number): ComparisonCell => ({
+    value: pct(value), className: value === bestValue ? 'font-bold text-white' : undefined,
+  });
+  const historicalValue = (irr: unknown, mdd: unknown) => <>
+    {pct(irr)}
+    {mdd != null && <span className="block text-xs text-slate-400 sm:ml-1 sm:inline">{pct(mdd, 0)}</span>}
+  </>;
   const lines: Line[] = useMemo(() => {
     const ls: Line[] = ok.map(k => ({key: k, label: label(k, S[k].label), color: COLORS[k], dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined, points: (S[k].curve || []).map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[1]}))}));
     const inv = S[ok[0]]?.curve || [];
@@ -416,25 +452,44 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     <div className="mt-3 flex flex-wrap gap-2" aria-label={t('시작 시점', 'Start point')}>{Object.entries(bt.variants).map(([k, v]) =>
       <button key={k} type="button" className={chipClass(k === variant)} aria-pressed={k === variant} onClick={() => setVariant(k)}>{vName(k, v)}</button>)}</div>
     <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span></p>
-    <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]} mobileHide={[4]}>
-      {primaryOrder.map(k => { const s = S[k]; if (!s) return null; return s.na
-        ? <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={`${tdL} text-slate-400`} colSpan={3}>{s.na}</td></tr>
-        : <tr key={k}><td className={tdL}><Dot k={k}/>{label(k, s.label)}</td><td className={cls(s.irr, bI)}>{pct(s.irr)}</td><td className={cls(s.irrLiq, bL)}>{pct(s.irrLiq)}</td><td className={cls(s.mdd, bM)}>{pct(s.mdd)}</td><td className={`${td} ${mh}`}>{won(s.final)} ({won(s.invested)})</td></tr>; })}
-    </Table></div>
+    <div className="mt-3"><ComparisonTable head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]}
+      rows={primaryOrder.filter(k => S[k]).map(k => {
+        const s = S[k];
+        return {
+          key: k, title: <><Dot k={k}/>{label(k, s.label)}</>, note: s.na,
+          cells: [
+            performanceCell(s.irr, bI), performanceCell(s.irrLiq, bL), performanceCell(s.mdd, bM),
+            {value: `${won(s.final)} (${won(s.invested)})`},
+          ],
+        };
+      })}/></div>
     <div className="mt-4"><LineChart lines={lines} yFormat={v => won(v)} ariaLabel={t('백테스트 자산 곡선', 'Backtest equity curve')}/></div>
     <details className="mt-3 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('매년 1월 시작 결과', 'Starting each January')} ({bt.startRange[0]}–{bt.startRange[1]})</summary>
-      <div className="mt-3"><Table head={[t('전략', 'Strategy'), t('시작연도 평균', 'Avg by start yr'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5-yr avg'), t('5년 최저', '5-yr min'), t('5년 QQQ 이김', 'Beat QQQ (5-yr)')]} mobileHide={[2, 4]}>
-        {order.map(k => <tr key={k}><td className={tdL}><Dot k={k}/>{label(k)}</td><td className={td}>{pct(M[k]?.startAvg)}</td><td className={`${td} ${mh}`}>{pct(M[k]?.startWorstMdd)}</td><td className={td}>{pct(M[k]?.fiveAvg)}</td><td className={`${td} ${mh}`}>{pct(M[k]?.fiveMin)}</td><td className={td}>{M[k]?.fiveBeatQqq == null ? '—' : `${M[k].fiveBeatQqq} / ${M[k].fiveN}`}</td></tr>)}
-      </Table></div>
-      <div className="mt-3"><Table head={[t('시작', 'Start'), ...order.map(k => label(k))]}>
-        {bt.startYears.map(r => <tr key={r.year}><td className={tdL}>{r.year}</td>{order.map(k => <td key={k} className={td}>{r[k]?.[0] == null ? '—' : <>{pct(r[k][0])}<span className="block text-xs text-slate-500 sm:ml-1 sm:inline sm:text-sm">{pct(r[k][1], 0)}</span></>}</td>)}</tr>)}
-      </Table></div>
+      <div className="mt-3"><ComparisonTable head={[t('전략', 'Strategy'), t('시작연도 평균', 'Avg by start yr'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5-yr avg'), t('5년 최저', '5-yr min'), t('5년 QQQ 이김', 'Beat QQQ (5-yr)')]}
+        rows={order.map(k => ({
+          key: k, title: <><Dot k={k}/>{label(k)}</>,
+          cells: [
+            {value: pct(M[k]?.startAvg)}, {value: pct(M[k]?.startWorstMdd)},
+            {value: pct(M[k]?.fiveAvg)}, {value: pct(M[k]?.fiveMin)},
+            {value: M[k]?.fiveBeatQqq == null ? '—' : `${M[k].fiveBeatQqq} / ${M[k].fiveN}`},
+          ],
+        }))}/></div>
+      <div className="mt-3"><ComparisonTable head={[t('시작', 'Start'), ...order.map(k => label(k))]}
+        rows={bt.startYears.map(r => ({
+          key: r.year, title: r.year,
+          cells: order.map(k => ({value: r[k]?.[0] == null ? '—' : historicalValue(r[k][0], r[k][1])})),
+        }))}/></div>
       <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭), 각 연도 1월 시작 ~ 현재.', 'IRR · (max drawdown), from January of each year to today.')}</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('5년 보유 구간별 결과', '5-year holding windows')} ({lang === 'en' ? `starts ${bt.fiveRange[0]}–${bt.fiveRange[1]}` : `${bt.fiveRange[0]}~${bt.fiveRange[1]}년 시작`})</summary>
-      <div className="mt-3"><Table head={[t('구간', 'Window'), ...order.map(k => label(k))]}>
-        {bt.fiveYear.map(r => <tr key={r.year}><td className={tdL}>{r.year}~{r.year + 5}</td>{order.map(k => <td key={k} className={`${td} ${k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : ''}`}>{pct(r[k])}{r.mdd?.[k] != null && <span className="block text-xs text-slate-500 sm:ml-1 sm:inline sm:text-sm">{pct(r.mdd[k], 0)}</span>}</td>)}</tr>)}
-      </Table></div>
+      <div className="mt-3"><ComparisonTable head={[t('구간', 'Window'), ...order.map(k => label(k))]}
+        rows={bt.fiveYear.map(r => ({
+          key: r.year, title: `${r.year}~${r.year + 5}`,
+          cells: order.map(k => ({
+            value: historicalValue(r[k], r.mdd?.[k]),
+            className: k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : undefined,
+          })),
+        }))}/></div>
       <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭). 빨간색: 같은 기간 QQQ 적립보다 IRR이 낮음. 구간이 겹치므로 독립 표본이 아닙니다.', 'IRR · (max drawdown). Red: lower IRR than QQQ DCA over the same window. Windows overlap, so they are not independent samples.')}</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('계산 기준', 'Method')}</summary>

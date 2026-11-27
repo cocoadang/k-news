@@ -48,6 +48,19 @@ type Backtest = {monthly: number; dataEnd: string; order?: string[]; variants: R
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const pct = (v: unknown, d = 2) => { const n = num(v); return n === null ? '—' : `${n > 0 ? '+' : ''}${n.toFixed(d)}%`; };
+const bestMetric = (values: unknown[], drawdown = false) => Math.max(...values
+  .map(num)
+  .filter((value): value is number => value !== null)
+  .map(value => drawdown ? -Math.abs(value) : value));
+
+function highlightedPct(value: unknown, best: number, digits = 2, drawdown = false) {
+  const n = num(value);
+  const formatted = pct(n, digits);
+  return n !== null && (drawdown ? -Math.abs(n) : n) === best
+    ? <strong className="font-bold text-white">{formatted}</strong>
+    : formatted;
+}
+
 const won = (v: unknown) => { const n = num(v); if (n === null) return '—'; const a = Math.abs(n); const sign = n < 0 ? '−' : '';
   if (getLang() === 'en') return sign + (a >= 1e9 ? `₩${(a / 1e9).toFixed(2)}B` : `₩${(a / 1e6).toFixed(a >= 1e8 ? 0 : 1)}M`);
   return sign + (a >= 1e8 ? `${(a / 1e8).toFixed(2)}억` : `${Math.round(a / 1e4).toLocaleString('ko-KR')}만`); };
@@ -104,7 +117,7 @@ function Table({head, children}: {head: string[]; children: React.ReactNode}) {
 }
 const td = 'border-b border-slate-800/70 px-2 py-2 text-right tabular-nums';
 const tdL = 'border-b border-slate-800/70 px-2 py-2 text-left';
-type ComparisonCell = {value: React.ReactNode; mobileDrawdown?: string; className?: string};
+type ComparisonCell = {value: React.ReactNode; mobileDrawdown?: React.ReactNode};
 type ComparisonRow = {key: string | number; title: React.ReactNode; cells: ComparisonCell[]; note?: string};
 
 function ComparisonTable({head, shortHead, rows, historical = false, columnWidths}: {
@@ -131,7 +144,7 @@ function ComparisonTable({head, shortHead, rows, historical = false, columnWidth
       <tbody>{rows.map(row => <tr key={row.key}>
         <th scope="row" className={`${cellPadding} text-left font-medium [overflow-wrap:anywhere]`}>{row.title}</th>
         {row.note ? <td colSpan={head.length - 1} className={`${cellPadding} text-slate-400`}>{row.note}</td> :
-          row.cells.map((cell, i) => <td key={head[i + 1]} className={`${cellPadding} whitespace-nowrap text-right ${cell.className ?? ''}`}>
+          row.cells.map((cell, i) => <td key={head[i + 1]} className={`${cellPadding} whitespace-nowrap text-right`}>
             {historical ? <>
               <span className={showDrawdown ? 'hidden sm:inline' : ''}>{cell.value}</span>
               <span className={showDrawdown ? 'text-slate-200 sm:hidden' : 'hidden'}>{cell.mobileDrawdown ?? '—'}</span>
@@ -443,15 +456,25 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const primaryOrder = includeTripod ? [...order, 'tripod'] : order;
   const S: Record<string, Strat> = includeTripod ? {...V.strategies, tripod: {...comparison, label: 'Tripod', note: ''}} : V.strategies;
   const ok = primaryOrder.filter(k => S[k] && !S[k].na);
-  const best = (f: (k: string) => number | undefined) => Math.max(...ok.map(f).filter((v): v is number => num(v) !== null));
-  const bI = best(k => S[k].irr), bL = best(k => S[k].irrLiq), bM = best(k => S[k].mdd);
-  const performanceCell = (value: number | undefined, bestValue: number): ComparisonCell => ({
-    value: pct(value), className: value === bestValue ? 'font-bold text-white' : undefined,
-  });
-  const historicalCell = (irr: unknown, mdd: unknown): ComparisonCell => ({
-    value: <>{pct(irr)}{mdd != null && <span className="ml-1 hidden text-xs text-slate-400 sm:inline">{pct(mdd, 0)}</span>}</>,
-    mobileDrawdown: pct(mdd, 0),
-  });
+  const bI = bestMetric(ok.map(k => S[k].irr));
+  const bL = bestMetric(ok.map(k => S[k].irrLiq));
+  const bM = bestMetric(ok.map(k => S[k].mdd), true);
+  const historicalCells = (returns: unknown[], drawdowns: unknown[], benchmark?: unknown): ComparisonCell[] => {
+    const topReturn = bestMetric(returns);
+    const shallowestDrawdown = bestMetric(drawdowns, true);
+    const benchmarkReturn = num(benchmark);
+    return returns.map((irr, i) => {
+      const drawdown = highlightedPct(drawdowns[i], shallowestDrawdown, 0, true);
+      const returnValue = num(irr);
+      return {
+        value: <>
+          <span className={benchmarkReturn !== null && returnValue !== null && returnValue < benchmarkReturn ? 'text-rose-300' : undefined}>{highlightedPct(irr, topReturn)}</span>
+          {num(drawdowns[i]) !== null && <span className="ml-1 hidden text-xs text-slate-400 sm:inline">{drawdown}</span>}
+        </>,
+        mobileDrawdown: drawdown,
+      };
+    });
+  };
   const strategyShortName = (key: string) => key === 'mubot' ? t('무한매수', 'Infinite') : key === 'qqq' ? 'QQQ' : label(key);
   const strategyName = (key: string, fallback?: string) => <>
     <span className="hidden sm:inline"><Dot k={key}/>{label(key, fallback)}</span>
@@ -464,6 +487,10 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     return ls;
   }, [bt, variant, lang]);
   const M = bt.summary;
+  const bestStartAvg = bestMetric(order.map(k => M[k]?.startAvg));
+  const bestWorstMdd = bestMetric(order.map(k => M[k]?.startWorstMdd), true);
+  const bestFiveAvg = bestMetric(order.map(k => M[k]?.fiveAvg));
+  const bestFiveMin = bestMetric(order.map(k => M[k]?.fiveMin));
   return <div className={card}>
     <h2 className="text-base font-semibold text-white">{lang === 'en' ? `Backtest — start at a crisis low, add ${won(bt.monthly)} every month` : `백테스트 — 위기 저점에서 시작해 매달 ${Math.round(bt.monthly / 1e4)}만 원 적립`}</h2>
     <div className="mt-3 flex flex-wrap gap-2" aria-label={t('시작 시점', 'Start point')}>{Object.entries(bt.variants).map(([k, v]) =>
@@ -477,7 +504,8 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         return {
           key: k, title: strategyName(k, s.label), note: s.na,
           cells: [
-            performanceCell(s.irr, bI), performanceCell(s.irrLiq, bL), performanceCell(s.mdd, bM),
+            {value: highlightedPct(s.irr, bI)}, {value: highlightedPct(s.irrLiq, bL)},
+            {value: highlightedPct(s.mdd, bM, 2, true)},
             {value: won(s.final)}, {value: won(s.invested)},
           ],
         };
@@ -490,8 +518,10 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         rows={order.map(k => ({
           key: k, title: strategyName(k),
           cells: [
-            {value: pct(M[k]?.startAvg)}, {value: pct(M[k]?.startWorstMdd)},
-            {value: pct(M[k]?.fiveAvg)}, {value: pct(M[k]?.fiveMin)},
+            {value: highlightedPct(M[k]?.startAvg, bestStartAvg)},
+            {value: highlightedPct(M[k]?.startWorstMdd, bestWorstMdd, 2, true)},
+            {value: highlightedPct(M[k]?.fiveAvg, bestFiveAvg)},
+            {value: highlightedPct(M[k]?.fiveMin, bestFiveMin)},
             {value: M[k]?.fiveBeatQqq == null ? '—' : `${M[k].fiveBeatQqq} / ${M[k].fiveN}`},
           ],
         }))}/></div>
@@ -499,7 +529,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         shortHead={[t('시작', 'Start'), ...order.map(strategyShortName)]} columnWidths={['w-[16%] sm:w-[20%]']}
         rows={bt.startYears.map(r => ({
           key: r.year, title: r.year,
-          cells: order.map(k => historicalCell(r[k]?.[0], r[k]?.[0] == null ? undefined : r[k][1])),
+          cells: historicalCells(order.map(k => r[k]?.[0]), order.map(k => r[k]?.[0] == null ? undefined : r[k][1])),
         }))}/></div>
       <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭), 각 연도 1월 시작 ~ 현재.', 'IRR · (max drawdown), from January of each year to today.')}</p>
     </details>
@@ -508,10 +538,7 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
         shortHead={[t('구간', 'Window'), ...order.map(strategyShortName)]} columnWidths={['w-[24%] sm:w-[20%]']}
         rows={bt.fiveYear.map(r => ({
           key: r.year, title: `${r.year}~${r.year + 5}`,
-          cells: order.map(k => ({
-            ...historicalCell(r[k], r.mdd?.[k]),
-            className: k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : undefined,
-          })),
+          cells: historicalCells(order.map(k => r[k]), order.map(k => r.mdd?.[k]), r.qqq),
         }))}/></div>
       <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭). 빨간색: 같은 기간 QQQ 적립보다 IRR이 낮음. 구간이 겹치므로 독립 표본이 아닙니다.', 'IRR · (max drawdown). Red: lower IRR than QQQ DCA over the same window. Windows overlap, so they are not independent samples.')}</p>
     </details>

@@ -12,16 +12,16 @@ const scaled = (value: number | null, divisor: number) => value === null ? null 
 const sourceLink = 'text-cyan-300 underline underline-offset-2';
 const panel = 'rounded-xl border border-slate-700 bg-slate-900 p-4';
 const usMetricInfo = {
-  growth: { label: '실질 GDP 성장률', value: 3.4, date: '2026-07-01', unit: '%', changeUnit: '%p', digits: 2, scale: 1,
-    basis: '전분기 대비 연율 · 0%가 성장과 위축의 경계', rule: '0%보다 높으면 실질 GDP가 전분기보다 늘었고, 낮으면 줄었습니다.', url: 'https://fred.stlouisfed.org/series/A191RL1Q225SBEA' },
-  profits: { label: '기업 이익 (세전)', value: 4280, date: '2026-04-01', unit: '조 달러', changeUnit: '조 달러', digits: 2, scale: 1000,
-    basis: '직전 분기 · 계절조정 연율', rule: '직전 분기와 비교한 명목 세전 이익의 증감입니다. 물가 변화가 포함됩니다.', url: 'https://fred.stlouisfed.org/series/CP' },
-  debt: { label: '중앙정부 부채 / GDP', value: 115.8, date: '2024', unit: '%', changeUnit: '%p', digits: 1, scale: 1,
-    basis: '직전 공개 연도', rule: '비율이 오르면 GDP 대비 중앙정부 부채가 늘었다는 뜻입니다. 재정 위험은 이자 부담과 만기 구조도 함께 봐야 합니다.', url: 'https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US' },
-  nfci: { label: '미국 금융여건 (NFCI)', value: -0.478, date: '2026-11-13', unit: '', changeUnit: '포인트', digits: 3, scale: 1,
-    basis: '장기 평균 0', rule: '0보다 낮으면 평균보다 완화된 금융여건, 높으면 긴축적인 금융여건을 뜻합니다.', url: 'https://fred.stlouisfed.org/series/NFCI' },
-  dollar: { label: '광의 달러 지수', value: 122.65, date: '2026-11-13', unit: '', changeUnit: '포인트', digits: 2, scale: 1,
-    basis: '2006년 1월 = 100', rule: '지수가 오르면 무역 상대국 통화에 비해 달러가 강해졌다는 뜻입니다.', url: 'https://fred.stlouisfed.org/series/DTWEXBGS' },
+  growth: { label: '실질 GDP 성장률', value: 3.4, date: '2026-07-01', unit: '%', digits: 2, scale: 1,
+    rule: '0%보다 높으면 실질 GDP가 전분기보다 늘었고, 낮으면 줄었습니다.', url: 'https://fred.stlouisfed.org/series/A191RL1Q225SBEA' },
+  profits: { label: '기업 이익 (세전)', value: 4280, date: '2026-04-01', unit: '조 달러', digits: 2, scale: 1000,
+    rule: '직전 분기와 비교한 명목 세전 이익의 증감입니다. 물가 변화가 포함됩니다.', url: 'https://fred.stlouisfed.org/series/CP' },
+  debt: { label: '중앙정부 부채 / GDP', value: 115.8, date: '2024', unit: '%', digits: 1, scale: 1,
+    rule: '비율이 오르면 GDP 대비 중앙정부 부채가 늘었다는 뜻입니다. 재정 위험은 이자 부담과 만기 구조도 함께 봐야 합니다.', url: 'https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US' },
+  nfci: { label: '미국 금융여건 (NFCI)', value: -0.478, date: '2026-11-13', unit: '', digits: 3, scale: 1,
+    rule: '0보다 낮으면 평균보다 완화된 금융여건, 높으면 긴축적인 금융여건을 뜻합니다.', url: 'https://fred.stlouisfed.org/series/NFCI' },
+  dollar: { label: '광의 달러 지수', value: 122.65, date: '2026-11-13', unit: '', digits: 2, scale: 1,
+    rule: '지수가 오르면 무역 상대국 통화에 비해 달러가 강해졌다는 뜻입니다.', url: 'https://fred.stlouisfed.org/series/DTWEXBGS' },
 } as const;
 type UsMetricKey = keyof typeof usMetricInfo;
 const usKeys = Object.keys(usMetricInfo) as UsMetricKey[];
@@ -41,8 +41,6 @@ function UsMetrics({ snapshot }: { snapshot?: SystemHealth }) {
       {usKeys.map(key => {
         const info = usMetricInfo[key];
         const reading = snapshot ? snapshot.us[key] : info;
-        const previous = snapshot?.usHistory?.[key]?.at(-2);
-        const delta = reading && previous ? Number(((reading.value - previous.value) / info.scale).toFixed(info.digits)) : null;
         return <button key={key} type="button" aria-expanded={selected === key}
           aria-controls={selected === key ? 'us-metric-detail' : undefined}
           className={`min-w-0 rounded-lg border bg-slate-800/70 p-2.5 text-left focus-visible:outline-2 focus-visible:outline-cyan-400 ${selected === key ? 'border-cyan-400' : 'border-transparent hover:border-slate-500'}`}
@@ -50,8 +48,6 @@ function UsMetrics({ snapshot }: { snapshot?: SystemHealth }) {
           <span className="block text-xs text-cyan-300">{info.label}</span>
           <strong className="mt-1 block tabular-nums">{format(scaled(reading?.value ?? null, info.scale), info.unit, info.digits)}</strong>
           <span className="mt-1 block text-xs text-slate-400">{reading ? observationPeriod(key, reading.date) : '관측값 없음'}{!snapshot && ' · 저장값'}</span>
-          <span className="mt-1 block text-xs text-slate-300">{info.basis}</span>
-          <span className="mt-1 block text-xs text-slate-300">{delta === null ? '최근 방향 자료 없음' : delta === 0 ? '직전 관측 대비 보합' : `직전 관측 대비 ${delta > 0 ? '상승' : '하락'} ${format(Math.abs(delta), info.changeUnit, info.digits)}`}</span>
         </button>;
       })}
     </div>
@@ -148,29 +144,24 @@ export function SystemHealthMenu() {
       <section className={panel}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">국가 비교</h2>
-          <label className="flex items-center gap-2 text-xs text-slate-300">기준연도
-            <select className="rounded border border-slate-600 bg-slate-900 p-1.5" value={year} onChange={event => setYear(Number(event.target.value))}>
-              {years.map(y => <option key={y} value={y}>{y}년</option>)}
-            </select>
-          </label>
+          <select aria-label="기준연도" className="rounded border border-slate-600 bg-slate-900 p-1.5 text-xs text-slate-300" value={year} onChange={event => setYear(Number(event.target.value))}>
+            {years.map(y => <option key={y} value={y}>{y}년</option>)}
+          </select>
         </div>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="국가 선택">
           {(Object.keys(regions) as Region[]).map(r => <button key={r} type="button" aria-pressed={selected === r}
             onClick={() => setSelected(r)}
             className={`rounded-lg border px-3 py-2 text-sm ${selected === r ? 'border-cyan-400 bg-cyan-900 text-white' : 'border-slate-700 text-slate-300'}`}>{regions[r]}</button>)}
         </div>
-        <p className="mt-3 text-xs text-slate-400">세계은행 연간 관측치 기준입니다. 최신 연도는 경제권별로 공개 시점이 다를 수 있습니다.</p>
         <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label={regions[selected] + ' 경제 지표'}>
           {metrics.map(([label, value, id]) => <div key={label} className="min-w-0 rounded-lg bg-slate-800/70 p-2.5">
             <dt className="text-xs"><a className={sourceLink} href={`https://data.worldbank.org/indicator/${id}?locations=${selected}`}>{label}</a></dt>
             <dd className="mt-1 font-semibold tabular-nums">{value}</dd>
           </div>)}
         </dl>
-        <p className="mt-2 text-xs text-slate-400">취업자 1인당 GDP는 2021년 불변 구매력 기준입니다. —는 해당 연도 자료 미제공입니다.</p>
       </section>
       <section className={panel}>
         <h2 className="font-semibold">{year}년 자본 유입 순위</h2>
-        <p className="mt-1 text-xs text-slate-400">비교 대상 6개 경제권 중 자료가 있는 곳의 순위 · 십억 달러</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           {([[3, '외국인 직접투자 순유입'], [4, '포트폴리오 주식 순유입']] as const).map(([column, label]) =>
             <div key={column}>

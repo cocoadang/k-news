@@ -51,7 +51,7 @@ const topics: Topic[] = [
     ],
   },
   {
-    id: 'rivalry', title: ['전쟁·미중 관계', 'War & US–China ties'],
+    id: 'rivalry', title: ['전쟁·미중 패권', 'War and US–China rivalry'],
     milestones: [
       { date: '2025-11-01', kind: 'release', change: ['미중 합의에 희토류 수출통제 유예 포함', 'US–China deal included a pause in rare earth export controls'],
         summary: ['백악관은 중국이 새 희토류 수출통제의 글로벌 시행을 유예하기로 했다고 발표했습니다.', 'The White House said China agreed to suspend global implementation of new rare earth export controls.'],
@@ -115,7 +115,6 @@ export function TrumpPolicyHistory() {
   return <HistoryPanel
     title={t('트럼프 발언·정책 변화 이력', 'Trump’s statements and policy timeline')}
     topics={topics.map(entry => ({ id: entry.id, label: t(...entry.title) }))}
-    segmented
     activeId={active}
     onSelect={setActive}
   >

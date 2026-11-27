@@ -1,7 +1,7 @@
 import {deepStrictEqual, strictEqual} from 'node:assert';
 import {test} from 'node:test';
 import {completedCloses} from './marketSessions';
-import {upcomingMarketSchedule} from '../src/marketCalendar';
+import {formatKoreanMarketTime, upcomingMarketSchedule} from '../src/marketCalendar';
 import {sessionVideos} from '../src/components/MarketSessionCard';
 
 const stamp = (iso: string) => Date.parse(iso) / 1000;
@@ -26,4 +26,5 @@ test('only completed market wrap videos posted after the ET close are associated
 test('schedule rolls forward at US release instant and FOMC KST is the next date', () => {
   strictEqual(upcomingMarketSchedule(Date.parse('2026-12-04T13:30:00Z'))[0].names[1], 'FOMC decision');
   strictEqual(new Date(upcomingMarketSchedule(Date.parse('2026-12-04T13:30:00Z'))[0].at).toISOString(), '2026-12-09T19:00:00.000Z');
+  strictEqual(formatKoreanMarketTime('2026-12-09T14:00:00-05:00'), '12-10 04:00 KST');
 });

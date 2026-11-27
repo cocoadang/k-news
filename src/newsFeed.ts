@@ -36,7 +36,14 @@ export function groupNewsFeed(events: NewsEvent[]): NewsEvent[] {
   return feed;
 }
 
+const starshipMilestones = [
+  {id: 'catch', pattern: /\b(?:first|historic)\b.{0,45}\b(?:catch|capture|caught)\b|\bcatch(?:es)?\b.{0,45}\b(?:upper stage|from orbit)\b|첫\s*(?:상단부\s*)?포획|상단부\s*첫\s*포획|궤도.{0,16}귀환.{0,8}포획/i},
+  {id: 'fuel', pattern: /\b(?:refuelling|refueling|propellant transfer)\b.{0,35}\b(?:milestone|progress|advance)\b|연료\s*보급\s*진전/i},
+  {id: 'cryo', pattern: /\b(?:flight 17|17th (?:test )?flight)\b.{0,95}\b(?:cryogenic|cryo)\b|\b(?:cryogenic|cryo)\b.{0,95}\b(?:flight 17|17th (?:test )?flight)\b|17차\s*비행.{0,55}극저온\s*시험/i},
+] as const;
+
 const trackedIssues = [
+  { label: ['SpaceX 스타십 개발', 'SpaceX Starship development'], subject: /\bstarship\b|스타십/i, stages: starshipMilestones },
   { label: ['테슬라 오스틴 로보택시', 'Tesla Austin robotaxi'], subject: /(?=.*tesla|.*테슬라)(?=.*robotaxi|.*로보택시)(?=.*austin|.*오스틴)/i },
   { label: ['SpaceX 궤도 데이터센터', 'SpaceX orbital data centers'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*data[ -]?cent(?:er|re)|.*데이터\s*센터)(?=.*orbital|.*in space|.*궤도|.*우주)/i },
   { label: ['SpaceX 애리조나 AI 시설', 'SpaceX Arizona AI facility'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*arizona|.*애리조나)(?=.*\bai\b|.*data[ -]?cent(?:er|re)|.*데이터\s*센터)/i },
@@ -60,9 +67,10 @@ export function buildIssueFlows(events: NewsEvent[]) {
     const members: NewsEvent[] = [];
     for (const event of events) {
       if (!newsTime(event) || event.contentType === 'rumor' || event.contentType === 'analyst_opinion') continue;
-      const title = event.originalTitle || event.title;
-      if (!issue.subject.test(title) || /\?|\b(?:could|might|seeks? approval|denied|rejected|not approved)\b|미승인|승인\s*거부|가능성/i.test(title)) continue;
-      const stage = milestones.find(step => step.pattern.test(title));
+      const titles = [event.originalTitle || event.title, event.titleKo].filter((title): title is string => Boolean(title));
+      if (/^.*(?:\?|\b(?:could|might|seeks? approval|denied|rejected|not approved)\b|미승인|승인\s*거부|가능성)/i.test(titles[0])) continue;
+      const stages = 'stages' in issue ? issue.stages : milestones;
+      const stage = stages.find(step => titles.some(title => issue.subject.test(title) && step.pattern.test(title)));
       if (!stage) continue;
       members.push(event);
       const previous = entriesByStage.get(stage.id);

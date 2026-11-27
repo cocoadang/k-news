@@ -1,17 +1,13 @@
 import {useEffect, useState} from 'react';
 import type {MarketSession, PublicCommentary} from '../../server/marketSessions';
 import {useLang} from '../i18n';
-import {summaryPreview, parseSummary, summaryTopics} from './youtubeSummary.mjs';
-import {upcomingMarketSchedule} from '../marketCalendar';
+import {parseSummary, summaryTopics} from './youtubeSummary.mjs';
+import {formatKoreanMarketTime, upcomingMarketSchedule} from '../marketCalendar';
 
 type RecentVideo = {id: string; title: string; publishedAt: number | null; status: string; programmes: string[]; summary: string | null};
 const eastern = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
 });
-const koreanTime = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-});
-
 export function sessionVideos(videos: RecentVideo[], date: string) {
   return videos.filter(video => {
     if (video.status !== 'ready' || !video.summary || !video.publishedAt) return false;
@@ -40,6 +36,7 @@ export function MarketSessionCard({videos, programmes, onVideo}: {
   if (!session) return <p className="text-sm text-slate-300">{t('선택한 거래일의 시장 요약이 없습니다.', 'No market recap for this date.')}</p>;
   const matchedVideos = sessionVideos(videos, session.date);
   const leadVideo = matchedVideos[0];
+  const leadTitle = leadVideo?.title.split(/\s*\|\s*/)[0].replace(/^\[.+?\]\s*/, '');
   const next = upcomingMarketSchedule()[0];
   const related = data.commentary.find(video => {
     const age = Date.parse(session.date) - Date.parse(video.publishedAt.slice(0, 10));
@@ -53,7 +50,7 @@ export function MarketSessionCard({videos, programmes, onVideo}: {
       <span className="mt-1 block text-sm font-medium tabular-nums text-slate-200">
         {session.closes.map(quote => `${quote.symbol} ${quote.change >= 0 ? '+' : ''}${quote.change.toFixed(2)}%`).join(' · ')}
       </span>
-      {leadVideo?.summary && <span className="mt-1 line-clamp-1 text-sm text-slate-300">{summaryPreview(leadVideo.summary, leadVideo.id)}</span>}
+      {leadTitle && <span className="mt-1 line-clamp-1 text-sm text-slate-300">{leadTitle}</span>}
     </summary>
     <div className="space-y-3 border-t border-slate-800 py-3">
       <a className="text-xs text-slate-300 underline underline-offset-4" href="https://finance.yahoo.com/quote/%5ENDX/history/" target="_blank" rel="noopener noreferrer">{t('종가 출처 · Yahoo Finance', 'Closing data · Yahoo Finance')} ↗</a>
@@ -72,7 +69,7 @@ export function MarketSessionCard({videos, programmes, onVideo}: {
         <a className="mt-1 inline-flex min-h-11 items-center text-sm text-slate-100 hover:underline" href={`https://www.youtube.com/watch?v=${related.id}`} target="_blank" rel="noopener noreferrer">{related.title} ↗</a>
       </div>}
       {next && <a className="inline-flex min-h-11 items-center text-sm text-cyan-300" href={next.source} target="_blank" rel="noopener noreferrer">
-        {t('다음 발표', 'Next release')} · {next.names[lang === 'en' ? 1 : 0]} · {koreanTime.format(Date.parse(next.at))} KST ↗
+        {t('다음 발표', 'Next release')} · {next.names[lang === 'en' ? 1 : 0]} · {formatKoreanMarketTime(next.at)} ↗
       </a>}
     </div>
   </details>;

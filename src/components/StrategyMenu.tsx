@@ -217,6 +217,8 @@ const indicatorRatingKo: Record<string, string> = {
   'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕',
 };
 
+const drawdownHistoryPeriod = {start: '1986-01-02', end: '2026-11-20'};
+
 function annualEntryRate(count: number, start: string, end: string) {
   const years = (Date.parse(end) - Date.parse(start)) / (86_400_000 * 365.2425);
   return (count / years).toFixed(2);
@@ -328,7 +330,10 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
       </div>
       {activeIndicator && <IndicatorHistory indicator={activeIndicator}/>}
       <section id="nasdaq-drawdown-history" hidden={!drawdownsOpen} className={`${card} col-span-full`}>
-        <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <h3 className="text-sm font-semibold text-white">{t('나스닥100 하락폭 발생 통계', 'Nasdaq-100 drawdown frequency')}</h3>
+          <span className="whitespace-nowrap text-xs tabular-nums text-slate-400">{dot(drawdownHistoryPeriod.start)}~{dot(drawdownHistoryPeriod.end)}</span>
+        </div>
         <div className="mt-2 text-xs sm:text-sm"><ComparisonTable head={[
           t('전고점 대비 하락폭', 'Drawdown from peak'),
           t('발생 횟수', 'Entries'),
@@ -347,22 +352,18 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
             key: threshold, title: `−${threshold}%`,
             cells: [
               {value: count},
-              {value: annualEntryRate(count, '1986-01-02', '2026-11-20') + t('회/년', '/year')},
+              {value: annualEntryRate(count, drawdownHistoryPeriod.start, drawdownHistoryPeriod.end) + t('회/년', '/year')},
               {value: date},
               {value: median},
             ],
           }))}/></div>
-        <p className="mt-2 text-xs leading-5 text-slate-400">{t(
-          '1986.01.02~2026.11.20 나스닥100 일별 종가. 전고점 회복 전에는 각 하락폭의 첫 도달만 집계했습니다. 간격 중앙값은 연속 도달일 사이의 간격으로, 1회 발생 시에는 표시하지 않습니다.',
-          'Nasdaq-100 daily closes, Jan 2, 1986–Nov 20, 2026. Each threshold is counted on its first hit before recovery to the previous peak. The median uses gaps between successive hits and is unavailable for a single hit.',
-        )}</p>
       </section>
     </div>
   </>;
 }
 
 function LiveSection({live}: {live: Live}) {
-  const {t, lang} = useLang();
+  const {t} = useLang();
   const order = (live.order || ORDER).filter(k => live.virtual[k]);
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [tripod, setTripod] = useState<typeof tripodLiveSeed | null>(null);
@@ -401,7 +402,6 @@ function LiveSection({live}: {live: Live}) {
   return <>
     <div className={card}>
       <h2 className="text-base font-semibold text-white">{t('실전 추적', 'Live tracking')}</h2>
-      <p className="mt-1 text-sm text-slate-400">{lang === 'en' ? <>Virtual accounts adding the same amount on the first trading day of each month since {dot(live.start)} · as of {dot(live.asOf)}</> : <>{dot(live.start)}부터 매달 첫 거래일에 같은 금액을 넣은 가상 계좌 · 기준 {dot(live.asOf)}</>}</p>
       <div className="mt-3 space-y-2 sm:hidden" aria-label={t('모바일 전략별 실전 추적', 'Mobile strategy tracking')}>
         {[...order, 'tripod'].map(k => {
           const v = k === 'tripod' ? null : live.virtual[k];

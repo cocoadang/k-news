@@ -84,7 +84,7 @@ function Body({ s }: { s: any }) {
   }
   return <>
     <p className="tl-text">{t.text}</p>
-    <span className="tl-tag">{t.kind === 'translation' ? '검토된 번역' : 'AI 요약 제목'}</span>
+    {t.kind !== 'translation' && <span className="tl-tag">AI 요약 제목</span>}
     {sourceExcerpt}
   </>;
 }

@@ -23,69 +23,75 @@ function Source({ s }: { s: any }) {
   const e = statementSource(s);
   if (!e?.url) return null;
   const sourceName = e.sourceName || tr('출처', 'Source');
-  const label = s.kind === 'reported_headline' ? `${tr('보도', 'Report')} · ${sourceName}` : sourceName;
+  const action = s.kind === 'video_quote' ? tr('영상 보기', 'Watch video') : tr('원문 보기', 'View original');
+  const label = `${action} · ${sourceName}`;
   return <a className="tl-source" href={e.url} target="_blank" rel="noreferrer">{label} ↗</a>;
 }
 
+const reviewedPostSummaries = [
+  {
+    personId: 'sundar-pichai', matches: /(?:500\s*billion|오천억|5[,.]?000억)[\s\S]*25\s*%[\s\S]*103\s*%/i,
+    ko: '피차이는 알파벳 3분기 매출이 25%, 구글 클라우드 매출이 103% 성장했다고 밝혔습니다. AI 투자가 검색 이용을 늘리고, AI 인프라와 솔루션 수요가 클라우드 성장을 이끌었다고 설명했습니다.',
+    en: 'Pichai said Alphabet revenue grew 25% and Google Cloud revenue rose 103%. He credited AI investment with driving search usage and AI infrastructure and solutions demand with boosting Cloud.',
+  },
+  {
+    personId: 'satya-nadella', matches: /MAI Base 2[\s\S]*Rocket/i,
+    ko: '나델라는 달러당 AI 성능을 높이는 데 주력한다고 밝혔습니다. 사전학습·강화학습·토큰 효율을 개선하고 모델과 제품을 함께 개발해 고객의 비용 대비 성과를 높이겠다는 설명입니다.',
+    en: 'Nadella emphasized improving AI performance per dollar through more efficient training and models. He said building models and products together can deliver better economics for customers.',
+  },
+  {
+    personId: 'bill-ackman', matches: /@nvidia[\s\S]*(?:fiduciary|수탁자)/i,
+    ko: '애크먼은 엔비디아 이사회가 젠슨 황의 거취를 결정하기 전에 사실관계와 이해관계자에게 미칠 영향을 충분히 검토하지 않았다고 비판했습니다.',
+    en: 'Ackman criticized Nvidia’s board for what he saw as insufficient fact-finding and consideration of stakeholders before its decision on Jensen Huang.',
+  },
+  {
+    personId: 'ray-dalio', matches: /(?:Thanksgiving|추수감사절)[\s\S]*(?:meaningful|의미 있는)/i,
+    ko: '달리오는 추수감사절을 맞아 가족, 친구, 공동체에 감사를 전했습니다. 갈등이 있더라도 서로를 대하는 방식이 중요하다고 강조했습니다.',
+    en: 'In a Thanksgiving message, Dalio expressed gratitude for family, friends, and community. He emphasized the importance of how people treat one another amid conflict.',
+  },
+];
+
+function shortExcerpt(text: string) {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= 155) return normalized;
+  const opening = normalized.slice(0, 155);
+  const sentenceEnd = opening.search(/[.!?。！？](?=\s|$)/u);
+  if (sentenceEnd >= 55) return opening.slice(0, sentenceEnd + 1);
+  const wordEnd = opening.lastIndexOf(' ');
+  return `${opening.slice(0, wordEnd >= 110 ? wordEnd : opening.length)}…`;
+}
+
 function Body({ s }: { s: any }) {
-  const t = displayText(s);
-  const sourceExcerpt = !statementSource(s) && s.quoteText && (s.quoteText !== t.text || s.curatedSummaryKo)
-    ? <details className="tl-original">
-        <summary>{tr('원문 발췌', 'Original excerpt')}</summary>
-        <blockquote lang={s.quoteLanguage || 'en'}>{s.quoteText}</blockquote>
-      </details>
-    : null;
-  if (getLang() === 'en' && s.kind !== 'reported_excerpt') {
-    // 영어 화면: 번역 대신 영어 원문을 그대로 보여 줍니다(추가 비용 없음)
-    const warn = s.kind === 'reported_headline';
-    return <><p className={'tl-text tl-en' + (warn ? ' tl-milestone' : '')} lang="en">{warn ? s.quoteText : <>“{s.quoteText}”</>}</p>
-      {warn && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>{s.relatedHeadlines.length} other headlines on this</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
-  }
-  if (s.kind === 'video_quote') {
-    return <>
-      <p className="tl-text">{t.kind === 'ai_translation' ? t.text : <span lang="en">{t.text}</span>}</p>
-      {sourceExcerpt}
-    </>;
-  }
-  if (s.curatedSummaryKo) {
-    return <>
-      <p className="tl-text">{s.curatedSummaryKo}</p>
-      <span className="tl-tag">발언 요약</span>
-      {sourceExcerpt}
-    </>;
-  }
-  if (s.kind === 'social_post') {
-    const ko = t.kind === 'ai_translation';
-    return <>
-      <p className="tl-text">{ko ? t.text : <span lang="en">{t.text}</span>}</p>
-      {ko && sourceExcerpt}
-    </>;
-  }
-  if (s.kind === 'reported_excerpt') {
-    return <><p className="tl-text tl-en" lang={s.quoteLanguage || 'en'}>“{t.text}”</p><span className="tl-tag tl-warn">{tr('기사 요약 속 인용 · 공식 원문 아님', 'Quote inside an article summary · not an official source')}{s.context ? ` · ${tr('기사', 'Article')}: ${s.context}` : ''}</span></>;
-  }
-  if (s.kind === 'reported_headline') {
-    const ko = t.kind === 'ai_translation';
-    return <><p className={'tl-text tl-milestone' + (ko ? '' : ' tl-en')} lang={ko ? 'ko' : 'en'}>{t.text}</p>
-      {ko && sourceExcerpt}
-      {Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 && <details className="tl-original"><summary>같은 내용의 다른 헤드라인 {s.relatedHeadlines.length}건</summary><ul className="tl-related">{s.relatedHeadlines.map((h: string) => <li key={h} lang="en">{h}</li>)}</ul></details>}</>;
-  }
-  const summary = displaySummary(s);
-  if (summary) {
-    return <>
-      <h4 className="tl-milestone">{summary.title}</h4>
-      <p className="tl-text">{summary.summary}</p>
-      {s.sourceType !== 'authored_post' && <span className="tl-tag">{summary.reviewed ? '원문 검토 요약' : 'AI 발언 요약'}</span>}
-      {sourceExcerpt}
-    </>;
-  }
-  if (t.kind === 'original') {
-    return <p className="tl-text tl-en" lang="en">{t.text}</p>;
-  }
+  const english = getLang() === 'en';
+  const original = String(s.quoteText || '');
+  const display = displayText(s);
+  const curatedPost = s.kind === 'social_post' && reviewedPostSummaries.find(
+    item => item.personId === s.personId && (item.matches.test(original) || item.matches.test(display.text)),
+  );
+  const saved = s.koSummary?.status === 'ready' && typeof s.koSummary.summary === 'string' ? s.koSummary.summary.trim() : '';
+  const editorial = curatedPost ? (english ? curatedPost.en : curatedPost.ko) : '';
+  const summary = editorial || (!english ? s.curatedSummaryKo?.trim() || displaySummary(s)?.summary || saved : '');
+  const body = english ? original : display.text;
+  const excerpt = shortExcerpt(body);
+  const text = summary || excerpt;
+  const showExcerpt = !summary && excerpt !== body.trim();
+  const noSource = !statementSource(s);
+  const showStoredText = noSource && original && (original.trim() !== text || showExcerpt);
+  const lang = english || (!summary && display.kind === 'original') ? (s.quoteLanguage || 'en') : 'ko';
   return <>
-    <p className="tl-text">{t.text}</p>
-    {t.kind !== 'translation' && <span className="tl-tag">AI 요약 제목</span>}
-    {sourceExcerpt}
+    {text && <p className="tl-text" lang={lang}>{text}</p>}
+    {summary && <span className="tl-tag">{tr('요약', 'Summary')}</span>}
+    {showExcerpt && <span className="tl-tag">{tr('발췌', 'Excerpt')}</span>}
+    {s.kind === 'reported_excerpt' && <span className="tl-tag tl-warn">{tr('기사 요약 속 인용 · 공식 원문 아님', 'Quote inside an article summary · not an official source')}{s.context ? ` · ${tr('기사', 'Article')}: ${s.context}` : ''}</span>}
+    {showStoredText && <details className="tl-original">
+      <summary>{tr('원문 발췌 보기', 'View original excerpt')}</summary>
+      <blockquote lang={s.quoteLanguage || 'en'}>{original}</blockquote>
+    </details>}
+    {s.kind === 'reported_headline' && Array.isArray(s.relatedHeadlines) && s.relatedHeadlines.length > 0 &&
+      <details className="tl-original">
+        <summary>{tr(`같은 내용의 다른 헤드라인 ${s.relatedHeadlines.length}건`, `${s.relatedHeadlines.length} other headlines on this`)}</summary>
+        <ul className="tl-related">{s.relatedHeadlines.map((headline: string) => <li key={headline} lang="en">{headline}</li>)}</ul>
+      </details>}
   </>;
 }
 

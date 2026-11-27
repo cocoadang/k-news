@@ -6,8 +6,7 @@ import { Header } from './components/Header';
 import { CompanyTabs } from './components/CompanyTabs';
 import { FilterBar } from './components/FilterBar';
 import { EventCard } from './components/EventCard';
-import { NewsIssueOverview } from './components/NewsIssueOverview';
-import { buildIssueFlows, groupNewsFeed } from './newsFeed';
+import { groupNewsFeed } from './newsFeed';
 import { EventDetailModal } from './components/EventDetailModal';
 import { TelegramPreviewModal } from './components/TelegramPreviewModal';
 import { AdminSettings as SettingsModal } from './components/AdminSettings';
@@ -380,7 +379,6 @@ export default function App() {
 
   // Filtered Events
   const newsFeed = useMemo(() => groupNewsFeed(events), [events]);
-  const issueFlows = useMemo(() => buildIssueFlows(newsFeed, selectedCompany), [newsFeed, selectedCompany]);
   const filteredEvents = newsFeed.filter((e) => {
     // 1. Company Filter
     if (selectedCompany !== 'all') {
@@ -411,8 +409,7 @@ export default function App() {
       const matchBiz = e.relatedBusinesses.some((b) => b.toLowerCase().includes(q));
       const matchSource = [e.primarySource, ...(e.relatedSources || [])].some(source =>
         source.name.toLowerCase().includes(q) || source.title?.toLowerCase().includes(q));
-      const matchIssue = issueFlows.get(e.id)?.title.some(title => title.toLowerCase().includes(q));
-      if (!matchTitle && !matchBullets && !matchCompanies && !matchImpacts && !matchBiz && !matchSource && !matchIssue) {
+      if (!matchTitle && !matchBullets && !matchCompanies && !matchImpacts && !matchBiz && !matchSource) {
         return false;
       }
     }
@@ -494,7 +491,6 @@ export default function App() {
           <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         </div>
 
-        <NewsIssueOverview flows={issueFlows} events={filteredEvents} onOpenDetail={setDetailEvent} />
         {/* Events Feed */}
         {filteredEvents.length === 0 ? (
           <div className="py-12 text-center bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
@@ -512,7 +508,6 @@ export default function App() {
               <EventCard
                 key={event.id}
                 event={event}
-                hasIssueFlow={issueFlows.has(event.id)}
                 onOpenDetail={(evt) => setDetailEvent(evt)}
               />
             ))}
@@ -526,7 +521,6 @@ export default function App() {
       {detailEvent && (
         <EventDetailModal
           event={newsFeed.find(event => event.id === detailEvent.id) ?? detailEvent}
-          issueFlow={issueFlows.get(detailEvent.id)}
           onClose={() => setDetailEvent(null)}
           onSendTelegram={handleSendTelegram}
           onReanalyze={handleReanalyze}

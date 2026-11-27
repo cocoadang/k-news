@@ -104,31 +104,41 @@ function Table({head, children}: {head: string[]; children: React.ReactNode}) {
 }
 const td = 'border-b border-slate-800/70 px-2 py-2 text-right tabular-nums';
 const tdL = 'border-b border-slate-800/70 px-2 py-2 text-left';
-type ComparisonCell = {value: React.ReactNode; className?: string};
+type ComparisonCell = {value: React.ReactNode; mobileDrawdown?: string; className?: string};
 type ComparisonRow = {key: string | number; title: React.ReactNode; cells: ComparisonCell[]; note?: string};
 
-function ComparisonTable({head, rows}: {head: string[]; rows: ComparisonRow[]}) {
-  const columns = head.slice(1);
+function ComparisonTable({head, shortHead, rows, historical = false, columnWidths}: {
+  head: string[];
+  shortHead: string[];
+  rows: ComparisonRow[];
+  historical?: boolean;
+  columnWidths?: string[];
+}) {
+  const {t} = useLang();
+  const [showDrawdown, setShowDrawdown] = useState(false);
+  const cellPadding = 'border-b border-slate-800/70 px-0.5 py-1.5 sm:px-2 sm:py-2';
   return <>
-    <div className="hidden sm:block"><Table head={head}>
-      {rows.map(row => <tr key={row.key}>
-        <th scope="row" className={`${tdL} font-medium`}>{row.title}</th>
-        {row.note ? <td colSpan={columns.length} className={`${tdL} text-slate-400`}>{row.note}</td> :
-          row.cells.map((cell, i) => <td key={columns[i]} className={`${td} ${cell.className ?? ''}`}>{cell.value}</td>)}
-      </tr>)}
-    </Table></div>
-    <ul role="list" className="space-y-2 sm:hidden">
-      {rows.map(row => <li key={row.key} className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/50 p-2.5">
-        <p className="text-sm font-semibold text-slate-100">{row.title}</p>
-        {row.note ? <p className="mt-1 text-xs text-slate-400">{row.note}</p> :
-          <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-2">
-            {row.cells.map((cell, i) => <div key={columns[i]} className="min-w-0 border-t border-slate-800 pt-1">
-              <dt className="text-xs leading-4 text-slate-400">{columns[i]}</dt>
-              <dd className={`mt-0.5 text-sm leading-5 tabular-nums ${cell.className ?? ''}`}>{cell.value}</dd>
-            </div>)}
-          </dl>}
-      </li>)}
-    </ul>
+    {historical && <div role="group" aria-label={t('표시 지표', 'Displayed metric')} className="mb-1 flex gap-1 sm:hidden">
+      <button type="button" aria-pressed={!showDrawdown} className={chipClass(!showDrawdown)} onClick={() => setShowDrawdown(false)}>IRR</button>
+      <button type="button" aria-pressed={showDrawdown} className={chipClass(showDrawdown)} onClick={() => setShowDrawdown(true)}>{t('최대낙폭', 'Max drawdown')}</button>
+    </div>}
+    <table className="w-full table-fixed border-collapse text-[11px] leading-4 tabular-nums sm:text-sm sm:leading-5">
+      {columnWidths && <colgroup>{head.map((heading, i) => <col key={heading} className={columnWidths[i]}/>)}</colgroup>}
+      <thead><tr>{head.map((heading, i) => <th key={heading} scope="col" aria-label={heading}
+        className={`${cellPadding} font-medium text-slate-400 sm:text-xs ${i ? 'text-right' : 'text-left'}`}>
+        <span className="break-keep sm:hidden">{shortHead[i]}</span><span className="hidden sm:inline">{heading}</span>
+      </th>)}</tr></thead>
+      <tbody>{rows.map(row => <tr key={row.key}>
+        <th scope="row" className={`${cellPadding} text-left font-medium [overflow-wrap:anywhere]`}>{row.title}</th>
+        {row.note ? <td colSpan={head.length - 1} className={`${cellPadding} text-slate-400`}>{row.note}</td> :
+          row.cells.map((cell, i) => <td key={head[i + 1]} className={`${cellPadding} whitespace-nowrap text-right ${cell.className ?? ''}`}>
+            {historical ? <>
+              <span className={showDrawdown ? 'hidden sm:inline' : ''}>{cell.value}</span>
+              <span className={showDrawdown ? 'text-slate-200 sm:hidden' : 'hidden'}>{cell.mobileDrawdown ?? '—'}</span>
+            </> : cell.value}
+          </td>)}
+      </tr>)}</tbody>
+    </table>
   </>;
 }
 
@@ -218,6 +228,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
     <div className="mt-2"><ComparisonTable head={[t('구간', 'Threshold'), t('발생 횟수', 'Entries'), t('발생 빈도', 'Frequency'), t('최근 도달일', 'Last entry'), t('간격 중앙값', 'Median gap')]}
+      shortHead={[t('구간', 'Threshold'), t('횟수', 'Count'), t('빈도', 'Rate'), t('최근일', 'Last date'), t('중앙값', 'Median')]} columnWidths={['w-[21%] sm:w-[24%]', 'w-[13%] sm:w-[19%]', 'w-[20%] sm:w-[19%]', 'w-[25%] sm:w-[19%]']}
       rows={history.rows.map(([threshold, count, date, median]) => ({
         key: threshold,
         title: lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold,
@@ -325,6 +336,7 @@ function MarketIndicatorCards({live}: {live: Live | null}) {
           t('최근 도달일', 'Last entry'),
           t('간격 중앙값', 'Median gap'),
         ]}
+          shortHead={[t('구간', 'Threshold'), t('횟수', 'Count'), t('빈도', 'Rate'), t('최근일', 'Last date'), t('중앙값', 'Median')]} columnWidths={['w-[21%] sm:w-[24%]', 'w-[13%] sm:w-[19%]', 'w-[20%] sm:w-[19%]', 'w-[25%] sm:w-[19%]']}
           rows={([
             [10, 35, '2026-11-02', t('약 7개월', '≈7 months')],
             [20, 8, '2025-04-04', t('약 2.8년', '≈2.8 years')],
@@ -436,9 +448,14 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
   const performanceCell = (value: number | undefined, bestValue: number): ComparisonCell => ({
     value: pct(value), className: value === bestValue ? 'font-bold text-white' : undefined,
   });
-  const historicalValue = (irr: unknown, mdd: unknown) => <>
-    {pct(irr)}
-    {mdd != null && <span className="block text-xs text-slate-400 sm:ml-1 sm:inline">{pct(mdd, 0)}</span>}
+  const historicalCell = (irr: unknown, mdd: unknown): ComparisonCell => ({
+    value: <>{pct(irr)}{mdd != null && <span className="ml-1 hidden text-xs text-slate-400 sm:inline">{pct(mdd, 0)}</span>}</>,
+    mobileDrawdown: pct(mdd, 0),
+  });
+  const strategyShortName = (key: string) => key === 'mubot' ? t('무한매수', 'Infinite') : key === 'qqq' ? 'QQQ' : label(key);
+  const strategyName = (key: string, fallback?: string) => <>
+    <span className="hidden sm:inline"><Dot k={key}/>{label(key, fallback)}</span>
+    <span className="sm:hidden">{strategyShortName(key)}</span>
   </>;
   const lines: Line[] = useMemo(() => {
     const ls: Line[] = ok.map(k => ({key: k, label: label(k, S[k].label), color: COLORS[k], dashed: k === 'qqq', width: k === 'qqq' ? 2 : undefined, points: (S[k].curve || []).map(p => ({t: Date.parse(p[0].length > 7 ? p[0] : `${p[0]}-15`), y: p[1]}))}));
@@ -452,41 +469,47 @@ function BacktestSection({bt, variant, setVariant}: {bt: Backtest; variant: stri
     <div className="mt-3 flex flex-wrap gap-2" aria-label={t('시작 시점', 'Start point')}>{Object.entries(bt.variants).map(([k, v]) =>
       <button key={k} type="button" className={chipClass(k === variant)} aria-pressed={k === variant} onClick={() => setVariant(k)}>{vName(k, v)}</button>)}</div>
     <p className="mt-2 text-sm leading-6 text-slate-400"><span className="font-semibold text-slate-200">{dot(V.period[0])} ~ {dot(V.period[1])}</span></p>
-    <div className="mt-3"><ComparisonTable head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 (넣은 돈)', 'Final (contributed)')]}
+    <div className="mt-3"><ComparisonTable head={[t('전략', 'Strategy'), t('세전 IRR', 'IRR pre-tax'), t('세후 IRR', 'IRR after tax'), t('최대낙폭', 'Max DD'), t('최종 금액', 'Final value'), t('넣은 돈', 'Contributed')]}
+      shortHead={[t('전략', 'Strategy'), t('세전', 'Pre-tax'), t('세후', 'After-tax'), t('낙폭', 'Max DD'), t('최종', 'Final'), t('원금', 'Paid in')]}
+      columnWidths={['w-[19%] sm:w-[22%]']}
       rows={primaryOrder.filter(k => S[k]).map(k => {
         const s = S[k];
         return {
-          key: k, title: <><Dot k={k}/>{label(k, s.label)}</>, note: s.na,
+          key: k, title: strategyName(k, s.label), note: s.na,
           cells: [
             performanceCell(s.irr, bI), performanceCell(s.irrLiq, bL), performanceCell(s.mdd, bM),
-            {value: `${won(s.final)} (${won(s.invested)})`},
+            {value: won(s.final)}, {value: won(s.invested)},
           ],
         };
       })}/></div>
     <div className="mt-4"><LineChart lines={lines} yFormat={v => won(v)} ariaLabel={t('백테스트 자산 곡선', 'Backtest equity curve')}/></div>
     <details className="mt-3 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('매년 1월 시작 결과', 'Starting each January')} ({bt.startRange[0]}–{bt.startRange[1]})</summary>
       <div className="mt-3"><ComparisonTable head={[t('전략', 'Strategy'), t('시작연도 평균', 'Avg by start yr'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5-yr avg'), t('5년 최저', '5-yr min'), t('5년 QQQ 이김', 'Beat QQQ (5-yr)')]}
+        shortHead={[t('전략', 'Strategy'), t('시작 평균', 'Start avg'), t('최악 낙폭', 'Worst DD'), t('5년 평균', '5y avg'), t('5년 최저', '5y min'), t('QQQ 초과', 'Beat QQQ')]}
+        columnWidths={['w-[19%] sm:w-[22%]']}
         rows={order.map(k => ({
-          key: k, title: <><Dot k={k}/>{label(k)}</>,
+          key: k, title: strategyName(k),
           cells: [
             {value: pct(M[k]?.startAvg)}, {value: pct(M[k]?.startWorstMdd)},
             {value: pct(M[k]?.fiveAvg)}, {value: pct(M[k]?.fiveMin)},
             {value: M[k]?.fiveBeatQqq == null ? '—' : `${M[k].fiveBeatQqq} / ${M[k].fiveN}`},
           ],
         }))}/></div>
-      <div className="mt-3"><ComparisonTable head={[t('시작', 'Start'), ...order.map(k => label(k))]}
+      <div className="mt-3"><ComparisonTable historical head={[t('시작', 'Start'), ...order.map(k => label(k))]}
+        shortHead={[t('시작', 'Start'), ...order.map(strategyShortName)]} columnWidths={['w-[16%] sm:w-[20%]']}
         rows={bt.startYears.map(r => ({
           key: r.year, title: r.year,
-          cells: order.map(k => ({value: r[k]?.[0] == null ? '—' : historicalValue(r[k][0], r[k][1])})),
+          cells: order.map(k => historicalCell(r[k]?.[0], r[k]?.[0] == null ? undefined : r[k][1])),
         }))}/></div>
       <p className="mt-2 text-xs text-slate-400">{t('IRR · (최대낙폭), 각 연도 1월 시작 ~ 현재.', 'IRR · (max drawdown), from January of each year to today.')}</p>
     </details>
     <details className="mt-2 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-200">{t('5년 보유 구간별 결과', '5-year holding windows')} ({lang === 'en' ? `starts ${bt.fiveRange[0]}–${bt.fiveRange[1]}` : `${bt.fiveRange[0]}~${bt.fiveRange[1]}년 시작`})</summary>
-      <div className="mt-3"><ComparisonTable head={[t('구간', 'Window'), ...order.map(k => label(k))]}
+      <div className="mt-3"><ComparisonTable historical head={[t('구간', 'Window'), ...order.map(k => label(k))]}
+        shortHead={[t('구간', 'Window'), ...order.map(strategyShortName)]} columnWidths={['w-[24%] sm:w-[20%]']}
         rows={bt.fiveYear.map(r => ({
           key: r.year, title: `${r.year}~${r.year + 5}`,
           cells: order.map(k => ({
-            value: historicalValue(r[k], r.mdd?.[k]),
+            ...historicalCell(r[k], r.mdd?.[k]),
             className: k !== 'qqq' && r[k] != null && r[k] < r.qqq ? 'text-rose-300' : undefined,
           })),
         }))}/></div>

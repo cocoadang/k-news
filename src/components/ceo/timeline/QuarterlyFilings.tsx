@@ -101,6 +101,35 @@ const comparisons: Readonly<Partial<Record<string, QuarterlyComparison>>> = {
       {name: 'UnitedHealth', prior: 20000, latest: 0},
     ],
   },
+  'ray-dalio': {
+    manager: 'Bridgewater Associates, LP',
+    // EDGAR 0001350694-26-000003 and 0001350694-26-000004.
+    prior: {period: '2026-06-30', filed: '2026-08-14'},
+    latest: {period: '2026-09-30', filed: '2026-11-16'},
+    note: ['레이 달리오가 창업한 브리지워터의 기관 공시입니다.', 'Institutional filings of Bridgewater, founded by Ray Dalio.'],
+    rows: [
+      {name: 'NVIDIA', prior: 3866195, latest: 2688221},
+      {name: 'Amazon', prior: 2025481, latest: 970756},
+      {name: 'Alphabet Class A', prior: 1322176, latest: 460233},
+      {name: 'Microsoft', prior: 711896, latest: 221261},
+      {name: 'Tesla', prior: 0, latest: 7220},
+    ],
+  },
+  'jamie-dimon': {
+    manager: 'JPMorgan Chase & Co.',
+    // EDGAR 0000019617-26-000325 and 0000019617-26-000404.
+    // Sum all common-share rows per CUSIP; options are reported with separate CUSIPs.
+    prior: {period: '2026-06-30', filed: '2026-08-12'},
+    latest: {period: '2026-09-30', filed: '2026-11-12'},
+    note: ['JP모건체이스 그룹의 기관 공시 기준입니다.', 'Based on JPMorgan Chase’s group institutional filings.'],
+    rows: [
+      {name: 'NVIDIA', prior: 449404578, latest: 462163595},
+      {name: 'Amazon', prior: 167979147, latest: 179422440},
+      {name: 'Microsoft', prior: 135173516, latest: 157973965},
+      {name: 'Alphabet Class A', prior: 91919476, latest: 94118201},
+      {name: 'Tesla', prior: 41972287, latest: 33111574},
+    ],
+  },
 };
 
 export function QuarterlyFilings({personId}: {personId: string}) {
@@ -113,7 +142,6 @@ export function QuarterlyFilings({personId}: {personId: string}) {
       {t('분기 공시', 'Quarterly filings')} · {manager}
     </summary>
     <div className="space-y-3 border-t border-slate-800 py-3">
-      <p className="text-sm text-slate-300">{t('운용사 분기말 공개 보유 · 주요 종목 주식 수', 'Manager’s disclosed quarter-end holdings · selected share counts')}</p>
       <table className="w-full table-fixed border-collapse text-xs sm:text-sm" aria-label={t('분기별 보유 주식 수', 'Quarterly share counts')}>
         <colgroup><col/><col className="w-[29%]"/><col className="w-[29%]"/></colgroup>
         <thead>

@@ -5,6 +5,7 @@ type FilingPeriod = {period: string; filed: string};
 
 type QuarterlyComparison = {
   manager: string;
+  note?: readonly [string, string];
   prior: FilingPeriod;
   latest: FilingPeriod;
   rows: {name: string; prior: number; latest: number}[];
@@ -56,13 +57,57 @@ const comparisons: Readonly<Partial<Record<string, QuarterlyComparison>>> = {
       {name: 'Amazon', prior: 34978432, latest: 35573420},
     ],
   },
+  'ken-griffin': {
+    manager: 'Citadel Advisors LLC',
+    // EDGAR 0001104659-26-104387 (Q2 restatement) and 0001104659-26-128228.
+    // Sum each CUSIP's common-share rows across reporting managers in the filing.
+    prior: {period: '2026-06-30', filed: '2026-09-02'},
+    latest: {period: '2026-09-30', filed: '2026-11-16'},
+    note: ['2분기는 9월 2일 정정 공시 기준입니다.', 'The Q2 figures use the September 2 restatement.'],
+    rows: [
+      {name: 'NVIDIA', prior: 11815467, latest: 11660790},
+      {name: 'Microsoft', prior: 3770405, latest: 5839847},
+      {name: 'Tesla', prior: 1226238, latest: 2549820},
+      {name: 'Alphabet Class A', prior: 2990581, latest: 2201127},
+      {name: 'Amazon', prior: 10882003, latest: 4793901},
+    ],
+  },
+  'howard-marks': {
+    manager: 'Oaktree Capital Management, L.P.',
+    // EDGAR 0000949509-26-000005 (Q2) and 0001193125-26-467250 (Q3).
+    // In Brookfield's Q3 restatement, manager number 7 identifies Oaktree Capital Management.
+    prior: {period: '2026-06-30', filed: '2026-08-14'},
+    latest: {period: '2026-09-30', filed: '2026-11-18'},
+    note: ['3분기는 브룩필드 정정 공시에서 오크트리에 귀속된 종목 기준입니다.', 'Q3 shows holdings attributed to Oaktree in Brookfield’s restatement.'],
+    rows: [
+      {name: 'TORM', prior: 20329874, latest: 6329874},
+      {name: 'Bausch + Lomb', prior: 3441042, latest: 4565719},
+      {name: 'Core Scientific', prior: 4993708, latest: 3735346},
+      {name: 'Barrick Mining', prior: 3206087, latest: 1642668},
+      {name: 'Surgery Partners', prior: 862588, latest: 1612805},
+    ],
+  },
+  'michael-burry': {
+    manager: 'Scion Asset Management, LLC',
+    // EDGAR 0001879202-25-000038 and 0001649339-25-000007.
+    prior: {period: '2025-06-30', filed: '2025-08-14'},
+    latest: {period: '2025-09-30', filed: '2025-11-03'},
+    note: ['2025년 2·3분기 과거 공시입니다.', 'Historical filings for Q2 and Q3 2025.'],
+    rows: [
+      {name: 'Lululemon', prior: 50000, latest: 100000},
+      {name: 'Molina Healthcare', prior: 0, latest: 125000},
+      {name: 'SLM', prior: 0, latest: 480054},
+      {name: 'Estée Lauder Class A', prior: 150000, latest: 0},
+      {name: 'UnitedHealth', prior: 20000, latest: 0},
+    ],
+  },
 };
 
 export function QuarterlyFilings({personId}: {personId: string}) {
   const {t, locale} = useLang();
   const comparison = comparisons[personId];
   if (!comparison) return null;
-  const {manager, prior, latest, rows} = comparison;
+  const {manager, prior, latest, rows, note} = comparison;
   return <details className="mb-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 sm:px-4">
     <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-slate-100 focus-visible:outline-cyan-400">
       {t('분기 공시', 'Quarterly filings')} · {manager}
@@ -93,6 +138,7 @@ export function QuarterlyFilings({personId}: {personId: string}) {
           </tr>)}
         </tbody>
       </table>
+      {note && <p className="text-xs text-slate-400">{t(...note)}</p>}
     </div>
   </details>;
 }

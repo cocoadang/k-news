@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Settings } from 'lucide-react';
+import { Activity, Send, Settings } from 'lucide-react';
 import { AuthStatus } from '../types';
 import { LangToggle, useLang } from '../i18n';
 
@@ -17,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   const { t } = useLang();
+  const showAdminSettings = authStatus?.isAuthenticated || new URLSearchParams(window.location.search).get('admin') === '1';
   return (
     <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5">
@@ -37,16 +38,26 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LangToggle />
-            
-            {/* Settings Gear Button (⚙️) */}
-            <button
-              onClick={authStatus?.isAuthenticated ? onOpenSettings : onOpenLogin}
-              className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
-              title={t('관리자 설정', 'Admin settings')}
-              aria-label={t('설정', 'Settings')}
+            <a
+              href="https://t.me/dsoom_news"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('텔레그램 입장', 'Join Telegram')}
+              className="inline-flex h-[30px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-cyan-700 bg-cyan-950 px-2 text-xs font-medium text-cyan-200 transition-colors hover:bg-cyan-900 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
             >
-              <Settings className="w-4 h-4" />
-            </button>
+              <Send className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {t('텔레그램 입장', 'Join Telegram')}
+            </a>
+            {showAdminSettings && (
+              <button
+                onClick={authStatus?.isAuthenticated ? onOpenSettings : onOpenLogin}
+                className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+                title={t('관리자 설정', 'Admin settings')}
+                aria-label={t('설정', 'Settings')}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
         </div>

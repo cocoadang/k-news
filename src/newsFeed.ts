@@ -43,10 +43,48 @@ const starshipMilestones = [
 ] as const;
 
 const trackedIssues = [
-  { label: ['SpaceX 스타십 개발', 'SpaceX Starship development'], subject: /\bstarship\b|스타십/i, stages: starshipMilestones },
-  { label: ['테슬라 오스틴 로보택시', 'Tesla Austin robotaxi'], subject: /(?=.*tesla|.*테슬라)(?=.*robotaxi|.*로보택시)(?=.*austin|.*오스틴)/i },
-  { label: ['SpaceX 궤도 데이터센터', 'SpaceX orbital data centers'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*data[ -]?cent(?:er|re)|.*데이터\s*센터)(?=.*orbital|.*in space|.*궤도|.*우주)/i },
-  { label: ['SpaceX 애리조나 AI 시설', 'SpaceX Arizona AI facility'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*arizona|.*애리조나)(?=.*\bai\b|.*data[ -]?cent(?:er|re)|.*데이터\s*센터)/i },
+  { companyId: 'spacex', label: ['SpaceX 스타십 개발', 'SpaceX Starship development'], subject: /\bstarship\b|스타십/i, stages: starshipMilestones },
+  { companyId: 'tsla', label: ['테슬라 오스틴 로보택시', 'Tesla Austin robotaxi'], subject: /(?=.*tesla|.*테슬라)(?=.*robotaxi|.*로보택시)(?=.*austin|.*오스틴)/i },
+  { companyId: 'spacex', label: ['SpaceX 궤도 데이터센터', 'SpaceX orbital data centers'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*data[ -]?cent(?:er|re)|.*데이터\s*센터)(?=.*orbital|.*in space|.*궤도|.*우주)/i },
+  { companyId: 'spacex', label: ['SpaceX 애리조나 AI 시설', 'SpaceX Arizona AI facility'], subject: /(?=.*space\s*x|.*스페이스\s*x)(?=.*arizona|.*애리조나)(?=.*\bai\b|.*data[ -]?cent(?:er|re)|.*데이터\s*센터)/i },
+  {
+    companyId: 'tsla',
+    label: ['테슬라 사이버캡 출시', 'Tesla Cybercab rollout'],
+    subject: /\bcybercabs?\b|사이버캡/i,
+    stages: [
+      {id: 'berlinPlan', pattern: /\b(?:targets?|aims?)\b.{0,70}\b(?:production|manufacturing)\b.{0,40}\b(?:giga )?berlin\b|기가\s*베를린.{0,35}사이버캡\s*생산.{0,14}목표/i},
+      {id: 'sales', pattern: /\btesla\b.{0,24}\bstart(?:s|ed)? selling cybercabs?\b|테슬라.{0,15}사이버캡\s*판매\s*시작/i},
+    ],
+  },
+  {
+    companyId: 'nvda',
+    label: ['NVIDIA 베라 루빈', 'NVIDIA Vera Rubin'],
+    subject: /\bvera rubin\b|베라\s*루빈/i,
+    stages: [
+      {id: 'benchmark', pattern: /\bmlperf\b.{0,70}\b(?:training|endpoints|debut)\b|MLPerf.{0,40}(?:학습|엔드포인트)/i},
+      {id: 'supply', pattern: /\bexpands? supply chain capacity\b|공급망\s*생산능력\s*확대/i},
+      {id: 'cloud', pattern: /\bexpands? microsoft ai collaboration\b|마이크로소프트와\s*AI\s*협력\s*확대/i},
+    ],
+  },
+  {
+    companyId: 'googl',
+    label: ['구글 AI 모드 확장', 'Google AI Mode rollout'],
+    subject: /\bai mode\b|AI\s*모드/i,
+    stages: [
+      {id: 'defaultModel', pattern: /\bgemini 4 hydrogen\b.{0,30}\bdefault\b|기본값.{0,20}제미나이\s*4\s*하이드로젠/i},
+      {id: 'searchIntegrations', pattern: /\bwallet\b.{0,14}\bdrive\b.{0,20}\bgemini app integrations\b|월렛.{0,8}드라이브.{0,10}제미나이\s*앱\s*연동/i},
+    ],
+  },
+  {
+    companyId: 'msft',
+    label: ['마이크로소프트 Copilot 확장', 'Microsoft Copilot rollout'],
+    subject: /\bcopilot\b|코파일럿/i,
+    stages: [
+      {id: 'workspaces', pattern: /\bunveils? copilot workspaces\b|Copilot\s*Workspaces.{0,24}공개/i},
+      {id: 'dynamics', pattern: /\bintroducing dynamics 365 in copilot\b|코파일럿에\s*다이내믹스\s*365\s*도입/i},
+      {id: 'appSearch', pattern: /\brefresh(?:es)? copilot app search\b|코파일럿\s*앱\s*검색\s*기능\s*개편/i},
+    ],
+  },
 ] as const;
 
 const milestones = [
@@ -59,6 +97,16 @@ const milestones = [
 ] as const;
 
 const stageLabels = {
+  berlinPlan: ['베를린 생산 목표 보도', 'Berlin production target reported'],
+  sales: ['판매 시작', 'Sales begin'],
+  benchmark: ['MLPerf 성능 공개', 'MLPerf results'],
+  supply: ['공급망 생산능력 확대', 'Supply capacity expands'],
+  cloud: ['마이크로소프트 협력 확대', 'Microsoft collaboration expands'],
+  defaultModel: ['기본 모델 변경', 'Default model changes'],
+  searchIntegrations: ['월렛·드라이브·제미나이 연동', 'Wallet, Drive and Gemini integration'],
+  workspaces: ['Workspaces 공개', 'Workspaces unveiled'],
+  dynamics: ['Dynamics 365 연동', 'Dynamics 365 integration'],
+  appSearch: ['앱 검색 개편', 'App search updated'],
   catch: ['첫 포획', 'First catch'],
   fuel: ['연료 보급 진전', 'Refueling progress'],
   cryo: ['17차 비행 시험 준비', 'Flight 17 test preparation'],
@@ -74,9 +122,10 @@ type StageId = keyof typeof stageLabels;
 type IssueStep = {id: StageId; event: NewsEvent; date: number; label: readonly [string, string]};
 export type IssueFlow = { title: readonly [string, string]; entries: IssueStep[] };
 
-export function buildIssueFlows(events: NewsEvent[]) {
+export function buildIssueFlows(events: NewsEvent[], companyId: string) {
   const byEvent = new Map<string, IssueFlow>();
   for (const issue of trackedIssues) {
+    if (issue.companyId !== companyId) continue;
     const entriesByStage = new Map<StageId, NewsEvent>();
     const members: NewsEvent[] = [];
     for (const event of events) {

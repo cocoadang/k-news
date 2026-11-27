@@ -380,7 +380,7 @@ export default function App() {
 
   // Filtered Events
   const newsFeed = useMemo(() => groupNewsFeed(events), [events]);
-  const issueFlows = useMemo(() => buildIssueFlows(newsFeed), [newsFeed]);
+  const issueFlows = useMemo(() => buildIssueFlows(newsFeed, selectedCompany), [newsFeed, selectedCompany]);
   const filteredEvents = newsFeed.filter((e) => {
     // 1. Company Filter
     if (selectedCompany !== 'all') {

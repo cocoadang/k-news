@@ -43,10 +43,9 @@ export const Header: React.FC<HeaderProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t('텔레그램 입장', 'Join Telegram')}
-              className="inline-flex h-[30px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-cyan-700 bg-cyan-950 px-2 text-xs font-medium text-cyan-200 transition-colors hover:bg-cyan-900 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+              className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg border border-cyan-700 bg-cyan-950 text-cyan-200 transition-colors hover:bg-cyan-900 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
             >
-              <Send className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              {t('텔레그램 입장', 'Join Telegram')}
+              <Send className="h-4 w-4" aria-hidden="true" />
             </a>
             {showAdminSettings && (
               <button

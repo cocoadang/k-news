@@ -128,3 +128,4 @@ Deploy smoke (ops/deploy.py) requires ≥3 public YouTube summaries and none fro
 - 주 메뉴 4번째 '나스닥 전략'(src/components/StrategyMenu.tsx). 서버·API 변경 없음, 브라우저가 외부 공개 자료를 직접 읽음.
 - 자료 출처는 KS Wealth OS(cocoadang/ks-wealth-os): 실전 추적 = Firestore busan-redevelopment `kswealth_public/strategy`(공개 get, 금액·계좌 정보 없음, Apps Script가 매시간 게시), 백테스트 = https://asset.dsoom.com/strategy-backtest.json(CORS news.dsoom.com만 허용). 숫자를 바꾸려면 ks-wealth-os 쪽을 고침.
 - 같은 PR에서 server/companyRenewal.ts의 30일 기사 범위가 실제 시계(Date.now) 대신 실행 시각(now)을 쓰도록 수정 — 테스트 고정 날짜(2026-10-14)가 30일을 넘긴 11/11부터 CI가 실패했음.
+2026-11-28 (Claude 점검): Supadata 결제 주기 env(KNEWS_SUPADATA_WINDOW_END=2026-11-27T00:00Z)가 만료돼 11/27 불앤베어(CLIlZsXvaMQ)가 supadata_free_account_or_cycle_unverified로 멈춤(설계상 자동 갱신 안 함 — 광수님이 Supadata 대시보드의 실제 갱신일로 START/END 갱신 필요). 11/26 불앤베어(EQaz7tv_AoQ)는 요약 중 wallstreet_state_capacity(상태 문서 24청크 초과)로 실패. /api/ops/health에 주기 만료·Supadata 6시간 대기·상태 저장 용량(youtube.state, 최대 영상 3개 크기) 표시 추가.

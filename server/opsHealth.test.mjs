@@ -63,3 +63,14 @@ test('held summary exposes count-only diagnostics', () => {
   assert.equal(d.candidate, 5); assert.equal(d.sourceScreen, 4); assert.equal(d.segments, 1);
   assert.equal(JSON.stringify(h).includes('secret words'), false);
 });
+
+test('flags expired Supadata window, long Supadata hold and reports state size without contents', () => {
+  const now = Date.parse('2026-11-28T14:00:00Z');
+  const youtube = { videos: { b: { video: { id: 'b' }, programmes: ['bullbear'], firstSeen: now - 30 * 3600000, stage: 'text_waiting', hold: 'supadata_free_account_or_cycle_unverified', transcript: [{ start: 0, text: 'secret words' }] } }, budgets: {}, supadata: { used: 56, days: {}, end: Date.parse('2026-11-27T00:00:00Z') } };
+  const h = buildOpsHealth({ now, youtube, config: { ...config, supadataCycleEnd: Date.parse('2026-11-27T00:00:00Z') } });
+  assert.ok(h.issues.some(i => /Supadata 결제 주기 설정 만료\(2026-11-27\)/.test(i)), h.issues.join());
+  assert.ok(h.issues.some(i => /Supadata 자막 대기 6시간 이상 1건/.test(i)));
+  assert.ok(h.youtube.state.jsonBytes > 0 && h.youtube.state.usedPct < 1);
+  assert.equal(h.youtube.state.largestVideos[0].id, 'b');
+  assert.equal(JSON.stringify(h).includes('secret words'), false);
+});

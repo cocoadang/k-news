@@ -1,4 +1,5 @@
 // 운영 점검용 공개 요약(/api/ops/health). 비밀값·IP·로그 원문 없이 숫자/상태만 내보낸다. 순수 함수(테스트 가능).
+import { gzipSync } from 'node:zlib';
 const H = 3600_000;
 const kstDay = t => new Date(t + 9 * H).toISOString().slice(0, 10);
 const num = v => (Number.isFinite(+v) ? +v : null);
@@ -98,6 +99,19 @@ export function buildOpsHealth({ now = Date.now(), lastPollTime = null, logs = [
     };
     if (yt.summaryBudget.monthPct >= 80) issues.push(`유튜브 요약 예산 ${yt.summaryBudget.monthPct}% 사용`);
     if (yt.supadata?.usedPct >= 80) issues.push(`Supadata 사용량 ${yt.supadata.usedPct}%`);
+    // Supadata 결제 주기는 Cloud Run 환경변수(KNEWS_SUPADATA_WINDOW_START/END)로 명시하며, 만료되면 자막 수집이 조용히 멈춘다.
+    const windowEnd = Number.isFinite(config.supadataCycleEnd) ? config.supadataCycleEnd : null;
+    if (windowEnd !== null) { yt.supadataWindowEnd = windowEnd; if (now >= windowEnd) issues.push(`Supadata 결제 주기 설정 만료(${kstDay(windowEnd)}) — KNEWS_SUPADATA_WINDOW_START/END 갱신 필요`); }
+    const supadataHeld = recent.filter(r => r.stage === 'text_waiting' && /^supadata_/.test(r.hold || '') && now - (r.firstSeen || now) >= 6 * H);
+    if (supadataHeld.length) issues.push(`Supadata 자막 대기 6시간 이상 ${supadataHeld.length}건(${supadataHeld[0].hold})`);
+    // 상태 문서 용량(압축 후 base64 기준, 한도 24×300000자). 넘으면 저장이 wallstreet_state_capacity로 실패한다.
+    try {
+      const json = Buffer.from(JSON.stringify(youtube));
+      const stored = json.length * 4 / 3 > 24 * 300000 ? Math.ceil(gzipSync(json).length * 4 / 3) : Math.ceil(json.length * 4 / 3);
+      const top = Object.entries(youtube.videos || {}).map(([id, r]) => [id, Buffer.byteLength(JSON.stringify(r))]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      yt.state = { jsonBytes: json.length, storedChars: stored, limitChars: 24 * 300000, usedPct: pct(stored, 24 * 300000), largestVideos: top.map(([id, bytes]) => ({ id, bytes })) };
+      if (yt.state.usedPct >= 80) issues.push(`유튜브 상태 저장 용량 ${yt.state.usedPct}%`);
+    } catch { /* 진단용 — 실패해도 무시 */ }
   }
 
   // CEO 번역·요약 원장

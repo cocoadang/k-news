@@ -217,9 +217,22 @@ const indicatorHistory = {
 
 type IndicatorHistoryKey = keyof typeof indicatorHistory;
 
-const indicatorRatingKo: Record<string, string> = {
-  'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕',
+const fearGreedBands: Record<string, {labelKo: string; range: string}> = {
+  'extreme fear': {labelKo: '극단적 공포', range: '0–<25'},
+  fear: {labelKo: '공포', range: '25–<45'},
+  neutral: {labelKo: '중립', range: '45–<55'},
+  greed: {labelKo: '탐욕', range: '55–<75'},
+  'extreme greed': {labelKo: '극단적 탐욕', range: '75–100'},
 };
+
+function FearGreedBand({rating}: {rating: string}) {
+  const {lang} = useLang();
+  const band = fearGreedBands[rating];
+  return <>
+    <span>{lang === 'en' ? rating : band.labelKo}</span>
+    <span className="block whitespace-nowrap text-[10px] font-normal text-slate-400 tabular-nums sm:ml-2 sm:inline sm:text-xs">{band.range}</span>
+  </>;
+}
 
 const drawdownHistoryPeriod = {start: '1986-01-02', end: '2026-11-20'};
 
@@ -229,7 +242,7 @@ function annualEntryRate(count: number, start: string, end: string) {
 }
 
 function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
-  const {t, lang} = useLang();
+  const {t} = useLang();
   const history = indicatorHistory[indicator];
   return <section id="indicator-history" className={`${card} col-span-full`}>
     <h3 className="text-sm font-semibold text-white">{t('과거 발생 통계', 'Historical threshold entries')} · {indicator === 'vix' ? 'VIX' : indicator === 'fear' ? 'Fear & Greed' : 'QQQ RSI(14)'}</h3>
@@ -237,7 +250,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
       shortHead={[t('구간', 'Threshold'), t('횟수', 'Count'), t('빈도', 'Rate'), t('최근일', 'Last date'), t('중앙값', 'Median')]} columnWidths={['w-[21%] sm:w-[24%]', 'w-[13%] sm:w-[19%]', 'w-[20%] sm:w-[19%]', 'w-[25%] sm:w-[19%]']}
       rows={history.rows.map(([threshold, count, date, median]) => ({
         key: threshold,
-        title: lang !== 'en' && indicator === 'fear' ? indicatorRatingKo[threshold] : threshold,
+        title: indicator === 'fear' ? <FearGreedBand rating={threshold}/> : threshold,
         cells: [
           {value: count.toLocaleString()},
           {value: annualEntryRate(count, history.start, history.end) + t('회/년', '/year')},

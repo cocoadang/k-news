@@ -253,7 +253,7 @@ function IndicatorHistory({indicator}: {indicator: IndicatorHistoryKey}) {
         title: indicator === 'fear' ? <FearGreedBand rating={threshold}/> : threshold,
         cells: [
           {value: count.toLocaleString()},
-          {value: annualEntryRate(count, history.start, history.end) + t('회/년', '/year')},
+          {value: <span className="whitespace-normal">{annualEntryRate(count, history.start, history.end)}<wbr/>{t('회/년', '/year')}</span>},
           {value: date ?? '—'},
           {value: median === null ? '—' : t(`${median}일`, `${median} days`)},
         ],
